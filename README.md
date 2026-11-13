@@ -3,6 +3,7 @@
 **Standalone**, local-first Salesforce Agentic QA starter. No dependency on any earlier repository. Designed for Windows, Node 22+, TypeScript and headless Playwright.
 
 ## Current state
+The continuation now includes durable SQLite-backed LangGraph interrupts/resume, structured execution history, Tooling/Metadata API clients, guarded sandbox mutation and cleanup services, Chroma ingestion/retrieval adapters, reviewed workflow generation, bounded MCP observation, and deterministic quality services. See the **current continuation** table in [FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md) for exact validation and limits, and [LOCAL_SETUP.md](docs/LOCAL_SETUP.md) for runnable commands. This is still a partial implementation of the complete P0/P1/P2 request. The following paragraph describes the original starter scope.
 This is a **runnable foundation, not a finished autonomous Salesforce tester**. It includes a deterministic offline demo, typed story plans, conservative test-data dependency proposals, JWT API authentication helper, validated bounded Salesforce Describe discovery, versioned snapshots, a local evidence store and example Playwright fixture tests. A LangGraph planning demo and a read-only Salesforce MCP server are implemented. Chroma, approved data writes, browser org exploration and self-learning remain extension points.
 
 ## Requirements

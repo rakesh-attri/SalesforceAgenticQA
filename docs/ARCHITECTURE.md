@@ -1,5 +1,17 @@
 # Architecture
 
+## Continuation runtime
+
+The current platform adds node:sqlite execution history and a single-writer durable LangGraph saver. The saver persists serialized checkpoint bytes and pending writes, supports process restart, and preserves interrupt/resume semantics. Human plan review remains separate from data-operation approval.
+
+Dedicated data mutations use fresh sandbox identity verification and scoped expiring payload approvals. DataExecution journals side-effect intent before dispatch, returns completed operation references on replay, blocks uncertain replays and checks cleanup ownership. This extends the original read-only transport: generic POST remains prohibited. Hybrid UI/business-service creation is still outstanding.
+
+Tooling queries and a bounded readMetadata SOAP client supplement Describe discovery. Metadata parsing rejects entities/DTDs and faults. The readMetadata implementation follows Salesforce's [readMetadata contract](https://developer.salesforce.com/docs/platform/api-metadata/references/crud-based-calls/meta-readmetadata.html); Tooling fields follow the official [FlowDefinition](https://developer.salesforce.com/docs/platform/api-tooling/references/tooling-objects/tooling-flowdefinition.html) and [ValidationRule](https://developer.salesforce.com/docs/platform/api-tooling/references/tooling-objects/tooling-validationrule.html) references. Live permissions and returned component semantics remain unverified.
+
+SemanticKnowledge sends explicit embeddings to Chroma, uses versioned source/chunk IDs, filters retrieval by org/permission/version/verified status, and exposes an HTTPS embedding adapter. Workflow generation accepts reviewed observed steps and a criterion, emits Playwright source, and validates syntax. Actual fixture-generated code is executed by Playwright; it does not establish Salesforce behavior. MCP exploration is bounded navigation and observation only.
+
+Quality services provide deterministic explainable selection, evidence-linked failure hypotheses, reviewed repair proposals, criteria gaps and verified lesson storage. They do not substitute for model-based reasoning or live org verification. Current evidence and missing features are in FEATURE_MATRIX.md. The remaining sections record the earlier architecture state.
+
 SalesforceAgenticQA is an independent Windows/Node/TypeScript project. No other automation repository is a dependency.
 
 ## Working pipeline

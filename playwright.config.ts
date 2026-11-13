@@ -14,7 +14,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     storageState: process.env.SFQA_BROWSER_STATE || undefined,
   },
-  reporter: [['list'], ['html', { open: 'never' }], ['junit', { outputFile: 'test-results/junit.xml' }]],
+  reporter: [['list'], ['html', { open: 'never' }], ['junit', { outputFile: 'test-results/junit.xml' }], ['./src/integrations/history-reporter.ts']],
   webServer: {
     command: 'tsx fixtures/demo-server.ts',
     url: 'http://127.0.0.1:8765/health',

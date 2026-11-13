@@ -1,5 +1,9 @@
 # Implementation roadmap
 
+## Continuation status
+
+The current FEATURE_MATRIX.md table supersedes earlier inventory. Durable orchestration/history, bounded metadata clients, guarded API mutation journaling, semantic retrieval adapters and deterministic P1/P2 quality services now have working implementations. Next work should connect reviewed business recipes to hybrid API/UI creation, validate real sandbox/session/vector integrations, extend permission/dependency coverage, and build richer bounded action exploration, repair and model evaluations. Reporting Labs requires an identified provider/API contract. Do not treat offline coverage as live integration completion.
+
 ## Baseline and increment 1
 
 Audit completed 2026-11-13. Baseline: typecheck passed; 1 unit test passed; offline demo completed; 2 headless local fixture tests passed. PowerShell blocks npm.ps1; use npm.cmd. Sandbox Node user lookup fails with `uv_os_get_passwd ENOMEM`; checks succeed outside that sandbox.

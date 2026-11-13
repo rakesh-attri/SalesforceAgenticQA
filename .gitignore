@@ -10,3 +10,13 @@ test-results/
 *.pem
 *.key
 .DS_Store
+.secrets/
+*.sqlite*
+*.db*
+*storageState*.json
+*storage-state*.json
+*.pfx
+*.p12
+coverage/
+tests/generated/
+*credentials*.json

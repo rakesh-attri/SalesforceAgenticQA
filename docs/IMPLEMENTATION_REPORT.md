@@ -1,5 +1,17 @@
 # Implementation report — 2026-11-13
 
+## Current continuation result
+
+Continued across P0, P1 and P2 with working TypeScript services and offline regressions. Added Tooling and read-only SOAP Metadata clients, independent SOQL state verification, sandbox-scoped create/delete transport, pending/completed side-effect journal and cleanup ownership, headless reviewed browser-session bootstrap, durable SQLite LangGraph checkpoints and named human interrupts, approval-ID-only MCP execution, embeddings/Chroma ingestion and scoped retrieval, SQLite execution history and Playwright reporter, workflow-based test generation, bounded MCP observation, deterministic risk selection, evidence-linked failure/defect proposals, guarded repair proposals, verified lessons and coverage/analytics utilities.
+
+Final executed checks: typecheck passed; **29 unit tests passed**; offline demo passed; **3 headless browser tests passed**, including actual generated TypeScript; generated outcomes persisted to SQLite history. Durable saver restart/resume and approval/production-write rejection are offline-tested. Dependency installation completed with zero vulnerabilities reported by npm. No real Salesforce calls, browser session creation, Salesforce writes, remote embeddings or Chroma requests were performed.
+
+The current completion matrix is the first table in FEATURE_MATRIX.md. Core service implementations are available, but end-to-end autonomous Salesforce QA remains incomplete. Missing code includes hybrid business/UI factory execution, full metadata/permission graph, rich action exploration, automatic intent-preserving code repair, model evaluation dashboards and Reporting Labs integration. Missing external prerequisites include authorized sandbox credentials, reviewed business recipes and persona login functions, a remote Chroma/embedding provider and a precise Reporting Labs API/authentication contract. These are not all external blockers: the missing implementations remain engineering work.
+
+Security check before publication: `.env`, private keys, `.auth`, `.state`, SQLite files, approval records, generated tests and runtime reports are ignored; tracked-file scans found no such artifacts. Changes remain scoped to the isolated SalesforceAgenticQA repository and normal non-force publication of feature/verified-discovery.
+
+## Historical first increment
+
 This increment improves the starter. The complete P0/P1/P2 master request remains unfinished; FEATURE_MATRIX.md identifies each remaining capability.
 
 ## Implemented and locally verified

@@ -1,5 +1,14 @@
 # Framework Knowledge Base
 
+## Continuation verification — 2026-11-13
+
+- Durable checkpoints must preserve pending writes and serialized byte arrays, not only visible graph state. Evidence: unit/platform.test.ts closes and reopens the SQLite saver before resuming a real LangGraph human interrupt.
+- A network exception after mutation dispatch is not proof that no record was created. Pending journal entries block automatic retry. Regression: uncertain side effects test in unit/platform.test.ts.
+- Record cleanup requires run ownership, not merely a matching object name. Regression: cross-run deletion rejection in unit/platform.test.ts.
+- Runtime history must derive from actual Playwright outcomes. Evidence: history reporter recorded three passed browser tests including generated workflow code; platform metrics returned executed=3, passed=3, failed=0.
+- Metadata SOAP read calls use HTTP POST despite being read-only. Keep this fixed readMetadata transport separate from generic mutation dispatch. Regression: unit/metadata.test.ts rejects unsupported verbs/types, DTDs and faults.
+- Dedicated approved writes extend the earlier blanket API-write-denial rule. Generic POST is still denied; sandbox identity, explicit object permission and scoped review are required by client.mutate. This is tested offline, not verified against a live org.
+
 ## Verified architecture decisions
 - Local-first Windows-compatible TypeScript framework.
 - Headless Playwright only.

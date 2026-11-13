@@ -1,4 +1,6 @@
 import { getSalesforceToken } from './jwt.js';
+import { authorize, type Mutation, type Approval } from './approval.js';
+import { metadataRequest,parseMetadata } from './metadata.js';
 export class SalesforceClient {
   private constructor(private instance:string,private token:string, private version:string) {}
   static async connect() {
@@ -19,4 +21,19 @@ export class SalesforceClient {
     return await response.json() as T;
   }
   get apiVersion(){return this.version;}
+  async readMetadata(type:string,names:string[]) {
+    const body=metadataRequest(type,names,this.token);
+    const response=await fetch(`${this.instance}/services/Soap/m/${this.version.slice(1)}`,{method:'POST',body,headers:{'Content-Type':'text/xml; charset=utf-8',SOAPAction:'readMetadata'},redirect:'error',signal:AbortSignal.timeout(30000)});
+    if(!response.ok) throw Error(`Read-only Metadata API failed (${response.status})`);
+    return {type,names,source:`metadata:readMetadata:${this.version}`,observedAt:new Date().toISOString(),metadata:parseMetadata(await response.text())};
+  }
+  async mutate(input:Mutation,approval:Approval) {
+    const identity=await this.get<{records:Array<{Id:string;IsSandbox:boolean}>}>(`/services/data/${this.version}/query?q=${encodeURIComponent('SELECT Id,IsSandbox FROM Organization LIMIT 1')}`);
+    if(identity.records.length!==1) throw Error('Organization identity unavailable');
+    const m=authorize(input,approval,identity.records[0],(process.env.SFQA_WRITE_OBJECTS||'').split(',').filter(Boolean));
+    const path=`${this.instance}/services/data/${this.version}/sobjects/${m.object}${m.operation==='delete'?'/'+m.id:''}`;
+    const response=await fetch(path,{method:m.operation==='create'?'POST':'DELETE',headers:{Authorization:`Bearer ${this.token}`,'Content-Type':'application/json'},body:m.operation==='create'?JSON.stringify(m.values):undefined,redirect:'error',signal:AbortSignal.timeout(30000)});
+    if(!response.ok) throw Error(`Approved mutation failed (${response.status})`);
+    return m.operation==='create'?await response.json() as {id:string;success:boolean}:undefined;
+  }
 }

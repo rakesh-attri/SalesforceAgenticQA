@@ -1,5 +1,37 @@
 # Local setup (Windows PowerShell)
 
+## Continuation commands
+
+```powershell
+npm.cmd ci
+npm.cmd run typecheck
+npm.cmd run unit
+npm.cmd run demo
+npm.cmd run platform -- generate-fixture
+npm.cmd test
+npm.cmd run platform -- metrics
+npm.cmd run platform -- graph-start reviewed-thread
+npm.cmd run platform -- graph-resume reviewed-thread YOUR_REVIEWER_NAME
+# Authorized live read-only integrations:
+npm.cmd run platform -- metadata
+npm.cmd run platform -- metadata-read CustomObject Account,Contact
+# Input-driven analysis (see platform-cli.ts input contracts):
+npm.cmd run platform -- risk path-to-selection-input.json
+npm.cmd run platform -- investigate path-to-failure-input.json
+npm.cmd run platform -- rag-index path-to-verified-source.json
+npm.cmd run platform -- rag-query path-to-scoped-query.json
+```
+
+SQLite uses Node's built-in node:sqlite (experimental in the verified Node 24.14.1 runtime); use Node 22.13+ or Node 24. Checkpoint saving is single-writer, not a distributed service. Runtime files remain ignored. Generated tests live in ignored tests/generated and must be regenerated after cloning.
+
+RAG requires CHROMA_HOST (HTTPS hostname), optional CHROMA_TOKEN, SFQA_EMBEDDING_URL (HTTPS OpenAI-compatible endpoint), SFQA_EMBEDDING_MODEL and SFQA_EMBEDDING_KEY. The caller must review source text for sensitive data before remote ingestion; built-in redaction is a limited additional filter, not a complete DLP system. Chroma Cloud-specific tenant/database configuration is not yet exposed by this CLI.
+
+Approved writes are disabled by default. The new dedicated mutation path requires a fresh Organization IsSandbox check, matching org ID, expiring SHA-256 payload approval, reviewer, nonFinancialReviewed=true and explicit SFQA_WRITE_OBJECTS allowlist. Ordinary request(POST) remains denied. MCP additionally requires SFQA_ENABLE_APPROVED_TOOLS=true and an operator-controlled ignored .state/reviewed-mutations.json map of approval IDs to {mutation,approval}. MCP cannot create approvals. Protect that file from untrusted edits. DataExecution journals pending operations before network calls, never retries uncertain effects, and permits cleanup only for a record created by that run. Each deletion needs its own scoped approval. Existing business automation must be reviewed before allowing object writes; no financial transactions are authorized by the framework.
+
+Browser sessions are created only through createBrowserSession with an explicitly reviewed org-specific authenticator and independent persona verifier. JWT is never used as browser-login evidence. All network origins are explicitly allowlisted. A real session has not been created during verification.
+
+The sections below describe the original starter and should be read with the dedicated mutation-path exception above.
+
 Use Node 22+ and npm; no Docker or Python. If PowerShell rejects npm.ps1, use npm.cmd without changing machine execution policy.
 
 ```powershell
