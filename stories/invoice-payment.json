@@ -1,0 +1,12 @@
+{
+  "id":"SFQA-001",
+  "title":"Student invoice payment",
+  "description":"As a student I want to pay an outstanding invoice through a sandbox payment provider.",
+  "persona":"Experience Cloud student",
+  "objects":["Account","Contact","Invoice"],
+  "acceptanceCriteria":[
+    {"id":"AC1","text":"A successful sandbox payment produces the approved payment status and invoice allocation."},
+    {"id":"AC2","text":"A declined sandbox payment does not mark the invoice paid."},
+    {"id":"AC3","text":"A repeated submission does not create a duplicate captured transaction."}
+  ]
+}

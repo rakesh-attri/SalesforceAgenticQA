@@ -1,0 +1,10 @@
+{
+  "orgAlias": "fixture-training-org",
+  "observedAt": "2026-11-13T00:00:00Z",
+  "source": "fixture",
+  "objects": [
+    {"name":"Account","label":"Account","createable":true,"fields":[{"name":"Name","type":"string","nillable":false,"createable":true,"defaultedOnCreate":false}]},
+    {"name":"Contact","label":"Contact","createable":true,"fields":[{"name":"LastName","type":"string","nillable":false,"createable":true,"defaultedOnCreate":false},{"name":"AccountId","type":"reference","nillable":true,"createable":true,"defaultedOnCreate":false,"referenceTo":["Account"]}]},
+    {"name":"Invoice","label":"Invoice","createable":false,"fields":[{"name":"Name","type":"string","nillable":false,"createable":false,"defaultedOnCreate":false}]}
+  ]
+}

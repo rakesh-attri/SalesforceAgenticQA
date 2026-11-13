@@ -1,0 +1,36 @@
+{
+  "name": "salesforce-agentic-qa",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=22"},
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "demo": "tsx src/cli.ts demo",
+    "demo:graph": "tsx src/cli.ts graph-demo",
+    "mcp:salesforce": "tsx src/integrations/mcp-cli.ts",
+    "discover:fixture": "tsx src/cli.ts discover --fixture fixtures/org-sample.json",
+    "discover:live": "tsx src/cli.ts discover --live",
+    "plan": "tsx src/cli.ts plan stories/invoice-payment.json",
+    "data:plan": "tsx src/cli.ts data-plan stories/invoice-payment.json",
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "unit": "tsx --test unit/*.test.ts",
+    "agents": "playwright init-agents --loop=codex",
+    "mcp:browser": "npx @playwright/mcp --headless"
+  },
+  "dependencies": {
+    "@langchain/langgraph": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@playwright/test": "^1.55.0",
+    "@playwright/mcp": "^0.0.60",
+    "chromadb": "^3.0.0",
+    "dotenv": "^17.0.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.9.0"
+  }
+}

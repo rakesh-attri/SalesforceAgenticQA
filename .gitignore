@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.auth/
+.state/
+artifacts/
+playwright-report/
+test-results/
+*.pem
+*.key
+.DS_Store
