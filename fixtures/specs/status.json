@@ -1,0 +1,10 @@
+{
+  "id": "fixture-status",
+  "title": "Apply status",
+  "description": "Local fixture apply action changes status to Paid; this is not Salesforce.",
+  "objects": [],
+  "persona": "local fixture tester",
+  "acceptanceCriteria": [
+    {"id": "AC1", "kind": "positive", "text": "Apply updates status to Paid", "expectedText": "Paid"}
+  ]
+}

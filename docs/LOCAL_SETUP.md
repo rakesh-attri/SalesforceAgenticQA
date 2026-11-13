@@ -1,5 +1,19 @@
 # Local setup (Windows PowerShell)
 
+## Specs-to-tests and verified-learning workflow
+
+See [SPECS_PIPELINE.md](SPECS_PIPELINE.md) for the connected workflow, bundle schema, trust boundaries and continuation point.
+
+```powershell
+npm.cmd run platform -- spec-ingest fixtures/specs/status.json
+npm.cmd run platform -- demo-learning
+npm.cmd run platform -- knowledge-index path-to-reviewed-knowledge.json
+npm.cmd run platform -- spec-run path-to-reviewed-bundle.json
+npm.cmd run platform -- heal-workflow path-to-locator-review.json
+```
+
+The learning demo intentionally executes one failing fixture and one corrected regression. It retains screenshot/trace/JSON/HTML/JUnit evidence and prints the manifest path. This never creates Salesforce data or executes a financial transaction.
+
 ## Continuation commands
 
 ```powershell

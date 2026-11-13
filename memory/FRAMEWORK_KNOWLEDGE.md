@@ -1,5 +1,15 @@
 # Framework Knowledge Base
 
+## Integrated pipeline lessons — 2026-11-13
+
+- Extracted prose is not an executable expected outcome. The spec pipeline requires explicit expectedText, matching reviewed workflow assertions and exact criterion links. Missing negative/boundary behavior becomes a question. Regression: unit/spec-pipeline.test.ts.
+- A generated file is not a passing test. The coordinator parses actual Playwright exit/status/attachments, rejects incomplete or duplicated reports and records only executed outcomes. Regression: real seeded failure and corrected run in spec-pipeline integration; blocked evaluation has zero passes.
+- Trusted source text cannot change under the same source version. Scoped schema-version changes conservatively deprecate schema-dependent facts and lessons until refreshed/reviewed. Regression: knowledge version/invalidation test.
+- A locator proposal must target the actual failing generated source, preserve the original expected outcome, and pass a reviewed rerun. Regression: source-hash-bound candidate rerun in spec-pipeline integration.
+- A repeated reviewed finding must not blindly insert the same lesson again. The persistent learning demo exposed a uniqueness failure; confirmation now revalidates evidence/regression, accepts the same reviewed cause idempotently and rejects conflicting causes. Fingerprints include org/permission. Regression: duplicate/conflicting confirmations in unit/spec-pipeline.test.ts.
+- Discovery capture timestamps are provenance, not schema changes. Lesson invalidation uses a schema-content fingerprint while execution approval still binds the exact snapshot version. Regression: unit/snapshots.test.ts.
+- Synthetic parent references must be materialized before child dispatch; cleanup must preserve reverse dependency order and run ownership across all adapter modes. Regression: unit/hybrid-factory.test.ts.
+
 ## Continuation verification — 2026-11-13
 
 - Durable checkpoints must preserve pending writes and serialized byte arrays, not only visible graph state. Evidence: unit/platform.test.ts closes and reopens the SQLite saver before resuming a real LangGraph human interrupt.

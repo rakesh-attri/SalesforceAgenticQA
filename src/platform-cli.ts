@@ -11,8 +11,28 @@ import { prioritize,CaseSchema,investigate,defect,gaps } from './agents/quality.
 import { generateTest,WorkflowSchema } from './agents/workflows.js';
 import { writeFile,mkdir } from 'node:fs/promises';
 import { SemanticKnowledge,SourceSchema,httpEmbeddings } from './knowledge/rag.js';
+import { ingestSpec } from './specs/ingest.js';
+import { PipelineInputSchema,createSpecPipeline } from './agents/pipeline.js';
+import { KnowledgeIndex,KnowledgeSchema } from './knowledge/index.js';
+import { demonstrateLearning } from './demos/learning.js';
+import { healReviewedWorkflow,HealingSchema } from './agents/healing.js';
 const [mode,file,arg]=process.argv.slice(2);
+async function planningKnowledge(history:History) {
+  if(!process.env.SFQA_EMBEDDING_URL)return new KnowledgeIndex(history);
+  const embed=httpEmbeddings(process.env.SFQA_EMBEDDING_URL,process.env.SFQA_EMBEDDING_KEY??'',process.env.SFQA_EMBEDDING_MODEL??'');
+  const remote=process.env.CHROMA_HOST?await SemanticKnowledge.connect(process.env.CHROMA_HOST,embed,process.env.CHROMA_TOKEN?{Authorization:`Bearer ${process.env.CHROMA_TOKEN}`} : {}):undefined;
+  return new KnowledgeIndex(history,embed,remote);
+}
 async function main() {
+  if(mode==='heal-workflow') {const h=new History();try{const input=HealingSchema.parse(await loadJson(file));await saveJson(`artifacts/healing/${input.runId}/review.json`,await healReviewedWorkflow(input,{history:h,root:`artifacts/healing/${input.runId}/execution`,allowedOrigins:[input.original.origin]}));}finally{h.close();}return;}
+  if(mode==='demo-learning'){console.log(JSON.stringify(await demonstrateLearning(),null,2));return;}
+  if(mode==='spec-ingest'){await saveJson('artifacts/spec-ingested.json',await ingestSpec(file));console.log('Parsed explicit criteria; executable workflows and expectedText still require review.');return;}
+  if(mode==='knowledge-index') {const h=new History();try {await (await planningKnowledge(h)).ingest(KnowledgeSchema.parse(await loadJson(file)));}finally{h.close();}return;}
+  if(mode==='spec-run') {
+    const raw=await loadJson(file) as Record<string,unknown>;
+    const input=PipelineInputSchema.parse({...raw,spec:typeof raw.specPath==='string'?await ingestSpec(raw.specPath):raw.spec}),h=new History(),saver=new DurableSaver('.state/spec-checkpoints.sqlite');
+    try {const result=await createSpecPipeline({history:h,knowledge:await planningKnowledge(h),root:'artifacts/spec-runs',checkpointer:saver}).invoke({input},{configurable:{thread_id:input.runId}});console.log(result.reportPath);if(result.execution?.exitCode)process.exitCode=result.execution.exitCode;}finally{saver.close();h.close();}return;
+  }
   if(mode==='rag-index'||mode==='rag-query') {
     const required=(name:string)=>{const v=process.env[name];if(!v) throw Error(`Missing ${name}`);return v;};
     const rag=await SemanticKnowledge.connect(required('CHROMA_HOST'),httpEmbeddings(required('SFQA_EMBEDDING_URL'),required('SFQA_EMBEDDING_KEY'),required('SFQA_EMBEDDING_MODEL')),process.env.CHROMA_TOKEN?{Authorization:`Bearer ${process.env.CHROMA_TOKEN}`} : {});

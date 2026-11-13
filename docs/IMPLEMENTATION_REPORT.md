@@ -1,5 +1,25 @@
 # Implementation report — 2026-11-13
 
+## Specs-to-tests session
+
+Started from verified `1730bda` on the existing feature branch. Preserved the prior 29 unit tests and 3 browser tests. Added a connected LangGraph specification pipeline, actual format parsers, reviewed expected-outcome binding, scoped persistent knowledge, generated browser/API execution, trace and screenshot mapping, historical-defect retrieval, explicit defect review/learning, source-bound locator-only repair reruns and deterministic quality/HTML reporting. Added hybrid recipe dispatch with scoped approval checks, independent SOQL verification and reverse ownership-aware cleanup.
+
+Verified evidence:
+
+- `unit/spec-formats.test.ts`: actual JSON/YAML/Markdown/text/DOCX/PDF extraction; OpenAPI behavior is covered in spec-pipeline tests.
+- `unit/spec-pipeline.test.ts`: actual generated headless failing test → trace/screenshot investigation → corrected fixture passing unchanged UI/API assertion → simulated named fixture review → persisted verified defect → reopened SQLite → mandatory future regression. Includes source-bound locator candidate passing the same expected outcome, blocked stale org versions/approval hashes and zero false passes for unexecuted criteria.
+- `unit/hybrid-factory.test.ts`: metadata → ordered reviewed UI/service recipe adapters → explicit mock sandbox approvals → SOQL verification code → cross-run cleanup denial → reverse cleanup. No live Salesforce/UI business factory was executed.
+- `npm.cmd run platform -- demo-learning`: independently executed the seeded failure, corrected regression and learned future plan, with retained evidence at `artifacts/learning-26e70902-bd1e-48b7-b7a6-ac0fcd9576d1/manifest.json`. These are local runtime artifacts, not Git contents. A fixture review actor exercises review gates; no real Salesforce defect was confirmed.
+- Latest unit run: **36 tests passed**. Typecheck, original demo and all **3 headless browser tests passed**. The integrated unit suite separately executes a seeded failing browser test, a corrected regression and a reviewed locator-candidate rerun.
+
+A repeated persistent demonstration exposed a duplicate lesson insertion. Confirmation is now idempotent for the same reviewed cause/test while conflicting causes require explicit reconciliation; defect fingerprints include org and permission. Regression covers duplicate confirmation and conflicting review. Knowledge invalidation uses a stable schema-content fingerprint, so a timestamp-only discovery refresh does not discard trusted lessons. Regression: unit/snapshots.test.ts.
+
+After the fix, two consecutive persistent CLI demos completed successfully. Latest retained manifest: `artifacts/learning-40578624-0f91-4756-8135-f788c4f77d6d/manifest.json`; it links the actual failing run, corrected passing run, and future mandatory regression with verified lesson citation. Runtime evidence remains local and ignored by Git.
+
+Audit/inventory: CAPABILITY_AUDIT.md covers all 15 responsibilities. SPECS_PIPELINE.md provides executable commands, the bundle contract, evidence locations and boundaries. Missing engineering is not relabeled as an external blocker: live graph session/data-gate integration, permission/record-type graph, rich action exploration, connectors, remote-catalog retrieval, model evaluation and Reporting Labs integration remain incomplete. Credentials, reviewed org recipes/personas and an identified Reporting Labs API are separate external prerequisites.
+
+Exact next dependency: connect HybridFactory setup/independent verification/cleanup and a separately verified browser persona/session approval into createSpecPipeline before permitting sandbox origins. Keep fixture-only execution until those gates and retry/recovery tests exist. The current branch remains feature/verified-discovery; this session's verified commit and push are reported in Git and the final handoff.
+
 ## Current continuation result
 
 Continued across P0, P1 and P2 with working TypeScript services and offline regressions. Added Tooling and read-only SOAP Metadata clients, independent SOQL state verification, sandbox-scoped create/delete transport, pending/completed side-effect journal and cleanup ownership, headless reviewed browser-session bootstrap, durable SQLite LangGraph checkpoints and named human interrupts, approval-ID-only MCP execution, embeddings/Chroma ingestion and scoped retrieval, SQLite execution history and Playwright reporter, workflow-based test generation, bounded MCP observation, deterministic risk selection, evidence-linked failure/defect proposals, guarded repair proposals, verified lessons and coverage/analytics utilities.

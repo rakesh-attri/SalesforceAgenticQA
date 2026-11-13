@@ -1,5 +1,33 @@
 # Feature matrix
 
+## Specs-to-tests continuation (authoritative current delta)
+
+This table supersedes conflicting historical rows below. Evidence is offline unless explicitly stated. See CAPABILITY_AUDIT.md for all 15 agent owners, inputs, outputs and tool boundaries; SPECS_PIPELINE.md for commands and exact limits.
+
+| Capability | Status | Evidence / limit |
+|---|---|---|
+| JSON/YAML/Markdown/text/PDF/DOCX/OpenAPI ingestion | Verified | spec-formats actual parsers; explicit AC extraction; no OCR, external refs or inferred business outcomes |
+| Integrated LangGraph specs → plan → reviewed source generation → execution → reports | Verified | spec-pipeline integration; loopback fixtures only; missing outcomes/workflows block execution |
+| Automatic scoped historical context during planning | Verified | reopened SQLite retrieves verified defect and mandates regression |
+| Positive/negative/boundary coverage | Partially implemented | authored kind preserved; unspecified behaviors remain questions, not invented scenarios |
+| API backend assertions in generated tests | Verified | actual HTTP state assertion alongside browser check |
+| Hybrid dependency setup, ownership and reverse cleanup | Partially implemented | mocked approved UI/service adapters + actual SOQL verification code in hybrid-factory.test; live org adapters unverified |
+| Persistent trust/version/org/permission knowledge | Verified | statuses, immutable content versions, deprecation, snapshot invalidation and retrieval gates tested |
+| Hybrid lexical/vector retrieval and Chroma mirroring | Partially implemented | local index + configured embeddings/remote mirror; remote Chroma not exercised; Chroma-only catalog import missing |
+| Failure traces, screenshots, API/state and historical defect mapping | Partially implemented | real Playwright ZIP parsed; images linked, not visually interpreted; API/state inputs are explicit evidence |
+| Failure → reviewed root cause/fix → verified lesson → future regression | Verified | seeded failure + unchanged corrected regression + persistent follow-up plan |
+| Duplicate defect candidates and stale lesson invalidation | Partially implemented | scoped fingerprints and source/snapshot invalidation; semantic duplicate adjudication requires review |
+| Source-bound locator-only healing with actual rerun | Partially implemented | original executed source/hash bound, assertions unchanged; returns reviewed candidate; fixture-only |
+| Quality HTML/JSON reports, readiness and cross-run trends | Implemented | escaped report output and deterministic execution/grounding metrics; not an LLM evaluation dashboard |
+| Connected agent ownership inventory | Implemented | CAPABILITY_AUDIT.md, typed graph plus deterministic reviewed services |
+| Jira/Azure DevOps connectors / arbitrary existing-test import | Not implemented | normalize to supported criteria; no external connector credentials or implementation |
+| Full permission/record-type discovery, live graph setup/session gates | Not implemented | next dependency before live pipeline execution |
+| Rich autonomous actions and full model-based quality evaluation | Not implemented | bounded observation only; deterministic evaluations are not model-quality evaluation |
+| Reporting Labs | Blocked | provider/API/auth contract still unspecified |
+| Complete original P0/P1/P2 definition of done | Not implemented | remaining engineering and external prerequisites documented separately |
+
+Latest verification: typecheck passed; **36 unit/integration tests passed**; original offline demo passed; **3 headless browser tests passed**. The integrated suite runs its own generated failing/corrected/healing browser cases. No live Salesforce, remote Chroma or embedding-provider validation was executed.
+
 ## Current continuation — 2026-11-13
 
 The table below supersedes the first-increment inventory later in this file. Verified means the described offline behavior executed; it does not mean live Salesforce or remote Chroma validation. Full master-prompt completion remains outstanding.
