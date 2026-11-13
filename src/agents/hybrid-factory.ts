@@ -11,7 +11,8 @@ export interface FactoryAdapter extends DataAdapter {
   verify(m:Mutation,id:string):Promise<unknown>;
 }
 export class HybridFactory {
-  constructor(private history:History,private adapters:Partial<Record<Mode,FactoryAdapter>>,private allowedObjects:string[]){}
+  constructor(private history:History,private adapters:Partial<Record<Mode,FactoryAdapter>>,private allowedObjects:string[]){history.db.exec('CREATE TABLE IF NOT EXISTS factory_records(run TEXT,object TEXT,id TEXT,mode TEXT,evidence TEXT,PRIMARY KEY(run,object,id))');}
+  owned(runId:string):SetupRecord[] {return this.history.db.prepare('SELECT object,id,mode,evidence FROM factory_records WHERE run=? ORDER BY rowid').all(runId).map(r=>({object:String(r.object),id:String(r.id),mode:r.mode as Mode,evidence:r.evidence?JSON.parse(String(r.evidence)):null}));}
   plan(recipes:Recipe[],org:OrgSnapshot) {
     const registry=new RecipeRegistry(),byObject=new Map<string,Recipe>();
     for(const recipe of recipes){registry.register(recipe);if(byObject.has(recipe.object))throw Error('One recipe per object required');byObject.set(recipe.object,recipe);}
@@ -36,8 +37,9 @@ export class HybridFactory {
       }
       const m:Mutation={runId,object:recipe.object,operation:'create',values};
       const id=String(await this.executor(recipe.mode).execute(m,await approvalFor(m)));
+      this.history.db.prepare('INSERT OR IGNORE INTO factory_records VALUES(?,?,?,?,NULL)').run(runId,recipe.object,id,recipe.mode);
       // Verification failure does not erase the durable ownership registry or trigger blind retries.
-      const evidence=await this.adapters[recipe.mode]!.verify(m,id);references.set(recipe.object,id);created.push({object:recipe.object,id,mode:recipe.mode,evidence});
+      const evidence=await this.adapters[recipe.mode]!.verify(m,id);if(evidence===undefined||evidence===null||evidence===false)throw Error('Independent verification produced no affirmative evidence');this.history.db.prepare('UPDATE factory_records SET evidence=? WHERE run=? AND object=? AND id=?').run(JSON.stringify(evidence),runId,recipe.object,id);references.set(recipe.object,id);created.push({object:recipe.object,id,mode:recipe.mode,evidence});
     }return created;
   }
   async cleanup(runId:string,created:Array<{object:string;id:string;mode:Mode}>,approvalFor:(m:Mutation)=>Promise<Approval>) {
@@ -48,3 +50,4 @@ export class HybridFactory {
     }return deleted;
   }
 }
+export type SetupRecord={object:string;id:string;mode:Mode;evidence:unknown};

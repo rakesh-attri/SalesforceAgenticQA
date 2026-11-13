@@ -1,5 +1,11 @@
 # Architecture
 
+## Current sandbox-readiness integration
+
+The spec coordinator now wraps runtime preflight, approved hybrid setup/independent verification, verified-reference binding, authenticated execution and cleanup in a journaled lifecycle. It reserves run IDs before effects and distinguishes test outcomes from overall lifecycle success. Verification failures retain owned records for cleanup; cleanup failures cannot masquerade as passing runs or verified fixes. See SANDBOX_EXECUTION.md for current contracts. Older sections below describe historical states and are superseded by FEATURE_MATRIX.md.
+
+The configured sandbox runtime independently checks fresh API/org identity, live Describe drift, a content-hashed expiring private session receipt and a fresh reviewed browser identity probe. Credentials and browser state are never graph messages. Chroma results now contribute to retrieval only after local source-version/trust isolation checks. No live integration was executed during development.
+
 ## Continuation runtime
 
 The current platform adds node:sqlite execution history and a single-writer durable LangGraph saver. The saver persists serialized checkpoint bytes and pending writes, supports process restart, and preserves interrupt/resume semantics. Human plan review remains separate from data-operation approval.

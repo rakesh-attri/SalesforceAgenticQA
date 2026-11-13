@@ -1,5 +1,7 @@
 # Specs in, tests out
 
+Current runtime update: [SANDBOX_EXECUTION.md](SANDBOX_EXECUTION.md) supersedes the older fixture-only boundary and setup continuation notes below. Fixture behavior is preserved. Sandbox execution now requires explicit runtime identity/schema/session gates, policy-bound data operations and lifecycle cleanup. The live CLI registers only the API adapter; actual Salesforce verification remains blocked by external prerequisites.
+
 ## Run the integrated demonstration
 
 ```powershell

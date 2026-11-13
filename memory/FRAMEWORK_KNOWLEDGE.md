@@ -1,5 +1,14 @@
 # Framework Knowledge Base
 
+## Sandbox-readiness integration lessons
+
+- Persist known factory ownership before independent verification. Otherwise verification failures lose cleanup references even though a create succeeded. Regression: readiness-pipeline.test.ts verifies cleanup after a seeded verification failure.
+- Adapter verification must return affirmative evidence or throw. False/null/undefined cannot be treated as verified records. Regression: readiness-pipeline.test.ts false evidence blocks browser dispatch and preserves cleanup.
+- A browser test passing is insufficient if cleanup failed. Preserve its real pass row, mark the overall lifecycle failed, and reject that run as verified-fix evidence. Regression: readiness-pipeline.test.ts cleanup failure and confirmDefect rejection.
+- Gate denial must precede every effect, including cleanup. Cleanup is attempted only if setup started; unique pending run reservations prevent blind replay. Regression: denied-session and repeated-run checks.
+- Browser identity must be independently verified; JWT identity does not establish browser auth. State receipts bind private file content and identity/expiry, while the runner consumes the separately approved state. Regression: session receipt tampering, identity/expiry denial and actual cookie-authenticated fixture execution.
+- Chroma SDK upserts require a preflight protocol call in addition to collection/query endpoints. The initial HTTP mock failed at preflight; adding the documented-by-installed-SDK endpoint fixed it. Regression: chroma-wire.test.ts. Remote hits are intersected with local reviewed scope/version state, never promoted directly to trusted facts.
+
 ## Integrated pipeline lessons — 2026-11-13
 
 - Extracted prose is not an executable expected outcome. The spec pipeline requires explicit expectedText, matching reviewed workflow assertions and exact criterion links. Missing negative/boundary behavior becomes a question. Regression: unit/spec-pipeline.test.ts.

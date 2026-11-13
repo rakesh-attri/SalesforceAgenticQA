@@ -1,6 +1,7 @@
 import { getSalesforceToken } from './jwt.js';
 import { authorize, type Mutation, type Approval } from './approval.js';
 import { metadataRequest,parseMetadata } from './metadata.js';
+import { z } from 'zod';
 export class SalesforceClient {
   private constructor(private instance:string,private token:string, private version:string) {}
   static async connect() {
@@ -21,6 +22,14 @@ export class SalesforceClient {
     return await response.json() as T;
   }
   get apiVersion(){return this.version;}
+  async identity() {
+    const response=await fetch(`${this.instance}/services/oauth2/userinfo`,{headers:{Authorization:`Bearer ${this.token}`},redirect:'error',signal:AbortSignal.timeout(30000)});
+    if(!response.ok)throw Error(`OAuth identity unavailable (${response.status})`);
+    const user=z.object({organization_id:z.string(),user_id:z.string()}).parse(await response.json());
+    const org=z.object({records:z.array(z.object({Id:z.string(),IsSandbox:z.boolean()})).length(1)}).parse(await this.get(`/services/data/${this.version}/query?q=${encodeURIComponent('SELECT Id,IsSandbox FROM Organization LIMIT 1')}`));
+    if(org.records[0].Id!==user.organization_id)throw Error('OAuth organization identity mismatch');
+    return {...org.records[0],userId:user.user_id};
+  }
   async readMetadata(type:string,names:string[]) {
     const body=metadataRequest(type,names,this.token);
     const response=await fetch(`${this.instance}/services/Soap/m/${this.version.slice(1)}`,{method:'POST',body,headers:{'Content-Type':'text/xml; charset=utf-8',SOAPAction:'readMetadata'},redirect:'error',signal:AbortSignal.timeout(30000)});

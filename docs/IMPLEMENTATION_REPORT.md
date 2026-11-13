@@ -1,5 +1,27 @@
 # Implementation report — 2026-11-13
 
+## Sandbox-readiness increment (current)
+
+Reconciled all original P0/P1/P2 and later specs-to-tests requirements against FEATURE_MATRIX.md before implementation/reporting. The current matrix is now a single inventory; conflicting historical tables moved to HISTORICAL_FEATURE_MATRIX.md. No earlier requirement was removed. Started from `43f93fb` on the existing isolated `feature/verified-discovery` branch.
+
+Dependency chain implemented: execution approval → fresh API/sandbox identity and schema/session checks → approved recipe planning → hybrid setup → independent verification → concrete record-reference binding → authenticated generated execution → approved reverse cleanup → lifecycle investigation/reporting. The existing offline flows remain supported.
+
+Completed within their stated scopes:
+
+- Spec graph calls the existing hybrid factory and runtime preflight. Known creations are journaled before verification, so verification failures still allow approved cleanup. Session/gate failures cannot initiate setup or cleanup. Pending run reservations prevent replay of uncertain effects. Explicit reviewed retention is supported.
+- Verified browser-state path is supplied to headless Playwright. Private receipts bind state SHA-256, org/user/persona, approved HTTPS origins, reviewer and bounded lifetime; consumed state and receipt paths are resolved under `.auth`. Existing session creation also rejects invalid/outside destinations before authentication and checks resolved output directories.
+- Configured live API runtime fetches fresh OAuth userinfo and sandbox identity, re-describes reviewed objects to reject schema drift, and independently probes the approved browser persona before setup and before browser execution. CLI wiring is available but no Salesforce connection was executed.
+- Overall lifecycle status is distinct from actual test results. Setup/cleanup/session errors produce evidence-linked hypotheses. A passed test from a failed cleanup lifecycle cannot confirm a verified fix.
+- Chroma retrieval now influences planning/investigation ranking, intersected with current locally reviewed source/version/org/permission records. The real SDK HTTP test covers auth, preflight, collection, upsert and query plus malicious/stale scope rejection. Its initial mock omitted the SDK preflight endpoint; that fixture was corrected and the protocol test passed.
+
+Verification: baseline typecheck, 36 tests, demo and 3 browsers passed. Expanded suite: **41 unit/integration tests passed**, typecheck passed, original demo passed, **3 headless browser tests passed**. New evidence: readiness-pipeline.test.ts (actual authenticated loopback browser, setup/reference/verification/cleanup paths, denial and failure-learning gates), live-runtime.test.ts (OAuth/org mismatch and schema drift denial), chroma-wire.test.ts (real SDK against local mock HTTP service). Final path-security regressions are included. No live Salesforce, financial transaction, external Chroma or model-provider validation was performed.
+
+Final focused rerun: typecheck and all 3 hybrid/readiness tests passed after strengthening the independent-verification contract: false/null/undefined evidence blocks browser dispatch and still permits approved owned-record cleanup. Full-suite execution remained 41 tests; the focused rerun is additional validation, not three new tests.
+
+Still partial: actual live browser/recipe workflows, org UI/service adapters, complete permission/record-type discovery, reviewed recovery of pending side effects, dynamic parent-dependent mutation approvals, autonomous action exploration, connectors, external Chroma-only catalog import and model evaluation. Reporting Labs remains blocked by an unspecified provider/API contract. External sandbox/session/model/vector credentials are separate prerequisites; they do not stand in for unfinished code.
+
+Next continuation: validate the configured runtime in an authorized sandbox with a reviewed nonfinancial workflow, then extend permission/record-type discovery and explicit approved recovery/approval interruptions. Current commands/contracts are in SANDBOX_EXECUTION.md. All 15 agent owners remain tracked in CAPABILITY_AUDIT.md and the reconciled feature matrix.
+
 ## Specs-to-tests session
 
 Started from verified `1730bda` on the existing feature branch. Preserved the prior 29 unit tests and 3 browser tests. Added a connected LangGraph specification pipeline, actual format parsers, reviewed expected-outcome binding, scoped persistent knowledge, generated browser/API execution, trace and screenshot mapping, historical-defect retrieval, explicit defect review/learning, source-bound locator-only repair reruns and deterministic quality/HTML reporting. Added hybrid recipe dispatch with scoped approval checks, independent SOQL verification and reverse ownership-aware cleanup.

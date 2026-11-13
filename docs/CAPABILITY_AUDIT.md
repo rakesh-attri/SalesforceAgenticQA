@@ -1,5 +1,7 @@
 # Capability audit and agent ownership
 
+Current increment: the graph coordinator now integrates Data Agent setup/verification/cleanup and Execution Coordinator session/identity gates. Knowledge Agent reads real Chroma query results with a locally verified catalog intersection. Failure Investigator receives lifecycle evidence, and Learning rejects passing tests from failed cleanup lifecycles. All 15 owners in the table remain; partial Explorer/Autonomous Explorer/model-evaluation roles are not relabeled complete. New evidence: readiness-pipeline.test.ts, live-runtime.test.ts, chroma-wire.test.ts. FEATURE_MATRIX.md is reconciled into one current inventory; earlier conflicting tables are archived.
+
 Audit starting point: `1730bda`, branch `feature/verified-discovery`, isolated SalesforceAgenticQA repository. Baseline executed: typecheck, 29 unit tests, demo, 3 headless browser tests passed. Existing Describe/Metadata/Tooling, recipe/journal, durable planning graph, MCP, Chroma adapters and deterministic quality functions were retained. The material gap was orchestration: specification ingestion, executable spec graph, failure evidence ingestion, persistent trusted retrieval and verified feedback were absent or disconnected. New code reuses those services rather than replacing them.
 
 All services are local TypeScript. Tool access below is an architectural boundary, not a claim of an external LLM agent running. `spec-pipeline.test.ts` connects the main graph; remaining agent responsibilities use the related explicit reviewed service workflows.

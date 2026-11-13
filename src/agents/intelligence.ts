@@ -26,6 +26,8 @@ export async function confirmDefect(history:History,index:KnowledgeIndex,scope:S
   review=ConfirmSchema.parse(review);
   if(!proposal.evidence.length||!history.results().some(r=>r.testId===proposal.testId&&r.status==='failed'&&r.evidence.some(e=>proposal.evidence.includes(e))))throw Error('Recorded failing execution evidence required');
   if(!history.results().some(r=>r.runId===review.regressionRun&&r.testId===proposal.testId&&r.status==='passed'))throw Error('Passing regression evidence required');
+  const lifecycleTable=history.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='pipeline_runs'").get();
+  if(lifecycleTable){const lifecycle=history.db.prepare('SELECT status FROM pipeline_runs WHERE run=?').get(review.regressionRun);if(lifecycle&&lifecycle.status!=='passed')throw Error('Regression pipeline lifecycle did not pass');}
   const existing=history.lessons().find(l=>l.id===proposal.id);
   if(existing&&(existing.testId!==proposal.testId||existing.rootCause!==review.rootCause))throw Error('Conflicting confirmed lesson requires explicit reconciliation');
   if(!existing)history.learn({id:proposal.id,testId:proposal.testId,reviewer:review.reviewer,rootCause:review.rootCause,evidence:proposal.evidence,regressionRun:review.regressionRun});

@@ -1,5 +1,16 @@
 # Local setup (Windows PowerShell)
 
+## Authorized sandbox runtime
+
+Read [SANDBOX_EXECUTION.md](SANDBOX_EXECUTION.md) before configuring the optional live runtime. It defines session receipts, private operator policy, exact mutation approvals, graph setup/verification/cleanup, failure recovery and external prerequisites.
+
+```powershell
+npm.cmd run platform -- session-verify .state/session-review.json
+npm.cmd run platform -- spec-run .state/reviewed-sandbox-bundle.json
+```
+
+These commands require separately authorized credentials, observed identity probes and reviewed inputs; they were not executed against Salesforce during verification. Existing offline commands below remain supported.
+
 ## Specs-to-tests and verified-learning workflow
 
 See [SPECS_PIPELINE.md](SPECS_PIPELINE.md) for the connected workflow, bundle schema, trust boundaries and continuation point.

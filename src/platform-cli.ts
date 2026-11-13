@@ -16,6 +16,8 @@ import { PipelineInputSchema,createSpecPipeline } from './agents/pipeline.js';
 import { KnowledgeIndex,KnowledgeSchema } from './knowledge/index.js';
 import { demonstrateLearning } from './demos/learning.js';
 import { healReviewedWorkflow,HealingSchema } from './agents/healing.js';
+import { configuredSandboxRuntime,configuredProbe,RuntimePolicySchema } from './integrations/live-runtime.js';
+import { issueSessionReceipt,BrowserIdentitySchema } from './integrations/session-gate.js';
 const [mode,file,arg]=process.argv.slice(2);
 async function planningKnowledge(history:History) {
   if(!process.env.SFQA_EMBEDDING_URL)return new KnowledgeIndex(history);
@@ -24,6 +26,11 @@ async function planningKnowledge(history:History) {
   return new KnowledgeIndex(history,embed,remote);
 }
 async function main() {
+  if(mode==='session-verify') {
+    const policy=RuntimePolicySchema.parse(await loadJson('.state/sandbox-policy.json'));
+    const raw=await loadJson(file) as {statePath:string;identity:unknown;reviewer:string;receiptPath:string};
+    console.log(await issueSessionReceipt({statePath:raw.statePath,identity:BrowserIdentitySchema.parse(raw.identity),reviewer:raw.reviewer,receiptPath:raw.receiptPath,ttlMs:15*60*1000,origins:policy.allowedOrigins,probe:configuredProbe(policy)}));return;
+  }
   if(mode==='heal-workflow') {const h=new History();try{const input=HealingSchema.parse(await loadJson(file));await saveJson(`artifacts/healing/${input.runId}/review.json`,await healReviewedWorkflow(input,{history:h,root:`artifacts/healing/${input.runId}/execution`,allowedOrigins:[input.original.origin]}));}finally{h.close();}return;}
   if(mode==='demo-learning'){console.log(JSON.stringify(await demonstrateLearning(),null,2));return;}
   if(mode==='spec-ingest'){await saveJson('artifacts/spec-ingested.json',await ingestSpec(file));console.log('Parsed explicit criteria; executable workflows and expectedText still require review.');return;}
@@ -31,7 +38,7 @@ async function main() {
   if(mode==='spec-run') {
     const raw=await loadJson(file) as Record<string,unknown>;
     const input=PipelineInputSchema.parse({...raw,spec:typeof raw.specPath==='string'?await ingestSpec(raw.specPath):raw.spec}),h=new History(),saver=new DurableSaver('.state/spec-checkpoints.sqlite');
-    try {const result=await createSpecPipeline({history:h,knowledge:await planningKnowledge(h),root:'artifacts/spec-runs',checkpointer:saver}).invoke({input},{configurable:{thread_id:input.runId}});console.log(result.reportPath);if(result.execution?.exitCode)process.exitCode=result.execution.exitCode;}finally{saver.close();h.close();}return;
+    try {const runtime=input.sandbox?configuredSandboxRuntime(h,await SalesforceClient.connect(),await loadJson('.state/sandbox-policy.json')):undefined;const result=await createSpecPipeline({history:h,knowledge:await planningKnowledge(h),root:'artifacts/spec-runs',checkpointer:saver,runtime}).invoke({input},{configurable:{thread_id:input.runId}});console.log(result.reportPath);if(result.lifecycle?.status==='failed')process.exitCode=1;else if(result.execution?.exitCode)process.exitCode=result.execution.exitCode;}finally{saver.close();h.close();}return;
   }
   if(mode==='rag-index'||mode==='rag-query') {
     const required=(name:string)=>{const v=process.env[name];if(!v) throw Error(`Missing ${name}`);return v;};
