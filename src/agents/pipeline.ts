@@ -17,6 +17,7 @@ import { writeFile } from 'node:fs/promises';
 import { evaluateReadiness,crossRunTrends,htmlReport } from './evaluation.js';
 import { SandboxRequestSchema,DataSetupSchema,type PipelineRuntime } from '../execution/readiness.js';
 import { ReasoningAgents,type AgentAdvice,type ReasoningRole } from './reasoning.js';
+import { proposeStoryRelationships } from './intelligence-plan.js';
 export const PipelineInputSchema=z.object({
   runId:z.string().regex(/^[A-Za-z0-9_-]+$/),spec:SpecSchema,org:OrgSnapshotSchema,permission:z.string().min(1),
   orgVersion:z.string(),allowedOrigins:z.array(z.string().url()).min(1),
@@ -28,7 +29,7 @@ export type PipelineInput=z.infer<typeof PipelineInputSchema>;
 export function executionHash(input:PipelineInput) {const {executionApproval,...payload}=PipelineInputSchema.parse(input);return createHash('sha256').update(JSON.stringify(payload)).digest('hex');}
 type Context=Awaited<ReturnType<KnowledgeIndex['retrieve']>>;
 export function analyze(input:PipelineInput,context:Context,history:History) {
-  const data=proposeDataPlan(input.spec,input.org),known=new Set(input.org.objects.map(o=>o.name));
+  const data=proposeDataPlan(input.spec,input.org,proposeStoryRelationships(input.spec,input.org)),known=new Set(input.org.objects.map(o=>o.name));
   const scenarios=input.spec.acceptanceCriteria.map(ac=>{
     const mapping=input.mappings.find(m=>m.criterionId===ac.id),reasons:string[]=[];
     if(!mapping)reasons.push('No reviewed workflow for criterion');

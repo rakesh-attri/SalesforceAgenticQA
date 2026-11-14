@@ -1,11 +1,13 @@
 import { z } from 'zod';
-import { OrgSnapshotSchema, type OrgSnapshot } from '../core/types.js';
+import { OrgSnapshotSchema,ObjectSchema, type OrgSnapshot } from '../core/types.js';
 import { SalesforceClient } from '../salesforce/client.js';
 const DescribeSchema=z.object({
   name:z.string(), label:z.string(), createable:z.boolean(),
   fields:z.array(z.object({name:z.string(),type:z.string(),nillable:z.boolean(),createable:z.boolean(),
     defaultedOnCreate:z.boolean().optional(),referenceTo:z.array(z.string()).optional(),
-    picklistValues:z.array(z.object({active:z.boolean(),value:z.string()})).optional()})),
+    picklistValues:z.array(z.object({active:z.boolean(),value:z.string()})).optional(),relationshipName:z.string().nullable().optional(),relationshipOrder:z.number().nullable().optional(),restrictedPicklist:z.boolean().optional(),length:z.number().optional(),precision:z.number().optional(),scale:z.number().optional(),updateable:z.boolean().optional()})),
+  recordTypeInfos:ObjectSchema.shape.recordTypeInfos,
+  childRelationships:ObjectSchema.shape.childRelationships,
 });
 export interface DiscoveryReader { apiVersion:string; get<T>(path:string):Promise<T> }
 export async function discoverOrg(client:DiscoveryReader,objectNames:string[]):Promise<OrgSnapshot> {

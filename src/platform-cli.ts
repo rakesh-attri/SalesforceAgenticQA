@@ -20,6 +20,11 @@ import { configuredSandboxRuntime,configuredProbe,RuntimePolicySchema } from './
 import { issueSessionReceipt,BrowserIdentitySchema } from './integrations/session-gate.js';
 import { configuredChat,configuredEmbeddings } from './ai/providers.js';
 import { ReasoningAgents,ReasoningRoleSchema } from './agents/reasoning.js';
+import { discoverOrgIntelligence,intelligenceVersion,IntelligenceSchema } from './agents/org-intelligence.js';
+import { planFromOrgIntelligence } from './agents/intelligence-plan.js';
+import { indexOrgIntelligence } from './knowledge/org-intelligence.js';
+import { SnapshotStore } from './knowledge/snapshots.js';
+import { prepareBrowserDiscovery } from './agents/browser-readiness.js';
 const [mode,file,arg]=process.argv.slice(2);
 async function planningKnowledge(history:History) {
   const embed=configuredEmbeddings();if(!embed)return new KnowledgeIndex(history);
@@ -27,6 +32,16 @@ async function planningKnowledge(history:History) {
   return new KnowledgeIndex(history,embed,remote);
 }
 async function main() {
+  if(mode==='org-plan') {const story=StorySchema.parse(await loadJson(file)),intel=IntelligenceSchema.parse(await loadJson(arg||'.state/org-intelligence-latest.json'));await saveJson(`artifacts/${story.id}/org-intelligence-plan.json`,planFromOrgIntelligence(story,intel));console.log(`Draft test/data plan saved for ${story.id}; no network calls or execution.`);return;}
+  if(mode==='org-intelligence') {
+    const story=StorySchema.parse(await loadJson(file));const client=await SalesforceClient.connect();
+    const result=await discoverOrgIntelligence(client,story,undefined,{allowNonSandboxRead:process.argv.includes('--allow-non-sandbox-read')}),version=intelligenceVersion(result),root=`.state/org-intelligence/${version}`;
+    await saveJson(`${root}/intelligence.json`,result);await saveJson('.state/org-intelligence-latest.json',result);
+    await new SnapshotStore().save(result.snapshot);await saveJson('.state/org-snapshot.json',result.snapshot);
+    await saveJson(`artifacts/${story.id}/org-intelligence-plan.json`,planFromOrgIntelligence(story,result));
+    await saveJson(`artifacts/${story.id}/browser-readiness.json`,await prepareBrowserDiscovery(result,{origin:process.env.SFQA_BROWSER_ORIGIN,persona:process.env.SFQA_BROWSER_PERSONA,receiptPath:process.env.SFQA_SESSION_RECEIPT}));
+    const h=new History();try {const reviewerIndex=process.argv.indexOf('--reviewer'),reviewer=reviewerIndex>=0?process.argv[reviewerIndex+1]:undefined;if(reviewerIndex>=0&&(!reviewer||reviewer.startsWith('--')))throw Error('Named metadata reviewer required');const knowledge=process.argv.includes('--with-embeddings')?await planningKnowledge(h):new KnowledgeIndex(h);const indexed=await indexOrgIntelligence(result,knowledge,process.env.SFQA_KNOWLEDGE_PERMISSION||'authorized-api-reader',reviewer);console.log(JSON.stringify({sandboxVerified:result.identity.IsSandbox,catalogObjects:result.catalogCount,describedObjects:result.snapshot.objects.length,fields:result.snapshot.objects.reduce((s,o)=>s+o.fields.length,0),recordTypes:result.snapshot.objects.reduce((s,o)=>s+(o.recordTypeInfos?.length??0),0),sections:result.sections.map(s=>({area:s.area,status:s.status,count:s.records.length})),unknowns:result.unknowns.length,knowledge:indexed,version,planPath:`artifacts/${story.id}/org-intelligence-plan.json`},null,2));}finally{h.close();}return;
+  }
   if(mode==='ai-reason'){const chat=configuredChat();if(!chat)throw Error('Chat provider is not configured');const role=ReasoningRoleSchema.safeParse(file);if(!role.success)throw Error('Unknown reasoning role');const advice=await new ReasoningAgents(chat).advise(role.data,{source:await loadJson(arg)});await saveJson(`artifacts/model-advice/${role.data}.json`,advice);console.log('Validated proposed model advice saved locally; human review required.');return;}
   if(mode==='session-verify') {
     const policy=RuntimePolicySchema.parse(await loadJson('.state/sandbox-policy.json'));

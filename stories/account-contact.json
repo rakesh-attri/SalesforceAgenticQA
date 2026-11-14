@@ -1,0 +1,12 @@
+{
+  "id": "SFQA-ACCOUNT-CONTACT",
+  "title": "Create a business account and related contact",
+  "description": "As an authorized sales user, I want to create a business account and a contact associated with that account. The exact Lightning navigation, business validation rules and approved data recipe must be confirmed in the sandbox.",
+  "persona": "authorized sales user (permissions not yet verified)",
+  "objects": [],
+  "acceptanceCriteria": [
+    {"id": "AC1", "text": "A valid business account can be saved through the approved workflow."},
+    {"id": "AC2", "text": "The saved contact references the intended account."},
+    {"id": "AC3", "text": "Invalid required-field input is rejected without an unintended record being saved."}
+  ]
+}

@@ -1,6 +1,6 @@
 import type { Story,OrgSnapshot,DataPlan,DataStep } from '../core/types.js';
 // Construct a conservative proposal, not a blind execution plan.
-export function proposeDataPlan(story:Story,org:OrgSnapshot):DataPlan {
+export function proposeDataPlan(story:Story,org:OrgSnapshot,relationships:Array<{object:string;field:string;parent:string;evidence:string[]}>=[]):DataPlan {
   const seen=new Set<string>(),steps:DataStep[]=[],warnings:string[]=[];
   for(const objectName of story.objects){
     const obj=org.objects.find(o=>o.name===objectName);
@@ -8,11 +8,13 @@ export function proposeDataPlan(story:Story,org:OrgSnapshot):DataPlan {
     const required=obj.fields.filter(f=>f.createable && !f.nillable && !f.defaultedOnCreate);
     const references=required.filter(f=>f.type==='reference');
     const ambiguous=references.filter(f=>(f.referenceTo?.length??0)!==1);
-    const deps=[...new Set(references.filter(f=>f.referenceTo?.length===1).flatMap(f=>f.referenceTo??[]))];
+    const requested=relationships.filter(r=>r.object===objectName);
+    const invalid=requested.some(r=>!r.evidence.length||!obj.fields.some(f=>f.name===r.field&&f.createable&&f.type==='reference'&&f.referenceTo?.includes(r.parent)));
+    const deps=[...new Set([...references.filter(f=>f.referenceTo?.length===1).flatMap(f=>f.referenceTo??[]),...requested.map(r=>r.parent)])];
     const unknown=deps.filter(d=>!story.objects.includes(d));
     if(seen.has(objectName)) continue;
-    const blocked=!obj.createable || unknown.length>0 || ambiguous.length>0;
-    steps.push({object:objectName,operation:'create',requiredFields:required.map(f=>f.name),dependsOn:deps,mode:'api',status:blocked?'blocked':'proposed',reason:!obj.createable?'Object not creatable':ambiguous.length?`Unresolved reference target: ${ambiguous.map(f=>f.name).join(', ')}`:unknown.length?`Unresolved parents: ${unknown.join(', ')}`:undefined});
+    const blocked=!obj.createable || unknown.length>0 || ambiguous.length>0||invalid;
+    steps.push({object:objectName,operation:'create',requiredFields:required.map(f=>f.name),dependsOn:deps,mode:'api',status:blocked?'blocked':'proposed',reason:!obj.createable?'Object not creatable':invalid?'Unverified business relationship field/target':ambiguous.length?`Unresolved reference target: ${ambiguous.map(f=>f.name).join(', ')}`:unknown.length?`Unresolved parents: ${unknown.join(', ')}`:undefined});
     seen.add(objectName);
   }
   // Check that required reference parents can be topologically ordered; do not execute cyclic graphs.

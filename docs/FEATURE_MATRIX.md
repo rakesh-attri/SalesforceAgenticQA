@@ -4,18 +4,24 @@ This is the reconciled source of truth for the original P0/P1/P2 master request 
 
 2026-11-14 authentication diagnostic verification: safe OAuth code/description classification and credential-withholding regressions passed. Read-only `discover:live` authenticated and discovered two configured objects with local credentials; no browser session, record mutation or broader live workflow was verified. Earlier `invalid_request` indicated the refresh_token scope/app installation/preauthorization requirement. See IMPLEMENTATION_REPORT.md for exact checks; prior statements of no live authentication apply to earlier increments.
 
+Latest org-intelligence run: OAuth/org identity succeeded but **IsSandbox=false**. Explicitly authorized metadata-only inspection read 1,088 catalog entries, selected Account/Contact from story terms, described 108 fields and two record-type info entries, and queried bounded Apex/Flow/permission/metadata inventories. This is **live Salesforce read-only verification, not sandbox/UI/write verification**. Raw sources remain local; see ORG_INTELLIGENCE.md for exact counts, partial/unknown areas and plans.
+
 ## Foundation and live readiness
 
 | Capability | Status | Evidence / remaining boundary |
 |---|---|---|
 | Standalone Windows/TypeScript/headless execution | Verified | existing typecheck/demo/browser suites retained; no Python/Docker dependency |
-| JWT API access and fresh OAuth/org identity | Partially implemented | JWT token + two-object live Describe verified on 2026-11-14; safe OAuth diagnostic mocks; client.identity userinfo/Organization runtime remains mock-validated |
+| JWT API access and fresh OAuth/org identity | Verified | actual userinfo/Organization identity executed; configured org reports IsSandbox=false; no sandbox assumption |
+| Story-driven accessible object resolution | Verified | catalog API-name/label matching, explicit-name checks, persona exclusion and budgets tested; live Account/Contact selected without SFQA_OBJECTS; relevance remains proposed |
 | Describe objects/fields/API-required fields/picklists/relationships | Verified | discovery tests; record-type rules and business requirements remain unknown |
-| Tooling Apex/FlowDefinition/validation rule reads | Partially implemented | bounded first 200 results; denied coverage unknown; source/dependency breadth incomplete |
-| Metadata SOAP named reads | Partially implemented | safe bounded readMetadata/XML tests; no live component retrieval |
-| Record-type scoped picklists, permission/sharing/dependency graph | Not implemented | must not infer business validity from Describe or API permissions |
+| Tooling Apex/FlowDefinition/validation rule reads | Partially implemented | live bounded reads: classes partial, triggers/flow definitions observed, selected validation query zero rows; behavior/dependency breadth incomplete |
+| Metadata SOAP named reads | Partially implemented | live CustomObject read executed; raw components retained locally pending interpretation/review |
+| Describe record-type/relationship intelligence | Verified | retained extended fields, record-type infos and child/parent relationships; actual two-object metadata read |
+| Permission inventories and scoped record-type query | Partially implemented | live ObjectPermissions/FieldPermissions/PermissionSetAssignment reads; field limit partial; record-type query zero rows; not effective authorization |
+| Record-type scoped picklists, effective sharing/dependency graph | Not implemented | dependency query unknown; permission-set muting/sharing/UI applicability and deep Flow/Apex analysis remain unknown |
 | Snapshot provenance, content versions/diffs/freshness | Verified | integrity, stable schema fingerprint and stale knowledge tests |
 | Dependency-aware data proposals/reviewed recipes | Verified | required/ambiguous/cyclic/blocked dependencies and recipe field/type/source gates |
+| Live story→metadata→test/data plan | Verified | three draft scenarios, API prerequisites and proposed Contact→Account dependency; no executable UI steps or writes authorized |
 | Hybrid API/UI/business factory lifecycle | Partially implemented | approved adapter dispatch, references, independent verification, reverse cleanup integrated in graph; built-in live CLI API adapter only; org UI/services require reviewed adapters |
 | Setup failure cleanup recovery | Verified | record journal precedes verification; graph cleans known owned rows after verification failure; unknown effects remain manual reconciliation |
 | Retry/idempotency/record ownership/retention | Verified | pending mutation/run journals, cross-run denial, reverse cleanup; retain requires named review; no automatic replay of uncertain effects |
@@ -67,6 +73,7 @@ This is the reconciled source of truth for the original P0/P1/P2 master request 
 | External Chroma-only source import / Cloud tenancy | Not implemented | explicit local review/catalog ingestion required; Cloud tenant/database CLI configuration incomplete |
 | Stale schema/lesson invalidation | Verified | schema-content changes deprecate dependent facts; capture-time-only changes do not |
 | Source-linked plan/investigation citations | Verified | criteria/version/workflow/verified-defect citations in reports |
+| Org intelligence→reviewed knowledge indexing | Verified | versioned observed local catalog by default; explicit reviewer required for trusted retrieval; tested planning/data/index links; external embedding upload opt-in |
 | Playwright HTML/JUnit/JSON/screenshots/traces | Verified | actual generated/local browser reports; lifecycle status reported independently from test rows |
 | Quality HTML/readiness/trends/retrieval metrics | Verified | deterministic grounding/execution/mixed-outcome metrics; mixed outcomes do not prove flakiness |
 | Full model evaluation/dashboard/knowledge effectiveness | Not implemented | deterministic metrics are not a model judge, retraining or comprehensive AI-quality evaluation |
@@ -77,6 +84,6 @@ This is the reconciled source of truth for the original P0/P1/P2 master request 
 
 ## Next dependency
 
-Latest completed checks (Gemini increment, 2026-11-14): typecheck passed, **64 unit/integration tests passed**, original demo passed and **3 headless browser tests passed**. Gemini APIs were mocked in tests; actual model:check returned chat model configuration failure and embedding not-configured. JWT/read-only Describe actually succeeded for two objects. Other live workflows/external services remain unverified.
+Latest completed checks (org-intelligence increment, 2026-11-14): typecheck passed, **69 unit/integration tests passed**, original demo passed and **3 headless browser tests passed**. The new five tests cover story resolution, graph/data/RAG links, metadata coverage and non-sandbox browser blocking. Actual read-only identity/catalog/metadata inspection succeeded against the configured **non-sandbox** org. Gemini check still reports chat model configuration failure and embedding not-configured. Live UI/data workflows and external vector/model responses remain unverified.
 
 Validate the configured API/session/data runtime in an authorized sandbox using reviewed nonfinancial workflows, then extend permission/record-type discovery and production-quality org UI/service adapters. Add explicit reviewed reconciliation/recovery for pending runs; do not silently replay them. Continue autonomous action exploration, semantic source import, connectors, model evaluation and provider-specific reporting afterwards. External credentials do not replace the unfinished engineering listed here.

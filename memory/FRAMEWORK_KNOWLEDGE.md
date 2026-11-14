@@ -1,5 +1,13 @@
 # Framework Knowledge Base
 
+## Real org intelligence — 2026-11-14
+
+- JWT success does not prove an org is a sandbox. Actual identity returned IsSandbox=false; default discovery refused it, and only an explicit read-only metadata exception proceeded. No UI/data-write gate is relaxed. Regression: org-intelligence.test.ts.
+- Story personas are not automatically data objects. A generic "sales user" mention must not propose User creation. Catalog-backed matching now excludes actor-only User mentions unless explicit object intent exists. Regression: story resolver test.
+- Optional relationship intent must be proposed against observed reference fields, not invented required fields. The real Account/Contact story yields Contact→Account while avoiding an inferred Account self-parent cycle. Regression: live-shaped plan/data integration test.
+- Accessible permission rows and zero validation-rule rows do not prove effective sharing or absence of business rules. Preserve observed/partial/unknown coverage and source queries. Live field/class results reached bounds and are partial; component dependencies remained unknown.
+- API observations are not silently trusted RAG knowledge. Store observed source/versioned facts locally; explicit reviewer publication is required for trusted scoped retrieval. Regression: observed→reviewed index test.
+
 ## Gemini integration lessons — 2026-11-14
 
 - Gemini chat uses generateContent structured JSON and local Zod validation; embeddings use a separate batchEmbedContents model. A configured key does not establish either endpoint works. Actual model:check reported a model configuration failure and embeddings not-configured, while Salesforce read-only JWT discovery succeeded for two objects.

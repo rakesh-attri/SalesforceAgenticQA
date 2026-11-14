@@ -9,7 +9,9 @@ export const StorySchema = z.object({
 export type Story = z.infer<typeof StorySchema>;
 export const ObjectSchema = z.object({
   name: z.string(), label: z.string(), createable: z.boolean(),
-  fields: z.array(z.object({ name: z.string(), type: z.string(), nillable: z.boolean(), createable: z.boolean(), defaultedOnCreate: z.boolean().optional(), referenceTo: z.array(z.string()).optional(), picklistValues: z.array(z.string()).optional() })),
+  fields: z.array(z.object({ name: z.string(), type: z.string(), nillable: z.boolean(), createable: z.boolean(), defaultedOnCreate: z.boolean().optional(), referenceTo: z.array(z.string()).optional(), picklistValues: z.array(z.string()).optional(),relationshipName:z.string().nullable().optional(),relationshipOrder:z.number().nullable().optional(),restrictedPicklist:z.boolean().optional(),length:z.number().optional(),precision:z.number().optional(),scale:z.number().optional(),updateable:z.boolean().optional() })),
+  recordTypeInfos:z.array(z.object({recordTypeId:z.string(),name:z.string(),developerName:z.string().optional(),active:z.boolean().optional(),available:z.boolean().optional(),master:z.boolean().optional(),defaultRecordTypeMapping:z.boolean().optional()})).optional(),
+  childRelationships:z.array(z.object({childSObject:z.string(),field:z.string(),relationshipName:z.string().nullable(),cascadeDelete:z.boolean().optional(),restrictedDelete:z.boolean().optional()})).optional(),
 });
 export const OrgSnapshotSchema = z.object({
   orgAlias: z.string(), observedAt: z.string(), source: z.enum(['fixture','salesforce-api']),

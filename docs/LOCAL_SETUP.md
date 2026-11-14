@@ -1,5 +1,15 @@
 # Local setup (Windows PowerShell)
 
+## Story-driven org intelligence
+
+```powershell
+npm.cmd run platform -- org-intelligence stories/account-contact.json
+# Explicit authorized metadata-only inspection when the configured org is not a sandbox:
+npm.cmd run platform -- org-intelligence stories/account-contact.json --allow-non-sandbox-read
+```
+
+See [ORG_INTELLIGENCE.md](ORG_INTELLIGENCE.md) for budgets, sources, local evidence/plan paths, review/RAG options and actual execution results. The configured org currently reports **IsSandbox=false**, so sandbox UI/data tests are not authorized. Read-only success does not override that identity flag.
+
 ## Optional Gemini integration
 
 See [GEMINI.md](GEMINI.md) for separate chat/embedding settings, safe diagnostics and actual validation status. Configure an approved chat model and optional embedding model in local `.env`; no provider is enabled by `.env.example`.
