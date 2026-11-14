@@ -2,12 +2,14 @@
 
 This is the reconciled source of truth for the original P0/P1/P2 master request and all later specs-to-tests requirements. Historical tables are archived in HISTORICAL_FEATURE_MATRIX.md and do not override this file. Statuses: Implemented = working code; Verified = stated automated scope executed; Partially implemented = incomplete breadth or unvalidated integration; Not implemented = missing engineering; Blocked = named external prerequisite. Offline verification never establishes live Salesforce behavior.
 
+2026-11-14 authentication diagnostic verification: safe OAuth code/description classification and credential-withholding regressions passed. Read-only `discover:live` authenticated and discovered two configured objects with local credentials; no browser session, record mutation or broader live workflow was verified. Earlier `invalid_request` indicated the refresh_token scope/app installation/preauthorization requirement. See IMPLEMENTATION_REPORT.md for exact checks; prior statements of no live authentication apply to earlier increments.
+
 ## Foundation and live readiness
 
 | Capability | Status | Evidence / remaining boundary |
 |---|---|---|
 | Standalone Windows/TypeScript/headless execution | Verified | existing typecheck/demo/browser suites retained; no Python/Docker dependency |
-| JWT API access and fresh OAuth/org identity | Partially implemented | client.identity uses userinfo and Organization query; transport mocks; live authorization unverified |
+| JWT API access and fresh OAuth/org identity | Partially implemented | JWT token + two-object live Describe verified on 2026-11-14; safe OAuth diagnostic mocks; client.identity userinfo/Organization runtime remains mock-validated |
 | Describe objects/fields/API-required fields/picklists/relationships | Verified | discovery tests; record-type rules and business requirements remain unknown |
 | Tooling Apex/FlowDefinition/validation rule reads | Partially implemented | bounded first 200 results; denied coverage unknown; source/dependency breadth incomplete |
 | Metadata SOAP named reads | Partially implemented | safe bounded readMetadata/XML tests; no live component retrieval |

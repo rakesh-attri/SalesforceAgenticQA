@@ -1,5 +1,9 @@
 # Framework Knowledge Base
 
+## Safe JWT diagnostics — 2026-11-14
+
+The old JWT helper discarded OAuth error details on HTTP 400. Response fields can echo secrets, so substring scrubbing alone cannot guarantee safe logs. The helper now recognizes fixed codes/reasons and prints static guidance, withholding unknown provider text and transport details. Regression: unit/jwt.test.ts covers mocked audience/certificate/approval/client errors, the observed invalid_request scope/preauthorization requirement, malformed responses, secret/assertion echoes and unchanged signed JWT claims/grant. Read-only live discovery subsequently succeeded for two configured objects; this does not establish live browser or write functionality.
+
 ## Sandbox-readiness integration lessons
 
 - Persist known factory ownership before independent verification. Otherwise verification failures lose cleanup references even though a create succeeded. Regression: readiness-pipeline.test.ts verifies cleanup after a seeded verification failure.

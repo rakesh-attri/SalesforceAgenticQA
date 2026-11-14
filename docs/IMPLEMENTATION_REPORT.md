@@ -1,5 +1,15 @@
 # Implementation report — 2026-11-13
 
+## JWT OAuth diagnostic fix — 2026-11-14
+
+`src/salesforce/jwt.ts` now parses failed OAuth JSON error/error_description fields and emits recognized codes plus fixed, credential-safe descriptions/guidance. Arbitrary provider descriptions, response bodies and transport errors are withheld. Mappings cover invalid_grant/client, audience, signature/certificate, assertion validity, consumer approval and the observed invalid_request refresh_token scope/app installation/preauthorization requirement. Non-JSON, malformed success and echoed-secret responses have safe fallbacks. Existing host validation, RS256 signing, 180-second JWT lifetime, redirect denial, timeout and JWT bearer grant remain intact.
+
+Verification: typecheck passed; 54 unit/integration tests passed; offline demo passed; all 3 headless browser tests passed. JWT tests use generated temporary RSA keys and mocked responses, verify the emitted JWT signature/claims/grant, and assert that echoed credentials/assertions/tokens never enter diagnostics. The existing local edit to unit/discovery.test.ts was preserved.
+
+Actual read-only discovery was retried. An earlier HTTP 400 invalid_request was safely categorized as the refresh_token scope/app installation/preauthorization requirement. The latest retry authenticated successfully and discovered two configured objects; metadata was saved only under ignored .state. The diagnostic change does not itself change app settings or the authentication grant. Broader live workflows, browser authentication and writes remain unverified. No credentials or raw OAuth responses are included in this report.
+
+Guidance was checked against Salesforce's [OAuth error documentation](https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_oauth_flow_errors.htm&language=en_US&type=5) and [JWT bearer-flow documentation](https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_oauth_jwt_flow_ca.htm&language=en_US&type=5).
+
 ## Sandbox-readiness increment (current)
 
 Reconciled all original P0/P1/P2 and later specs-to-tests requirements against FEATURE_MATRIX.md before implementation/reporting. The current matrix is now a single inventory; conflicting historical tables moved to HISTORICAL_FEATURE_MATRIX.md. No earlier requirement was removed. Started from `43f93fb` on the existing isolated `feature/verified-discovery` branch.
