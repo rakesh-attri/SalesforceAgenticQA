@@ -11,9 +11,11 @@ import { authorizeAuthHandoffs,allowAuthHandoff } from './dedicated-auth-review.
 import { XMLParser } from 'fast-xml-parser';
 import { parseLightningIdentity,sameSalesforceIdentity } from './lightning-identity.js';
 import { DedicatedStaticReviewSchema,authorizeStaticReview,matchesStaticReview } from './dedicated-static.js';
+import { fetchReviewedStatic,StaticTransportError } from './static-transport.js';
+import type { BoundaryDenialReason } from './browser-diagnostics.js';
 const Id=z.string().regex(/^[A-Za-z0-9]{15}(?:[A-Za-z0-9]{3})?$/);
 export class DedicatedSessionError extends Error {
-  constructor(readonly code:'private-state'|'state-origin'|'session-cookie'|'identity-http'|'identity-mismatch'|'state-changed'|'verification-unavailable'|'receipt') {super(`Dedicated browser session denied: ${code}. Private session/provider details withheld; review the approved state, current user/org and origins.`);this.name='DedicatedSessionError';}
+  constructor(readonly code:'private-state'|'state-origin'|'session-cookie'|'identity-http'|'identity-redirect'|'identity-mismatch'|'state-changed'|'verification-unavailable'|'receipt') {super(`Dedicated browser session denied: ${code}. ${code==='identity-redirect'?'The identity proof redirected and was not followed. Refresh the independently approved state through the dedicated user normal login; no receipt can be issued from a redirect.':'Private session/provider details withheld; review the approved state, current user/org and origins.'}`);this.name='DedicatedSessionError';}
 }
 export function validateDedicatedState(raw:unknown,policy:EnvironmentPolicy,now=Date.now()) {
   const parsed=z.object({cookies:z.array(z.object({name:z.string(),value:z.string(),domain:z.string(),path:z.string(),expires:z.number(),secure:z.boolean(),httpOnly:z.boolean()}).passthrough()).max(1000),origins:z.array(z.object({origin:z.string().url()}).passthrough()).max(20)}).safeParse(raw);
@@ -74,19 +76,20 @@ export function allowDedicatedRequest(raw:DedicatedGuard,request:{method:string;
     return message.actions.every((a:{descriptor?:string;params?:unknown})=>!!a.descriptor&&readActions.has(a.descriptor)&&ownedReadParams(g,a.descriptor,a.params));
   }catch{return false;}
 }
-export async function installDedicatedBoundary(context:BrowserContext,raw:unknown,onBlocked:(request?:BrowserRequest)=>void=()=>{}) {
+export async function installDedicatedBoundary(context:BrowserContext,raw:unknown,onBlocked:(request?:BrowserRequest,reason?:BoundaryDenialReason)=>void=()=>{},staticFetch:typeof fetchReviewedStatic=fetchReviewedStatic) {
   const config=DedicatedGuardSchema.parse(raw);for(const origin of config.origins)authorizeEnvironment(config.policy,config.identity,'dedicated-ui',origin);
   const assets=config.staticReview?authorizeStaticReview(config.staticReview,config.policy,config.identity,config.staticReview.plan.specVersion):undefined;
-  await context.routeWebSocket('**/*',socket=>{onBlocked();socket.close();});
+  await context.routeWebSocket('**/*',socket=>{onBlocked(undefined,'websocket');socket.close();});
   await context.route('**/*',async route=>{try {
     const request=route.request();
-    if(Date.parse(config.expiresAt)<=Date.now()){onBlocked(request);return route.abort('blockedbyclient');}
+    if(Date.parse(config.expiresAt)<=Date.now()){onBlocked(request,'expired');return route.abort('blockedbyclient');}
     if(matchesStaticReview(assets,{method:request.method(),url:request.url(),type:request.resourceType()})){
-      const headers={...await request.allHeaders()};delete headers.authorization;if(!config.origins.includes(new URL(request.url()).origin)){if(headers.cookie){onBlocked(request);return route.abort('blockedbyclient');}delete headers.cookie;delete headers.referer;}
+      if(!config.origins.includes(new URL(request.url()).origin))return route.fulfill(await staticFetch(assets,config.policy,config.identity,assets!.plan.specVersion,{url:request.url(),type:request.resourceType(),method:request.method()}));
+      const headers={...await request.allHeaders()};delete headers.authorization;
       return route.fallback({headers});
     }
     if(allowDedicatedRequest(config,{method:request.method(),url:request.url(),type:request.resourceType(),body:request.postData()}))return route.fallback();
-  }catch{/* Fail closed, without request/body diagnostics. */}onBlocked(route.request());return route.abort('blockedbyclient');});
+  }catch(error){onBlocked(route.request(),error instanceof StaticTransportError?error.code:'policy-denied');return route.abort('blockedbyclient');}onBlocked(route.request(),'policy-denied');return route.abort('blockedbyclient');});
 }
 export async function installDedicatedGuardFile(context:BrowserContext,path:string) {const config=DedicatedGuardSchema.parse(JSON.parse(await readFile(path,'utf8')));await installDedicatedBoundary(context,config);}
 export const DedicatedUiPlanSchema=z.object({orgId:Id,userId:Id,runId:z.string(),policyHash:z.string(),dataPlanHash:z.string(),sourceVersion:z.string(),sessionReceipt:z.string().min(1),workflows:z.array(WorkflowSchema).min(1).max(2),maxActions:z.number().int().min(0).max(20),maxMs:z.number().int().min(1).max(60000),publishVerifiedExecutionLesson:z.literal(true),exploration:z.object({approved:z.literal(true),maxSteps:z.number().int().min(1).max(2),useExternalModel:z.boolean()}).strict().optional()}).strict();
@@ -118,16 +121,17 @@ export async function verifyDedicatedSession(statePath:string,policy:unknown,ide
         // A normal UI session need not be an OAuth token accepted by userinfo.
         // The fixed read-only SOAP utility proves that same browser session;
         // it never substitutes the JWT/API token or calls login/create/update.
-        if(![400,401,403,404].includes(response.status()))throw new DedicatedSessionError('identity-http');
+        if(![400,401,403,404].includes(response.status()))throw new DedicatedSessionError(response.status()>=300&&response.status()<400?'identity-redirect':'identity-http');
         if(new URL(origin).hostname.endsWith('.lightning.force.com')){
           const document=await context.request.get(`${origin}/lightning/page/home`,{maxRedirects:0,timeout:15000});
-          if(!document.ok()||!document.headers()['content-type']?.includes('text/html'))throw new DedicatedSessionError('identity-http');
+          if(!document.ok())throw new DedicatedSessionError(document.status()>=300&&document.status()<400?'identity-redirect':'identity-http');
+          if(!document.headers()['content-type']?.includes('text/html'))throw new DedicatedSessionError('identity-http');
           try{observed=parseLightningIdentity(await document.text());}catch{throw new DedicatedSessionError('identity-mismatch');}
         }else {
         const version=process.env.SF_API_VERSION||'v62.0';if(!/^v\d+\.\d+$/.test(version))throw new DedicatedSessionError('verification-unavailable');
         const escaped=session.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');await verifier.clearCookies();
         const proof=await verifier.request.post(`${apiOrigin}/services/Soap/u/${version.slice(1)}`,{headers:{'Content-Type':'text/xml; charset=utf-8',SOAPAction:'getUserInfo'},data:`<env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:p="urn:partner.soap.sforce.com"><env:Header><p:SessionHeader><p:sessionId>${escaped}</p:sessionId></p:SessionHeader></env:Header><env:Body><p:getUserInfo/></env:Body></env:Envelope>`,maxRedirects:0,timeout:15000});
-        if(!proof.ok())throw new DedicatedSessionError('identity-http');const xml=await proof.text();if(xml.length>1000000||/<!DOCTYPE|<!ENTITY/i.test(xml))throw new DedicatedSessionError('identity-mismatch');
+        if(!proof.ok())throw new DedicatedSessionError(proof.status()>=300&&proof.status()<400?'identity-redirect':'identity-http');const xml=await proof.text();if(xml.length>1000000||/<!DOCTYPE|<!ENTITY/i.test(xml))throw new DedicatedSessionError('identity-mismatch');
         const parsed=new XMLParser({removeNSPrefix:true,ignoreAttributes:true,parseTagValue:false}).parse(xml),result=z.object({organizationId:Id,userId:Id}).safeParse(parsed?.Envelope?.Body?.getUserInfoResponse?.result);if(!result.success)throw new DedicatedSessionError('identity-mismatch');observed={organization_id:result.data.organizationId,user_id:result.data.userId};
         }
       }

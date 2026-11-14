@@ -5,7 +5,7 @@ import { resolve,join } from 'node:path';
 import { History } from '../src/core/history.js';
 import { dedicatedFixture } from './support/dedicated.js';
 import { DedicatedGuardSchema } from '../src/execution/dedicated-browser.js';
-import { observeDedicatedSelectors,reviewObservedSelectors } from '../src/execution/dedicated-selectors.js';
+import { observeDedicatedSelectors,reviewObservedSelectors,diagnoseDedicatedSelectors } from '../src/execution/dedicated-selectors.js';
 import { runDedicatedWorkflow } from '../src/execution/dedicated-pipeline.js';
 import { KnowledgeIndex } from '../src/knowledge/index.js';
 import { checkDedicatedReadiness } from '../src/execution/dedicated-readiness.js';
@@ -27,6 +27,20 @@ test('denied browser diagnostics retain operation shape without URLs, record val
   assert.deepEqual(report.descriptors,['aura://RecordUiController/ACTION$getRecord']);assert.deepEqual(report.parameterNames,['fields','recordId']);assert.equal(report.unknownDescriptors,1);assert.ok(!JSON.stringify(report).includes('private-'));assert.ok(!JSON.stringify(report).includes('https://'));
   const spoof=summarizeDeniedRequest({url:'https://qa.example/aura',method:'POST',type:'xhr',body:new URLSearchParams({message:JSON.stringify({actions:[{descriptor:'serviceComponent://privateCredential.RecordUiController/ACTION$getRecord'},{descriptor:'aura://RecordUiController/ACTION$privateCredential'}]})}).toString()});
   assert.deepEqual(spoof.descriptors,[]);assert.equal(spoof.unknownDescriptors,2);assert.ok(!JSON.stringify(spoof).includes('privateCredential'));
+});
+
+test('source-bound browser gap diagnosis never confirms causality, grants operations or counts observation as execution',()=>{
+  const binding={runId:'diagnosis-only',planHash:'fixture-plan',policyHash:'fixture-policy',sourceVersion:'fixture-v1'},evidence={...binding,capturedAt:new Date().toISOString(),observations:[{workflowId:'account-view',criterion:'AC-1',documentHash:'fixture-document',expectedHash:'fixture-expected',locator:{by:'role',value:'heading',name:'Synthetic owned fixture'},status:'review-required',reason:'not-observed',count:0}],blockedRequests:2,deniedRequests:[summarizeDeniedRequest({url:'https://qa.example/aura',method:'POST',type:'xhr',body:new URLSearchParams({message:JSON.stringify({actions:[{descriptor:'apex://Unreviewed/ACTION$unknown'}]})}).toString()}),summarizeDeniedRequest({url:'https://qa.example/resource/unknown.js',method:'GET',type:'script'})]};
+  const diagnosis=diagnoseDedicatedSelectors(evidence,binding);assert.equal(diagnosis.classification,'framework-policy-or-workflow-gap');assert.equal(diagnosis.unknownActionSamples,1);assert.equal(diagnosis.observedSelectors,0);assert.equal(diagnosis.rootCause,'unconfirmed');assert.equal(diagnosis.deniedRequestsProvenCausal,false);assert.equal(diagnosis.generatedExecutionProven,false);assert.equal(diagnosis.learningEligible,false);assert.ok(diagnosis.recommendations.includes('review-exact-static-dependencies'));assert.throws(()=>diagnoseDedicatedSelectors(evidence,{...binding,sourceVersion:'other'}),/binding/);
+  const observed=diagnoseDedicatedSelectors({...evidence,blockedRequests:0,deniedRequests:[],observations:[{...evidence.observations[0],status:'observed',reason:'unique-exact-match',count:1}]},binding);assert.equal(observed.status,'selectors-observed');assert.equal(observed.generatedExecutionProven,false);assert.equal(observed.learningEligible,false);
+});
+
+test('a missing first selector cannot consume the second owned page observation budget',async()=>{
+  await mkdir('.auth',{recursive:true});const root=await mkdtemp(resolve('.auth/fair-selector-budget-')),state=join(root,'state.json'),h=new History(':memory:'),f=dedicatedFixture(h);await writeFile(state,JSON.stringify({cookies:[],origins:[]}));
+  try{const owned=[{object:'Account' as const,id:'001000000000001'},{object:'Contact' as const,id:'003000000000001'}],workflows=f.input.ui.plan.workflows.map((raw,index)=>{const workflow=structuredClone(raw),record=owned[index];workflow.path=`/lightning/r/${record.object}/${record.id}/view`;workflow.assertion.text=`Expected ${record.object} fixture`;workflow.assertion.locator={by:'role' as const,value:'heading',name:workflow.assertion.text};return workflow;}),documents=workflows.map(w=>new URL(w.path,w.origin).href),guard=DedicatedGuardSchema.parse({policy:f.policy,identity:f.identity,origins:[f.browserOrigin],documents,owned,expiresAt:f.policy.approval.expiresAt}),binding={runId:'fair-budget',planHash:f.input.data.approval.planHash,policyHash:f.input.ui.plan.policyHash,sourceVersion:f.input.spec.version};
+    const evidence=await observeDedicatedSelectors({guard,workflows,statePath:state,maxMs:5000,binding,prepareContext:async context=>{await context.route('**/*',route=>route.fulfill({contentType:'text/html',body:route.request().url()===documents[0]?'<h1>Unobserved Account fixture</h1>':'<h1>Expected Contact fixture</h1>'}));}});
+    assert.equal(evidence.observations[0].status,'review-required');assert.equal(evidence.observations[1].status,'observed');assert.equal(evidence.observations[1].finalPage?.sameRecord,true);assert.throws(()=>reviewObservedSelectors(evidence,binding,workflows,documents),/review required/);
+  }finally{h.close();await rm(root,{recursive:true,force:true,maxRetries:8,retryDelay:100});}
 });
 
 test('readiness checks never reserve runs or create data, and browser failure is reported without provider secrets',async()=>{

@@ -16,7 +16,7 @@ import { executeGenerated } from './runner.js';
 import { saveJson } from '../core/io.js';
 import { htmlReport } from '../agents/evaluation.js';
 import { investigateFailure } from '../agents/intelligence.js';
-import { observeDedicatedSelectors,reviewObservedSelectors } from './dedicated-selectors.js';
+import { observeDedicatedSelectors,reviewObservedSelectors,diagnoseDedicatedSelectors } from './dedicated-selectors.js';
 import { authorizeStaticReview } from './dedicated-static.js';
 export const DedicatedExecutionSchema=z.object({spec:SpecSchema,org:OrgSnapshotSchema,permission:z.string().min(1),data:DedicatedRunSchema,ui:DedicatedUiReviewSchema}).strict();
 export type DedicatedExecution=z.infer<typeof DedicatedExecutionSchema>;
@@ -72,7 +72,8 @@ export async function runDedicatedWorkflow(raw:unknown,s:DedicatedExecutionServi
   }
   for(const failure of execution?.failures??[])investigations.push(await investigateFailure(s.knowledge,scope,{...failure,expected:input.spec.acceptanceCriteria.find(ac=>ui.plan.workflows.find(w=>w.id===failure.testId)?.criterion===ac.id)?.text??'Reviewed owned workflow'}));
   if(errors.length){const evidence=join(root,'lifecycle.json');await saveJson(evidence,{stages,errors,created,cleaned});investigations.push(await investigateFailure(s.knowledge,scope,{testId:`${run.plan.runId}-lifecycle`,message:errors.join('; '),expected:'Approved dedicated session, verified owned setup, execution and safe cleanup',evidence:[evidence]}));}
-  const report={mode:'DEDICATED_QA_ORG',validation:s.validation??'unclassified',status:passed?'passed':'failed',runId:run.plan.runId,stages,errors,created,cleaned,ownership:s.data.summary(run),analysis,selectors:selectorReview??(selectors?{status:'review-required',evidence:selectors}:{status:'not-executed'}),execution:execution??{status:'not-executed'},exploration,investigations,learning:{status:passed?'eligible':'blocked',kind:'verified-execution-lesson',defectRootCauseConfirmed:false}};
+  const selectorDiagnosis=selectors?diagnoseDedicatedSelectors(selectors,{runId:run.plan.runId,planHash:dedicatedPlanHash(run.plan),policyHash:run.plan.policyHash,sourceVersion:input.spec.version}):{status:'not-executed'};
+  const report={mode:'DEDICATED_QA_ORG',validation:s.validation??'unclassified',status:passed?'passed':'failed',runId:run.plan.runId,stages,errors,created,cleaned,ownership:s.data.summary(run),analysis,selectors:selectorReview??(selectors?{status:'review-required',evidence:selectors}:{status:'not-executed'}),selectorDiagnosis,execution:execution??{status:'not-executed'},exploration,investigations,learning:{status:passed?'eligible':'blocked',kind:'verified-execution-lesson',defectRootCauseConfirmed:false}};
   const reportPath=join(root,'report.json');await saveJson(reportPath,report);await writeFile(join(root,'report.html'),htmlReport(report));
   if(passed){await s.knowledge.ingest({id:`dedicated-workflow:${input.spec.id}`,version:run.plan.runId,...scope,kind:'lesson',status:'verified',reviewer:run.approval.operator,capturedAt:new Date().toISOString(),schemaVersion:knowledgeFingerprint(input.org),text:'Reviewed dedicated QA Account/Contact workflow passed real headless assertions, independent SOQL and owned cleanup. This is execution knowledge, not a confirmed defect cause.',evidence:[reportPath,execution!.report],testIds:execution!.results.map(r=>r.testId)});report.learning.status='verified';await saveJson(reportPath,report);await writeFile(join(root,'report.html'),htmlReport(report));}
   return {...report,reportPath};

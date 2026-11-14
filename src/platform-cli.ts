@@ -43,9 +43,10 @@ import { access } from 'node:fs/promises';
 import { EnvironmentPolicySchema } from './execution/environment.js';
 import { DedicatedExecutionSchema,runDedicatedWorkflow } from './execution/dedicated-pipeline.js';
 import { dedicatedReviewPackage } from './execution/dedicated-review.js';
-import { createDedicatedSession,verifyDedicatedSession,geminiExplorationChooser,minimizeDedicatedImport,reviewDedicatedUi } from './execution/dedicated-browser.js';
+import { createDedicatedSession,verifyDedicatedSession,geminiExplorationChooser,minimizeDedicatedImport,reviewDedicatedUi,DedicatedSessionError } from './execution/dedicated-browser.js';
 import { discoverOrg } from './agents/org-discovery.js';
 import { prepareAuthReview } from './execution/dedicated-auth-review.js';
+import { diagnoseDedicatedSelectors } from './execution/dedicated-selectors.js';
 import { checkDedicatedReadiness } from './execution/dedicated-readiness.js';
 import { claimBridgeUse } from './salesforce/ui-bridge.js';
 import { prepareStaticReview,authorizeStaticReview } from './execution/dedicated-static.js';
@@ -64,6 +65,10 @@ async function reviewedKnowledge(history:History,remoteApproved=false) {
   return new KnowledgeIndex(history,embed,remote,embeddingSpace);
 }
 async function main() {
+  if(mode==='dedicated-ui-review'){
+    const input=DedicatedExecutionSchema.parse(await loadJson(file)),root=`artifacts/dedicated-runs/${input.data.plan.runId}`,evidence=await loadJson(`${root}/selector-evidence.json`),diagnosis=diagnoseDedicatedSelectors(evidence,{runId:input.data.plan.runId,planHash:input.data.approval.planHash,policyHash:input.data.plan.policyHash,sourceVersion:input.spec.version});
+    await saveJson(`${root}/ui-gap-review.json`,{capturedAt:new Date().toISOString(),diagnosis,changesExecutionOutcome:false,recordsCreated:0,learningPublished:false});console.log(JSON.stringify(diagnosis));return;
+  }
   if(mode==='dedicated-static-review'){
     const policy=EnvironmentPolicySchema.parse(await loadJson('.state/dedicated-qa-policy.json')),input=DedicatedExecutionSchema.parse(await loadJson(arg||'.state/dedicated-qa-execution.json')),client=await SalesforceClient.connect('.state/dedicated-qa-policy.json'),identity=await client.identity(),review=prepareStaticReview(await loadJson(file||'.state/dedicated-static-observed.json'),policy,identity,input.spec.version);
     await saveJson('.state/dedicated-static-review.json',review);console.log(JSON.stringify({approved:false,assets:review.plan.assets.length,additionalOrigins:[...new Set(review.plan.assets.map(a=>new URL(a.url).origin))].filter(o=>!policy.allowedOrigins.includes(o)),businessOriginsChanged:false}));return;
@@ -82,9 +87,11 @@ async function main() {
     const input=DedicatedExecutionSchema.parse(await loadJson(file)),path='.state/dedicated-qa-policy.json',client=await SalesforceClient.connect(path),policy=EnvironmentPolicySchema.parse(await loadJson(path)),history=new History('.state/dedicated-qa.sqlite'),data=client.dedicatedData(history);
     try {
       if(mode==='dedicated-dependencies'){
+        try {
         const identity=await client.identity();reviewDedicatedUi(input.ui,policy,identity);if(input.ui.plan.sourceVersion!==input.spec.version||input.ui.plan.dataPlanHash!==input.data.approval.planHash)throw Error('Metadata review differs from the approved run');
         const references=await data.cleanedMetadataReferences(input.data),session=await verifyDedicatedSession(arg||`.auth/${input.data.plan.runId}-state.json`,policy,identity,client.apiOrigin),origins=[...new Set(input.ui.plan.workflows.map(w=>w.origin))],documents=references.map(r=>`${origins[0]}/lightning/r/${r.object}/${r.id}/view`),rawAssets=await access('.state/dedicated-static-approval.json').then(()=>loadJson('.state/dedicated-static-approval.json'),()=>undefined),staticReview=rawAssets?authorizeStaticReview(rawAssets,policy,identity,input.spec.version):undefined;
-        const report=await diagnoseUiDependencies({guard:{policy,identity,origins,documents,owned:references,expiresAt:policy.approval.expiresAt,staticReview},statePath:session.statePath,maxMs:10000});await saveJson(`artifacts/dedicated-runs/${input.data.plan.runId}/dependencies.json`,report);console.log(JSON.stringify(report));return;
+        const report=await diagnoseUiDependencies({guard:{policy,identity,origins,documents,owned:references,expiresAt:policy.approval.expiresAt,staticReview},statePath:session.statePath,maxMs:10000});await saveJson(`artifacts/dedicated-runs/${input.data.plan.runId}/dependencies.json`,report);await saveJson('.state/dedicated-dependency-check.json',{capturedAt:new Date().toISOString(),status:'observed',runId:input.data.plan.runId,report});console.log(JSON.stringify(report));return;
+        }catch(error){await saveJson('.state/dedicated-dependency-check.json',{capturedAt:new Date().toISOString(),status:'blocked',runId:input.data.plan.runId,reason:error instanceof DedicatedSessionError?error.code:'prerequisite-failed',recordsCreated:0,assertionsExecuted:0,learningPublished:false});throw error;}
       }
       if(mode==='dedicated-import'){if(!arg)throw Error('Provide the independently approved state path under .auth');await data.check(input.data,'dedicated-ui');const minimized=await minimizeDedicatedImport(arg,`.auth/${input.data.plan.runId}-minimized-state.json`,policy);await verifyDedicatedSession(minimized.statePath,policy,await client.identity(),client.apiOrigin,input.ui.plan.sessionReceipt);console.log(JSON.stringify({sessionVerified:true,removed:minimized.removed,originalUnchanged:true}));return;}
       if(mode==='dedicated-check'){const report=await checkDedicatedReadiness(input,{data,identity:()=>client.identity(),policy:()=>loadJson(path),discover:()=>discoverOrg(client,['Account','Contact']),apiOrigin:client.apiOrigin});await saveJson('.state/dedicated-readiness.json',report);console.log(JSON.stringify(report));if(report.status==='blocked')process.exitCode=1;return;}
