@@ -1,5 +1,15 @@
 # Implementation report — 2026-11-13
 
+## Gemini provider integration — 2026-11-14
+
+Reviewed the existing configuration, JWT diagnostics, deterministic reasoning graph and callable embedding adapter. No chat provider interface existed, so added a provider-neutral StructuredChat contract and native TypeScript Gemini Developer API implementation while preserving Embed and the existing OpenAI-compatible adapter. No Salesforce auth grant or write policy was changed; the existing user edit to unit/discovery.test.ts remains untouched.
+
+Added separate chat/embedding configuration with alias/field validation, pinned HTTPS/header authentication, Zod JSON-schema output validation, safe input/output redaction, bounded timeout/retries/Retry-After/pacing and batching/vector checks. Graph phases now call optional Spec Analyst, Planner, Generator and Investigator reasoning hooks. Advice remains proposed, citations must resolve to input evidence, and workflow expected outcomes cannot be replaced by model text. Other reasoning roles use the same typed service. Reports expose failed model roles; deterministic execution remains independently verified.
+
+Actual external verification: read-only JWT/Describe succeeded for two configured objects using the existing .env. model:check executed and reported a chat **model configuration** failure plus embedding **not-configured**; no live Gemini response was validated or claimed. No Chroma/Vertex/model-quality or live Salesforce browser/write behavior is established by these checks. Setup, commands and limitations are in GEMINI.md and .env.example.
+
+Final executed checks: typecheck passed; **64 unit/integration tests passed**, including 10 focused Gemini tests; original demo passed; **3 headless browser tests passed**. Coverage includes actual phase-level mocked reasoning, rejected invented citations/changed assertions, rate/timeout and concurrent pacing, separate embedding shape/order/dimensions, privacy and backward-compatible HTTP embedding configuration. All original deterministic, auth, session, data-lifecycle and learning checks remain passing.
+
 ## JWT OAuth diagnostic fix — 2026-11-14
 
 `src/salesforce/jwt.ts` now parses failed OAuth JSON error/error_description fields and emits recognized codes plus fixed, credential-safe descriptions/guidance. Arbitrary provider descriptions, response bodies and transport errors are withheld. Mappings cover invalid_grant/client, audience, signature/certificate, assertion validity, consumer approval and the observed invalid_request refresh_token scope/app installation/preauthorization requirement. Non-JSON, malformed success and echoed-secret responses have safe fallbacks. Existing host validation, RS256 signing, 180-second JWT lifetime, redirect denial, timeout and JWT bearer grant remain intact.

@@ -1,21 +1,25 @@
 import { createHash } from 'node:crypto';
 import { ChromaClient, type Collection } from 'chromadb';
 import { z } from 'zod';
+import { redactModelText,environmentSecrets } from '../ai/privacy.js';
 export const SourceSchema=z.object({id:z.string().min(1),version:z.string().min(1),org:z.string().min(1),permission:z.string().min(1),status:z.literal('verified'),text:z.string().min(1),capturedAt:z.string().datetime()});
 export type Source=z.infer<typeof SourceSchema>;
 export type Embed=(texts:string[])=>Promise<number[][]>;
 export function httpEmbeddings(endpoint:string,key:string,model:string):Embed {
-  if(new URL(endpoint).protocol!=='https:'||!key||!model) throw Error('HTTPS embedding endpoint, model and key required');
+  try {const url=new URL(endpoint);if(url.protocol!=='https:'||url.username||url.password||!key||!model)throw Error();}catch{throw Error('HTTPS embedding endpoint, model and key required; configuration values withheld.');}
   return async texts=>{
-    const response=await fetch(endpoint,{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model,input:texts}),redirect:'error',signal:AbortSignal.timeout(30000)});
+    let response:Response;
+    try{response=await fetch(endpoint,{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model,input:texts.map(text=>redactModelText(text,[key,...environmentSecrets()]))}),redirect:'error',signal:AbortSignal.timeout(30000)});}catch{throw Error('Embedding provider transport failed; details withheld to protect credentials.');}
     if(!response.ok) throw Error(`Embedding provider failed (${response.status})`);
-    const body=z.object({data:z.array(z.object({index:z.number().int().nonnegative(),embedding:z.array(z.number().finite()).min(1)}))}).parse(await response.json());
+    let raw:unknown;try{raw=await response.json();}catch{throw Error('Invalid embedding provider response; details withheld.');}
+    const parsed=z.object({data:z.array(z.object({index:z.number().int().nonnegative(),embedding:z.array(z.number().finite()).min(1)}))}).safeParse(raw);
+    if(!parsed.success)throw Error('Invalid embedding provider response; details withheld.');const body=parsed.data;
     const ordered=body.data.sort((a,b)=>a.index-b.index);
     if(ordered.length!==texts.length||ordered.some((e,i)=>e.index!==i)) throw Error('Embedding response index mismatch');
     return ordered.map(e=>e.embedding);
   };
 }
-export function redact(text:string) {return text.replace(/Bearer\s+\S+/gi,'[REDACTED]').replace(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/gi,'[EMAIL]').replace(/\b(?:00[1-9A-Za-z])[A-Za-z0-9]{12}(?:[A-Za-z0-9]{3})?\b/g,'[RECORD-ID]');}
+export function redact(text:string) {return redactModelText(text,environmentSecrets());}
 export class SemanticKnowledge {
   constructor(private collection:Pick<Collection,'upsert'|'query'>,private embed:Embed){}
   static async connect(host:string,embed:Embed,headers:Record<string,string>={}) {

@@ -1,5 +1,12 @@
 # Framework Knowledge Base
 
+## Gemini integration lessons — 2026-11-14
+
+- Gemini chat uses generateContent structured JSON and local Zod validation; embeddings use a separate batchEmbedContents model. A configured key does not establish either endpoint works. Actual model:check reported a model configuration failure and embeddings not-configured, while Salesforce read-only JWT discovery succeeded for two objects.
+- Keep model advice proposed and source-cited. The graph must reject model-proposed expected-outcome changes while preserving deterministic test rendering. Regression: unit/gemini.test.ts phase-order and assertion-preservation integration.
+- Preserve the symmetric Embed contract: SEMANTIC_SIMILARITY is applied consistently for Gemini document/query inputs; asymmetric tasks need an explicit interface extension. Regression: embedding payload/batch-order/dimension tests.
+- Provider errors can echo credentials, so diagnostics use fixed categories without raw text/causes. Regression: Gemini auth/rate/transport/schema/redaction tests. No automatic data-write permissions are introduced by model configuration.
+
 ## Safe JWT diagnostics — 2026-11-14
 
 The old JWT helper discarded OAuth error details on HTTP 400. Response fields can echo secrets, so substring scrubbing alone cannot guarantee safe logs. The helper now recognizes fixed codes/reasons and prints static guidance, withholding unknown provider text and transport details. Regression: unit/jwt.test.ts covers mocked audience/certificate/approval/client errors, the observed invalid_request scope/preauthorization requirement, malformed responses, secret/assertion echoes and unchanged signed JWT claims/grant. Read-only live discovery subsequently succeeded for two configured objects; this does not establish live browser or write functionality.

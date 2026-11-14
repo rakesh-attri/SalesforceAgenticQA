@@ -1,5 +1,17 @@
 # Local setup (Windows PowerShell)
 
+## Optional Gemini integration
+
+See [GEMINI.md](GEMINI.md) for separate chat/embedding settings, safe diagnostics and actual validation status. Configure an approved chat model and optional embedding model in local `.env`; no provider is enabled by `.env.example`.
+
+```powershell
+npm.cmd run model:check
+npm.cmd run platform -- ai-reason spec-analyst .state/reviewed-input.json
+npm.cmd run discover:live
+```
+
+Connectivity success requires an actual valid API response. The documented check currently reports chat model configuration failure and embeddings not-configured; Salesforce read-only JWT discovery was actually successful. No writes are enabled by these commands.
+
 ## Authorized sandbox runtime
 
 Read [SANDBOX_EXECUTION.md](SANDBOX_EXECUTION.md) before configuring the optional live runtime. It defines session receipts, private operator policy, exact mutation approvals, graph setup/verification/cleanup, failure recovery and external prerequisites.

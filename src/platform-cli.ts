@@ -10,7 +10,7 @@ import { discoverTooling } from './salesforce/operations.js';
 import { prioritize,CaseSchema,investigate,defect,gaps } from './agents/quality.js';
 import { generateTest,WorkflowSchema } from './agents/workflows.js';
 import { writeFile,mkdir } from 'node:fs/promises';
-import { SemanticKnowledge,SourceSchema,httpEmbeddings } from './knowledge/rag.js';
+import { SemanticKnowledge,SourceSchema } from './knowledge/rag.js';
 import { ingestSpec } from './specs/ingest.js';
 import { PipelineInputSchema,createSpecPipeline } from './agents/pipeline.js';
 import { KnowledgeIndex,KnowledgeSchema } from './knowledge/index.js';
@@ -18,14 +18,16 @@ import { demonstrateLearning } from './demos/learning.js';
 import { healReviewedWorkflow,HealingSchema } from './agents/healing.js';
 import { configuredSandboxRuntime,configuredProbe,RuntimePolicySchema } from './integrations/live-runtime.js';
 import { issueSessionReceipt,BrowserIdentitySchema } from './integrations/session-gate.js';
+import { configuredChat,configuredEmbeddings } from './ai/providers.js';
+import { ReasoningAgents,ReasoningRoleSchema } from './agents/reasoning.js';
 const [mode,file,arg]=process.argv.slice(2);
 async function planningKnowledge(history:History) {
-  if(!process.env.SFQA_EMBEDDING_URL)return new KnowledgeIndex(history);
-  const embed=httpEmbeddings(process.env.SFQA_EMBEDDING_URL,process.env.SFQA_EMBEDDING_KEY??'',process.env.SFQA_EMBEDDING_MODEL??'');
+  const embed=configuredEmbeddings();if(!embed)return new KnowledgeIndex(history);
   const remote=process.env.CHROMA_HOST?await SemanticKnowledge.connect(process.env.CHROMA_HOST,embed,process.env.CHROMA_TOKEN?{Authorization:`Bearer ${process.env.CHROMA_TOKEN}`} : {}):undefined;
   return new KnowledgeIndex(history,embed,remote);
 }
 async function main() {
+  if(mode==='ai-reason'){const chat=configuredChat();if(!chat)throw Error('Chat provider is not configured');const role=ReasoningRoleSchema.safeParse(file);if(!role.success)throw Error('Unknown reasoning role');const advice=await new ReasoningAgents(chat).advise(role.data,{source:await loadJson(arg)});await saveJson(`artifacts/model-advice/${role.data}.json`,advice);console.log('Validated proposed model advice saved locally; human review required.');return;}
   if(mode==='session-verify') {
     const policy=RuntimePolicySchema.parse(await loadJson('.state/sandbox-policy.json'));
     const raw=await loadJson(file) as {statePath:string;identity:unknown;reviewer:string;receiptPath:string};
@@ -38,11 +40,11 @@ async function main() {
   if(mode==='spec-run') {
     const raw=await loadJson(file) as Record<string,unknown>;
     const input=PipelineInputSchema.parse({...raw,spec:typeof raw.specPath==='string'?await ingestSpec(raw.specPath):raw.spec}),h=new History(),saver=new DurableSaver('.state/spec-checkpoints.sqlite');
-    try {const runtime=input.sandbox?configuredSandboxRuntime(h,await SalesforceClient.connect(),await loadJson('.state/sandbox-policy.json')):undefined;const result=await createSpecPipeline({history:h,knowledge:await planningKnowledge(h),root:'artifacts/spec-runs',checkpointer:saver,runtime}).invoke({input},{configurable:{thread_id:input.runId}});console.log(result.reportPath);if(result.lifecycle?.status==='failed')process.exitCode=1;else if(result.execution?.exitCode)process.exitCode=result.execution.exitCode;}finally{saver.close();h.close();}return;
+    try {const runtime=input.sandbox?configuredSandboxRuntime(h,await SalesforceClient.connect(),await loadJson('.state/sandbox-policy.json')):undefined;const chat=configuredChat();const result=await createSpecPipeline({history:h,knowledge:await planningKnowledge(h),root:'artifacts/spec-runs',checkpointer:saver,runtime,reasoning:chat?new ReasoningAgents(chat):undefined}).invoke({input},{configurable:{thread_id:input.runId}});console.log(result.reportPath);if(result.lifecycle?.status==='failed')process.exitCode=1;else if(result.execution?.exitCode)process.exitCode=result.execution.exitCode;}finally{saver.close();h.close();}return;
   }
   if(mode==='rag-index'||mode==='rag-query') {
     const required=(name:string)=>{const v=process.env[name];if(!v) throw Error(`Missing ${name}`);return v;};
-    const rag=await SemanticKnowledge.connect(required('CHROMA_HOST'),httpEmbeddings(required('SFQA_EMBEDDING_URL'),required('SFQA_EMBEDDING_KEY'),required('SFQA_EMBEDDING_MODEL')),process.env.CHROMA_TOKEN?{Authorization:`Bearer ${process.env.CHROMA_TOKEN}`} : {});
+    const embed=configuredEmbeddings();if(!embed)throw Error('Embedding provider is not configured');const rag=await SemanticKnowledge.connect(required('CHROMA_HOST'),embed,process.env.CHROMA_TOKEN?{Authorization:`Bearer ${process.env.CHROMA_TOKEN}`} : {});
     if(mode==='rag-index') console.log(JSON.stringify(await rag.ingest(SourceSchema.parse(await loadJson(file)))));
     else {const input=await loadJson(file) as {text:string;scope:{org:string;permission:string;version:string}};await saveJson('artifacts/retrieval.json',await rag.retrieve(input.text,input.scope));}return;
   }

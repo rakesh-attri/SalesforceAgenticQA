@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "tsx src/cli.ts",
     "platform": "tsx src/platform-cli.ts",
+    "model:check": "tsx src/ai/check.ts",
     "demo": "tsx src/cli.ts demo",
     "demo:graph": "tsx src/cli.ts graph-demo",
     "mcp:salesforce": "tsx src/integrations/mcp-cli.ts",

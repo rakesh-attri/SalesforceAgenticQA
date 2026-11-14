@@ -39,6 +39,8 @@ This is the reconciled source of truth for the original P0/P1/P2 master request 
 | Positive/negative/boundary scenarios | Partially implemented | authored kinds retained; missing expected behavior becomes questions rather than invented scenarios |
 | Reviewed story→workflow→generated assertions | Verified | exact criterion/expectedText mapping, source citations, blocked prerequisites and schema/hash gates |
 | LangGraph connected pipeline | Verified | ingestion/context/planning/review/risk/data/generation/session/setup/execution/investigation/report lifecycle |
+| Gemini chat and role-level reasoning hooks | Verified | mocked generateContent, Zod validation/citations; Spec Analyst/Planner/Generator/Investigator phases emit proposals; other roles via CLI; no live model result validated |
+| Model provider config, privacy and request budgets | Verified | distinct chat/embedding configuration, static diagnostics, timeout/429/backoff/pacing/redaction tests; developer API only, no Vertex integration |
 | General TypeScript generation validation | Partially implemented | constrained DSL syntax + actual execution; arbitrary user source semantic validation not implemented |
 | Backend API assertions | Verified | generated independent HTTP expectations; no assumption that JWT authenticates browser/request context |
 | Change/risk/mandatory regression selection | Partially implemented | deterministic component/history/lesson selection; full Salesforce component impact map missing |
@@ -58,6 +60,8 @@ This is the reconciled source of truth for the original P0/P1/P2 master request 
 | Operational SQLite history/trust/source isolation | Verified | run/test/lesson/knowledge scope/version tests; all runtime databases ignored |
 | Redaction/normalization/chunking | Partially implemented | limited redaction + chunks; source privacy review still required; no complete DLP guarantee |
 | Embeddings + persistent local lexical/vector index | Partially implemented | injected embeddings and cosine/lexical scoring; external provider not exercised |
+| Separate Gemini embedding adapter | Verified | mocked batchEmbedContents, batch order/count/dimensions, existing Embed contract preserved; live embedding provider not configured |
+| Safe model connectivity command | Implemented | actual command reports chat model configuration failure and embedding not-configured; success requires real valid response, not key presence |
 | Chroma upsert and real retrieval flow | Verified | actual JS SDK over local mock HTTP server: auth, preflight, collection, upsert, query; returned hits affect ranking only for current reviewed catalog sources |
 | Remote ranking trust/version isolation | Verified | wrong org/stale/unreviewed/unknown catalog hits cannot elevate knowledge; configured failures are surfaced |
 | External Chroma-only source import / Cloud tenancy | Not implemented | explicit local review/catalog ingestion required; Cloud tenant/database CLI configuration incomplete |
@@ -68,11 +72,11 @@ This is the reconciled source of truth for the original P0/P1/P2 master request 
 | Full model evaluation/dashboard/knowledge effectiveness | Not implemented | deterministic metrics are not a model judge, retraining or comprehensive AI-quality evaluation |
 | Reporting Labs | Blocked | specific provider/API/auth contract not supplied; no invented integration |
 | 15-agent ownership inventory | Implemented | CAPABILITY_AUDIT.md defines inputs/outputs/tools/evidence; partial roles remain explicitly identified |
-| Live Salesforce and external vector/model verification | Blocked | authorized sandbox credentials, approved workflows/recipes/persona probes, sessions and service configurations unavailable |
+| Live sandbox workflows and external vector/model verification | Blocked | JWT/Describe succeeded for two objects; live browser/data workflows still need reviewed recipes/persona sessions; Gemini check is blocked at model configuration and embedding provider is disabled; external Chroma/model responses unverified |
 | Complete original and later definition of done | Not implemented | remaining engineering above remains in scope |
 
 ## Next dependency
 
-Latest completed checks for this increment: typecheck passed, **41 unit/integration tests passed**, original demo passed and **3 headless browser tests passed**. New protocol/browser integrations use local fixtures; live Salesforce and external service validation remain unexecuted.
+Latest completed checks (Gemini increment, 2026-11-14): typecheck passed, **64 unit/integration tests passed**, original demo passed and **3 headless browser tests passed**. Gemini APIs were mocked in tests; actual model:check returned chat model configuration failure and embedding not-configured. JWT/read-only Describe actually succeeded for two objects. Other live workflows/external services remain unverified.
 
 Validate the configured API/session/data runtime in an authorized sandbox using reviewed nonfinancial workflows, then extend permission/record-type discovery and production-quality org UI/service adapters. Add explicit reviewed reconciliation/recovery for pending runs; do not silently replay them. Continue autonomous action exploration, semantic source import, connectors, model evaluation and provider-specific reporting afterwards. External credentials do not replace the unfinished engineering listed here.

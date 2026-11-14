@@ -16,6 +16,7 @@ import { saveJson } from '../core/io.js';
 import { writeFile } from 'node:fs/promises';
 import { evaluateReadiness,crossRunTrends,htmlReport } from './evaluation.js';
 import { SandboxRequestSchema,DataSetupSchema,type PipelineRuntime } from '../execution/readiness.js';
+import { ReasoningAgents,type AgentAdvice,type ReasoningRole } from './reasoning.js';
 export const PipelineInputSchema=z.object({
   runId:z.string().regex(/^[A-Za-z0-9_-]+$/),spec:SpecSchema,org:OrgSnapshotSchema,permission:z.string().min(1),
   orgVersion:z.string(),allowedOrigins:z.array(z.string().url()).min(1),
@@ -48,20 +49,25 @@ export function analyze(input:PipelineInput,context:Context,history:History) {
 type Analysis=ReturnType<typeof analyze>;
 type Execution=Awaited<ReturnType<typeof executeGenerated>>;
 type Lifecycle={status:'not-executed'|'passed'|'failed';stages:string[];errors:string[];created:number;cleaned:number};
-const State=Annotation.Root({input:Annotation<PipelineInput>(),context:Annotation<Context>(),analysis:Annotation<Analysis>(),files:Annotation<Array<{id:string;code:string}>>(),execution:Annotation<Execution|undefined>(),lifecycle:Annotation<Lifecycle>(),investigations:Annotation<Array<Awaited<ReturnType<typeof investigateFailure>>>>(),reportPath:Annotation<string>()});
-export function createSpecPipeline(services:{history:History;knowledge:KnowledgeIndex;root:string;checkpointer?:BaseCheckpointSaver;runtime?:PipelineRuntime}) {
+const State=Annotation.Root({input:Annotation<PipelineInput>(),context:Annotation<Context>(),analysis:Annotation<Analysis>(),files:Annotation<Array<{id:string;code:string}>>(),execution:Annotation<Execution|undefined>(),lifecycle:Annotation<Lifecycle>(),investigations:Annotation<Array<Awaited<ReturnType<typeof investigateFailure>>>>(),reportPath:Annotation<string>(),advice:Annotation<Partial<Record<ReasoningRole,AgentAdvice>>>(),modelFailures:Annotation<ReasoningRole[]>()});
+export function createSpecPipeline(services:{history:History;knowledge:KnowledgeIndex;root:string;checkpointer?:BaseCheckpointSaver;runtime?:PipelineRuntime;reasoning?:ReasoningAgents}) {
   services.history.db.exec('CREATE TABLE IF NOT EXISTS pipeline_runs(run TEXT PRIMARY KEY,status TEXT,payload TEXT)');
+  async function modelAdvice(state:typeof State.State,role:ReasoningRole,analysis=state.analysis,investigations=state.investigations) {
+    const advice={...state.advice},modelFailures=[...state.modelFailures??[]];
+    if(services.reasoning)try{advice[role]=await services.reasoning.advise(role,{'reviewed-spec':state.input.spec,'reviewed-workflows':state.input.mappings,'observed-org-schema':state.input.org,'verified-knowledge':state.context??[],'deterministic-plan':analysis??null,'failure-evidence':investigations??[]});}catch{modelFailures.push(role);}
+    return {advice,modelFailures};
+  }
   const graph=new StateGraph(State)
-    .addNode('spec_analyst',state=>{
+    .addNode('spec_analyst',async state=>{
       const input=PipelineInputSchema.parse(state.input);
       if(input.orgVersion!==snapshotVersion(input.org))throw Error('Stale org knowledge binding');
       services.knowledge.bindSchema({org:input.org.orgAlias,permission:input.permission},schemaFingerprint(input.org));
       if(new Set(input.mappings.map(m=>m.criterionId)).size!==input.mappings.length)throw Error('Ambiguous workflow mapping');
-      return {input};
+      return {input,...await modelAdvice({...state,input},'spec-analyst')};
     })
     .addNode('knowledge_agent',async state=>({context:await services.knowledge.retrieve(`${state.input.spec.title} ${state.input.spec.description} ${state.input.spec.acceptanceCriteria.map(a=>a.text).join(' ')}`,{org:state.input.org.orgAlias,permission:state.input.permission})}))
-    .addNode('planner_reviewer_risk',state=>({analysis:analyze(state.input,state.context,services.history)}))
-    .addNode('generator',state=>({files:state.analysis.selection.flatMap(selected=>{const scenario=state.analysis.scenarios.find(s=>s.id===selected.id)!;if(scenario.status!=='reviewed')return [];const mapping=state.input.mappings.find(m=>m.criterionId===scenario.criterionId)!;return [{id:scenario.id,code:generateTest(mapping.workflow,state.input.allowedOrigins)}];})}))
+    .addNode('planner_reviewer_risk',async state=>{const analysis=analyze(state.input,state.context,services.history);return {analysis,...await modelAdvice(state,'test-planner',analysis)};})
+    .addNode('generator',async state=>({files:state.analysis.selection.flatMap(selected=>{const scenario=state.analysis.scenarios.find(s=>s.id===selected.id)!;if(scenario.status!=='reviewed')return [];const mapping=state.input.mappings.find(m=>m.criterionId===scenario.criterionId)!;return [{id:scenario.id,code:generateTest(mapping.workflow,state.input.allowedOrigins)}];}),...await modelAdvice(state,'generator')}))
     .addNode('execution_coordinator',async state=>{
       const lifecycle:Lifecycle={status:'not-executed',stages:[],errors:[],created:0,cleaned:0};
       if(!state.input.executionApproval||!state.files.length)return {execution:undefined,lifecycle};
@@ -96,11 +102,11 @@ export function createSpecPipeline(services:{history:History;knowledge:Knowledge
       const investigations=[];
       for(const failure of state.execution?.failures??[]){const scenario=state.analysis.scenarios.find(s=>s.id===failure.testId)!;investigations.push(await investigateFailure(services.knowledge,{org:state.input.org.orgAlias,permission:state.input.permission},{...failure,expected:scenario.expected}));}
       if(state.lifecycle?.errors.length)investigations.push(await investigateFailure(services.knowledge,{org:state.input.org.orgAlias,permission:state.input.permission},{testId:`${state.input.runId}-lifecycle`,message:state.lifecycle.errors.join('\n'),expected:'Approved session, data verification, execution and cleanup complete',evidence:[join(services.root,state.input.runId,'lifecycle.json')]}));
-      return {investigations};
+      return {investigations,...await modelAdvice(state,'investigator',state.analysis,investigations)};
     })
     .addNode('reporter',async state=>{
       const reportPath=join(services.root,state.input.runId,'report.json');
-      const report={mode:state.input.org.source==='fixture'?'offline-fixture':'authorized-sandbox',runId:state.input.runId,lifecycle:state.lifecycle,source:{id:state.input.spec.source,version:state.input.spec.version},analysis:state.analysis,knowledge:state.context.map(d=>d.citation),execution:state.execution??{status:'not-executed'},investigations:state.investigations,metrics:services.history.metrics(),evaluation:evaluateReadiness(state.analysis.scenarios,state.execution?.results??[]),trends:crossRunTrends(services.history.results())};
+      const report={mode:state.input.org.source==='fixture'?'offline-fixture':'authorized-sandbox',runId:state.input.runId,lifecycle:state.lifecycle,source:{id:state.input.spec.source,version:state.input.spec.version},analysis:state.analysis,knowledge:state.context.map(d=>d.citation),execution:state.execution??{status:'not-executed'},investigations:state.investigations,modelAdvice:state.advice,modelFailures:state.modelFailures,metrics:services.history.metrics(),evaluation:evaluateReadiness(state.analysis.scenarios,state.execution?.results??[]),trends:crossRunTrends(services.history.results())};
       await saveJson(reportPath,report);await writeFile(join(services.root,state.input.runId,'report.html'),htmlReport(report));return {reportPath};
     })
     .addEdge(START,'spec_analyst').addEdge('spec_analyst','knowledge_agent').addEdge('knowledge_agent','planner_reviewer_risk').addEdge('planner_reviewer_risk','generator').addEdge('generator','execution_coordinator').addEdge('execution_coordinator','failure_investigator').addEdge('failure_investigator','reporter').addEdge('reporter',END);
