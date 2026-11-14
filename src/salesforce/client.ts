@@ -6,6 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { authorizeEnvironment,type EnvironmentPolicy,type EnvironmentDefinition } from '../execution/environment.js';
 import { DedicatedData } from './dedicated-qa.js';
 import type { History } from '../core/history.js';
+import { uiBridgeFailure,UiBridgeError } from './ui-bridge.js';
 export class SalesforceClient {
   private environment?:{policy:EnvironmentPolicy;identity:{Id:string;IsSandbox:boolean;userId:string};policyPath?:string};
   private constructor(private instance:string,private token:string, private version:string) {}
@@ -60,8 +61,9 @@ export class SalesforceClient {
   async dedicatedBrowserBridge() {
     if(this.environment?.policy.mode!=='DEDICATED_QA_ORG')throw Error('Dedicated browser bridge requires explicit dedicated QA authorization');
     await this.authorizeCapability('dedicated-ui');
-    const response=await fetch(`${this.instance}/services/oauth2/singleaccess?redirect_uri=${encodeURIComponent('lightning/page/home')}`,{method:'GET',headers:{Authorization:`Bearer ${this.token}`},redirect:'error',signal:AbortSignal.timeout(30000)});
-    if(!response.ok){const body=await response.text();const scope=/Invalid_Scope/i.test(body);throw Error(scope?'Dedicated browser bridge requires an independently authorized web scope; no app permissions were changed':`Dedicated browser bridge failed (${response.status}); provider details withheld`);}
+    let response:Response;
+    try {response=await fetch(`${this.instance}/services/oauth2/singleaccess?redirect_uri=${encodeURIComponent('lightning/page/home')}`,{method:'GET',headers:{Authorization:`Bearer ${this.token}`},redirect:'error',signal:AbortSignal.timeout(30000)});}catch{throw new UiBridgeError('Transport_Error',0);}
+    if(!response.ok)throw await uiBridgeFailure(response);
     let raw:unknown;try{raw=await response.json();}catch{throw Error('Dedicated browser bridge response invalid; details withheld');}
     const parsed=z.object({frontdoor_uri:z.string().url()}).safeParse(raw);if(!parsed.success)throw Error('Dedicated browser bridge response invalid; details withheld');
     const target=new URL(parsed.data.frontdoor_uri);if(target.protocol!=='https:'||!this.environment.policy.allowedOrigins.includes(target.origin)||target.pathname!=='/secur/frontdoor.jsp'||target.username||target.password||!target.searchParams.has('otp')||target.searchParams.has('sid')||target.searchParams.has('access_token'))throw Error('Dedicated browser bridge origin/one-time URL denied');

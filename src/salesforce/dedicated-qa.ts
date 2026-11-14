@@ -24,6 +24,9 @@ export interface DedicatedApi {
   origin:string;apiVersion:string;identity():Promise<EnvironmentIdentity>;policy():Promise<unknown>;
   get<T>(path:string):Promise<T>;dispatch(m:Mutation):Promise<{id:string;success:boolean}|undefined>;
 }
+export class DedicatedCleanupError extends Error {
+  constructor(readonly code:'cleanup-schema-unknown'|'cleanup-read-denied'|'cleanup-dependent-present'|'cleanup-visibility-unknown',readonly source:string){super(`${code}: ${source}. No cascade deletion is permitted.`);this.name='DedicatedCleanupError';}
+}
 export class DedicatedData {
   constructor(private history:History,private api:DedicatedApi) {
     history.db.exec(`CREATE TABLE IF NOT EXISTS dedicated_runs(org TEXT,user TEXT,run TEXT,plan TEXT,hash TEXT,status TEXT,started REAL,PRIMARY KEY(org,user,run));
@@ -36,7 +39,7 @@ export class DedicatedData {
     authorizeEnvironment(policy,identity,capability,this.api.origin,policy.dedicatedQa?.persona);
     if(run.plan.orgId!==identity.Id||run.plan.userId!==identity.userId||run.plan.policyHash!==environmentHash(policy)||run.approval.operator!==policy.approval.operator||run.approval.planHash!==dedicatedPlanHash(run.plan)||Date.parse(run.approval.expiresAt)<=Date.now())throw Error('Dedicated run requires current exact org/user/plan/operator approval');
     if(policy.dedicatedQa!.automationReview.sourceVersion!==run.plan.automationVersion)throw Error('Dedicated automation/source review is stale');
-    const user=await this.api.get<{records:Array<{Id:string;IsActive:boolean}>}>(this.query(`SELECT Id,IsActive FROM User WHERE Id='${identity.userId}' LIMIT 1`));
+    const user=z.object({records:z.array(z.object({Id,IsActive:z.boolean()})).length(1)}).parse(await this.api.get(this.query(`SELECT Id,IsActive FROM User WHERE Id='${identity.userId}' LIMIT 1`)));
     if(user.records.length!==1||user.records[0].Id!==identity.userId||!user.records[0].IsActive)throw Error('Dedicated QA test user is not active/verified');
     return {run,identity,policy};
   }
@@ -45,7 +48,7 @@ export class DedicatedData {
     const {run,identity,policy}=await this.check(raw),expected=proposeDedicatedPlan(snapshot,identity,policy,run.plan.runId);
     if(dedicatedPlanHash(expected)!==dedicatedPlanHash(run.plan))throw Error('Dedicated plan differs from reviewed deterministic factory/snapshot');
     // Prove cascade inspection is accessible before creating anything. These are valid, non-existent sentinel IDs.
-    await this.noForeignCascade(run,'Account','001000000000000AAA');await this.noForeignCascade(run,'Contact','003000000000000AAA');
+    await this.preflightCleanup(run);
     const db=this.history.db;db.exec('BEGIN IMMEDIATE');try{const prior=db.prepare('SELECT hash FROM dedicated_runs WHERE org=? AND user=? AND run=?').get(run.plan.orgId,run.plan.userId,run.plan.runId);if(prior)throw Error('Dedicated run ID already reserved; use recovery rather than replay');
       if(db.prepare("SELECT run FROM dedicated_runs WHERE org=? AND status='open'").get(run.plan.orgId))throw Error('A prior dedicated run requires reconciliation/cleanup');
       const start=Date.parse(new Date().toISOString().slice(0,10)+'T00:00:00Z'),count=db.prepare('SELECT COUNT(*) AS count FROM dedicated_runs WHERE org=? AND started>=?').get(run.plan.orgId,start);if(Number(count?.count)>=policy.dedicatedQa!.maxRunsPerDay)throw Error('Dedicated daily run quota reached');
@@ -72,11 +75,33 @@ export class DedicatedData {
     return {id,object,verified:true};
   }
   private async noForeignCascade(run:DedicatedRun,object:string,id:string) {
-    const described=z.object({name:z.string(),childRelationships:z.array(z.object({childSObject:z.string().regex(/^[A-Za-z][A-Za-z0-9_]*$/),field:z.string().regex(/^[A-Za-z][A-Za-z0-9_]*$/),cascadeDelete:z.boolean()})).max(1000)}).parse(await this.api.get(`/services/data/${this.api.apiVersion}/sobjects/${object}/describe`));
+    const parsed=z.object({name:z.string(),childRelationships:z.array(z.object({childSObject:z.string().regex(/^[A-Za-z][A-Za-z0-9_]*$/),field:z.string().regex(/^[A-Za-z][A-Za-z0-9_]*$/),relationshipName:z.string().regex(/^[A-Za-z][A-Za-z0-9_]*$/).nullable().optional(),cascadeDelete:z.boolean()})).max(1000)}).safeParse(await this.api.get(`/services/data/${this.api.apiVersion}/sobjects/${object}/describe`));if(!parsed.success)throw new DedicatedCleanupError('cleanup-schema-unknown',object);const described=parsed.data;
     if(described.name!==object)throw Error('Cleanup Describe identity mismatch');
-    for(const child of described.childRelationships.filter(c=>c.cascadeDelete)){const result=await this.api.get<{records:Array<{Id:string}>}>(this.query(`SELECT Id FROM ${child.childSObject} WHERE ${child.field}='${id}' LIMIT 2`));
+    for(const child of described.childRelationships.filter(c=>c.cascadeDelete)){let count:number;try{
+      if(child.relationshipName){
+        // Virtual child objects such as ActivityHistory require a relationship subquery.
+        const result=z.object({records:z.array(z.record(z.string(),z.unknown())).max(1)}).parse(await this.api.get(this.query(`SELECT Id,(SELECT Id FROM ${child.relationshipName} LIMIT 2) FROM ${object} WHERE Id='${id}' LIMIT 1`)));
+        if(result.records.length&&result.records[0].Id!==id)throw Error('parent mismatch');
+        // REST represents an empty child relationship as explicit null. Missing or
+        // malformed fields still fail closed; populated child pages always block.
+        const value=result.records[0]?.[child.relationshipName];count=!result.records.length||value===null?0:z.object({records:z.array(z.object({Id})).max(2)}).parse(value).records.length;
+      }else {const result=z.object({records:z.array(z.object({Id})).max(2)}).parse(await this.api.get(this.query(`SELECT Id FROM ${child.childSObject} WHERE ${child.field}='${id}' LIMIT 2`)));count=result.records.length;}
+    }catch{throw new DedicatedCleanupError('cleanup-read-denied',`${child.childSObject}.${child.field}`);}
       // Delete children explicitly first; even owned cascade effects are never implicitly authorized.
-      if(result.records.length)throw Error('Cleanup blocked by active dependent records; no cascade deletion is permitted');}
+      if(count)throw new DedicatedCleanupError('cleanup-dependent-present',`${child.childSObject}.${child.field}`);}
+  }
+  private async cleanupVisibility(run:DedicatedRun){
+    const observed=await this.api.get<{records:Array<{Profile?:{PermissionsViewAllData?:boolean;PermissionsModifyAllData?:boolean}}> }>(this.query(`SELECT Profile.PermissionsViewAllData,Profile.PermissionsModifyAllData FROM User WHERE Id='${run.plan.userId}' LIMIT 1`));
+    if(observed.records.length!==1||!(observed.records[0].Profile?.PermissionsViewAllData===true||observed.records[0].Profile?.PermissionsModifyAllData===true))throw new DedicatedCleanupError('cleanup-visibility-unknown','current-user-record-visibility');
+  }
+  async preflightCleanup(raw:unknown){const {run}=await this.check(raw);await this.cleanupVisibility(run);await this.noForeignCascade(run,'Account','001000000000000AAA');await this.noForeignCascade(run,'Contact','003000000000000AAA');return {status:'passed' as const,recordsCreated:0,runReserved:false};}
+  async inspectOwnedRelationship(raw:unknown,object:string,id:string,relationship:string){
+    await this.verifyOwned(raw,object,id);if(!/^[A-Za-z][A-Za-z0-9_]*$/.test(relationship))throw new DedicatedCleanupError('cleanup-schema-unknown',object);
+    const described=z.object({childRelationships:z.array(z.object({childSObject:z.string().regex(/^[A-Za-z][A-Za-z0-9_]*$/),field:z.string().regex(/^[A-Za-z][A-Za-z0-9_]*$/),relationshipName:z.string().nullable().optional(),cascadeDelete:z.boolean()}))}).parse(await this.api.get(`/services/data/${this.api.apiVersion}/sobjects/${object}/describe`));
+    const child=described.childRelationships.find(c=>c.cascadeDelete&&c.relationshipName===relationship);if(!child)throw new DedicatedCleanupError('cleanup-schema-unknown',object);
+    const response=z.object({records:z.array(z.record(z.string(),z.unknown())).max(1)}).parse(await this.api.get(this.query(`SELECT Id,(SELECT Id FROM ${relationship} LIMIT 2) FROM ${object} WHERE Id='${id}' LIMIT 1`))),value=response.records[0]?.[relationship];
+    let directChildRows:number|undefined;try{directChildRows=z.object({records:z.array(z.object({Id})).max(2)}).parse(await this.api.get(this.query(`SELECT Id FROM ${child.childSObject} WHERE ${child.field}='${id}' LIMIT 2`))).records.length;}catch{/* Virtual children can be inspected only by their supported parent relationship. */}
+    return {parentRows:response.records.length,shape:value===null?'null':value===undefined?'missing':Array.isArray(value)?'array':typeof value,childRows:value&&typeof value==='object'&&'records' in value&&Array.isArray(value.records)?value.records.length:undefined,directChildRows};
   }
   async execute(raw:unknown,input:Mutation,approval:Approval) {
     const {run,policy}=await this.check(raw);this.registered(run);const m=MutationSchema.parse(input),a=ApprovalSchema.parse(approval),qa=policy.dedicatedQa!,db=this.history.db;
@@ -89,7 +114,7 @@ export class DedicatedData {
       if(m.object==='Contact'){const parent=this.owned(run).find(r=>r.object==='Account')!;await this.verifyOwned(run,'Account',parent.id);}
     }else {
       if(!qa.actions.includes('delete-owned')||!m.id||Object.keys(m.values).length)throw Error('Exact owned cleanup approval required');
-      await this.verifyOwned(run,m.object,m.id);await this.noForeignCascade(run,m.object,m.id);
+      await this.verifyOwned(run,m.object,m.id);await this.cleanupVisibility(run);await this.noForeignCascade(run,m.object,m.id);
     }
     db.prepare('INSERT INTO dedicated_mutations VALUES(?,?,?,?,?,?,?,?)').run(run.plan.orgId,run.plan.userId,run.plan.runId,mutationHash(m),m.object,m.operation,m.id??null,'pending');
     const result=await this.api.dispatch(m);
@@ -106,5 +131,12 @@ export class DedicatedData {
   async recoverCleanup(raw:unknown){const {run}=await this.check(raw);const status=this.history.db.prepare('SELECT hash,status FROM dedicated_runs WHERE org=? AND user=? AND run=?').get(run.plan.orgId,run.plan.userId,run.plan.runId);if(status?.status==='complete'&&status.hash===dedicatedPlanHash(run.plan)&&this.summary(run).active===0)return [];this.registered(run);for(const record of this.owned(run)){const pending=this.history.db.prepare("SELECT hash FROM dedicated_mutations WHERE org=? AND user=? AND run=? AND object=? AND operation='delete' AND id=? AND status='pending'").get(run.plan.orgId,run.plan.userId,run.plan.runId,record.object,record.id);if(pending){const page=await this.api.get<{records:unknown[]}>(this.query(`SELECT Id FROM ${record.object} WHERE Id='${record.id}' LIMIT 1`));if(page.records.length)throw Error('Uncertain delete still present; operator reconciliation required');this.markDeleted(run,record.object,record.id);}}
     return this.cleanup(run);
   }
+  async verifyCleanup(raw:unknown){const {run,policy}=await this.check(raw),registered=this.history.db.prepare('SELECT hash FROM dedicated_runs WHERE org=? AND user=? AND run=?').get(run.plan.orgId,run.plan.userId,run.plan.runId);
+    if(registered?.hash!==dedicatedPlanHash(run.plan)||!policy.dedicatedQa!.actions.includes('read-owned')||this.summary(run).active||this.summary(run).uncertainEffects)throw Error('Known owned cleanup must be complete and certain before verification');
+    const rows=this.history.db.prepare('SELECT object,id,status FROM dedicated_records WHERE org=? AND user=? AND run=?').all(run.plan.orgId,run.plan.userId,run.plan.runId);
+    for(const rawRow of rows){const row=z.object({object:z.enum(['Account','Contact']),id:Id,status:z.literal('deleted')}).parse(rawRow),result=z.object({records:z.array(z.unknown()).max(1)}).parse(await this.api.get(this.query(`SELECT Id FROM ${row.object} WHERE Id='${row.id}' LIMIT 1`)));if(result.records.length)throw Error('A known owned record is still present; cleanup verification failed');}
+    return {knownRecords:rows.length,absent:rows.length,verifiedAt:new Date().toISOString()};
+  }
+  async cleanedMetadataReferences(raw:unknown){const {run}=await this.check(raw,'dedicated-ui');await this.verifyCleanup(run);return this.history.db.prepare("SELECT object,id FROM dedicated_records WHERE org=? AND user=? AND run=? AND status='deleted'").all(run.plan.orgId,run.plan.userId,run.plan.runId).map(r=>z.object({object:z.enum(['Account','Contact']),id:Id}).parse(r));}
   finish(run:DedicatedRun){const row=this.history.db.prepare('SELECT hash FROM dedicated_runs WHERE org=? AND user=? AND run=?').get(run.plan.orgId,run.plan.userId,run.plan.runId);if(row?.hash!==dedicatedPlanHash(run.plan))throw Error('Dedicated completion requires an existing exact run');if(this.summary(run).active||this.summary(run).uncertainEffects)throw Error('Cannot complete dedicated run with retained or uncertain records');this.history.db.prepare("UPDATE dedicated_runs SET status='complete' WHERE org=? AND user=? AND run=?").run(run.plan.orgId,run.plan.userId,run.plan.runId);}
 }

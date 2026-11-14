@@ -43,8 +43,13 @@ import { access } from 'node:fs/promises';
 import { EnvironmentPolicySchema } from './execution/environment.js';
 import { DedicatedExecutionSchema,runDedicatedWorkflow } from './execution/dedicated-pipeline.js';
 import { dedicatedReviewPackage } from './execution/dedicated-review.js';
-import { createDedicatedSession,verifyDedicatedSession,geminiExplorationChooser } from './execution/dedicated-browser.js';
+import { createDedicatedSession,verifyDedicatedSession,geminiExplorationChooser,minimizeDedicatedImport,reviewDedicatedUi } from './execution/dedicated-browser.js';
 import { discoverOrg } from './agents/org-discovery.js';
+import { prepareAuthReview } from './execution/dedicated-auth-review.js';
+import { checkDedicatedReadiness } from './execution/dedicated-readiness.js';
+import { claimBridgeUse } from './salesforce/ui-bridge.js';
+import { prepareStaticReview,authorizeStaticReview } from './execution/dedicated-static.js';
+import { diagnoseUiDependencies } from './execution/dependency-diagnostics.js';
 const [mode,file,arg]=process.argv.slice(2);
 async function planningKnowledge(history:History) {
   // Legacy entry points stay local until their exact external payload has been reviewed.
@@ -59,6 +64,11 @@ async function reviewedKnowledge(history:History,remoteApproved=false) {
   return new KnowledgeIndex(history,embed,remote,embeddingSpace);
 }
 async function main() {
+  if(mode==='dedicated-static-review'){
+    const policy=EnvironmentPolicySchema.parse(await loadJson('.state/dedicated-qa-policy.json')),input=DedicatedExecutionSchema.parse(await loadJson(arg||'.state/dedicated-qa-execution.json')),client=await SalesforceClient.connect('.state/dedicated-qa-policy.json'),identity=await client.identity(),review=prepareStaticReview(await loadJson(file||'.state/dedicated-static-observed.json'),policy,identity,input.spec.version);
+    await saveJson('.state/dedicated-static-review.json',review);console.log(JSON.stringify({approved:false,assets:review.plan.assets.length,additionalOrigins:[...new Set(review.plan.assets.map(a=>new URL(a.url).origin))].filter(o=>!policy.allowedOrigins.includes(o)),businessOriginsChanged:false}));return;
+  }
+  if(mode==='dedicated-auth-review'){const policy=EnvironmentPolicySchema.parse(await loadJson('.state/dedicated-qa-policy.json')),review=prepareAuthReview(await loadJson(file||'.state/dedicated-auth-origin-review.json'),policy);await saveJson('.state/dedicated-auth-handoff.review.json',review);console.log('Authentication-only exact GET document handoff draft saved locally; no origin enabled.');return;}
   if(mode==='dedicated-review'){
     if(!file)throw Error('Provide a new dedicated run ID');
     const client=await SalesforceClient.connect(),identity=await client.identity(),org=OrgSnapshotSchema.parse(await loadJson('.state/org-snapshot.json'));
@@ -68,13 +78,34 @@ async function main() {
     await saveJson('.state/dedicated-qa-policy.review.json',review.policyReview);await saveJson('.state/dedicated-qa-execution.review.json',review.executionReview);
     console.log('Exact-org dedicated policy/data/UI review package saved locally; no authorization activated and no records created.');return;
   }
-  if(mode==='dedicated-session'||mode==='dedicated-run'||mode==='dedicated-cleanup'){
+  if(mode==='dedicated-session'||mode==='dedicated-run'||mode==='dedicated-cleanup'||mode==='dedicated-check'||mode==='dedicated-import'||mode==='dedicated-dependencies'){
     const input=DedicatedExecutionSchema.parse(await loadJson(file)),path='.state/dedicated-qa-policy.json',client=await SalesforceClient.connect(path),policy=EnvironmentPolicySchema.parse(await loadJson(path)),history=new History('.state/dedicated-qa.sqlite'),data=client.dedicatedData(history);
     try {
-      if(mode==='dedicated-session'){await data.check(input.data,'dedicated-ui');const identity=await client.identity();if(arg)await verifyDedicatedSession(arg,policy,identity,client.apiOrigin,input.ui.plan.sessionReceipt);else await createDedicatedSession({policy,identity,apiOrigin:client.apiOrigin,statePath:`.auth/${input.data.plan.runId}-state.json`,receiptPath:input.ui.plan.sessionReceipt,bridge:()=>client.dedicatedBrowserBridge()});console.log('Dedicated browser state and identity receipt verified privately.');return;}
-      if(mode==='dedicated-cleanup'){await data.recoverCleanup(input.data);data.finish(input.data);console.log('Known owned cleanup/absence verified; uncertain create effects are never adopted automatically.');return;}
+      if(mode==='dedicated-dependencies'){
+        const identity=await client.identity();reviewDedicatedUi(input.ui,policy,identity);if(input.ui.plan.sourceVersion!==input.spec.version||input.ui.plan.dataPlanHash!==input.data.approval.planHash)throw Error('Metadata review differs from the approved run');
+        const references=await data.cleanedMetadataReferences(input.data),session=await verifyDedicatedSession(arg||`.auth/${input.data.plan.runId}-state.json`,policy,identity,client.apiOrigin),origins=[...new Set(input.ui.plan.workflows.map(w=>w.origin))],documents=references.map(r=>`${origins[0]}/lightning/r/${r.object}/${r.id}/view`),rawAssets=await access('.state/dedicated-static-approval.json').then(()=>loadJson('.state/dedicated-static-approval.json'),()=>undefined),staticReview=rawAssets?authorizeStaticReview(rawAssets,policy,identity,input.spec.version):undefined;
+        const report=await diagnoseUiDependencies({guard:{policy,identity,origins,documents,owned:references,expiresAt:policy.approval.expiresAt,staticReview},statePath:session.statePath,maxMs:10000});await saveJson(`artifacts/dedicated-runs/${input.data.plan.runId}/dependencies.json`,report);console.log(JSON.stringify(report));return;
+      }
+      if(mode==='dedicated-import'){if(!arg)throw Error('Provide the independently approved state path under .auth');await data.check(input.data,'dedicated-ui');const minimized=await minimizeDedicatedImport(arg,`.auth/${input.data.plan.runId}-minimized-state.json`,policy);await verifyDedicatedSession(minimized.statePath,policy,await client.identity(),client.apiOrigin,input.ui.plan.sessionReceipt);console.log(JSON.stringify({sessionVerified:true,removed:minimized.removed,originalUnchanged:true}));return;}
+      if(mode==='dedicated-check'){const report=await checkDedicatedReadiness(input,{data,identity:()=>client.identity(),policy:()=>loadJson(path),discover:()=>discoverOrg(client,['Account','Contact']),apiOrigin:client.apiOrigin});await saveJson('.state/dedicated-readiness.json',report);console.log(JSON.stringify(report));if(report.status==='blocked')process.exitCode=1;return;}
+      if(mode==='dedicated-session'){
+        await data.check(input.data,'dedicated-ui');const identity=await client.identity();
+        if(arg)await verifyDedicatedSession(arg,policy,identity,client.apiOrigin,input.ui.plan.sessionReceipt);
+        else {
+          const authReview=await access('.state/dedicated-auth-handoff.json').then(()=>loadJson('.state/dedicated-auth-handoff.json'),()=>undefined);
+          await createDedicatedSession({policy,identity,apiOrigin:client.apiOrigin,statePath:`.auth/${input.data.plan.runId}-state.json`,receiptPath:input.ui.plan.sessionReceipt,bridge:async()=>{const url=await client.dedicatedBrowserBridge();claimBridgeUse(history,url);return url;},authReview,diagnostic:value=>saveJson('.state/dedicated-session-diagnostic.json',value),originReview:value=>saveJson('.state/dedicated-auth-origin-review.json',value)});
+        }
+        console.log('Dedicated browser state and identity receipt verified privately.');return;
+      }
+      if(mode==='dedicated-cleanup'){
+        const deleted=await data.recoverCleanup(input.data);data.finish(input.data);const absence=await data.verifyCleanup(input.data),root=`artifacts/dedicated-runs/${input.data.plan.runId}`,recovery={status:'cleanup-verified',runId:input.data.plan.runId,deletedThisAttempt:deleted.length,absence,currentOwnership:data.summary(input.data),changesExecutionOutcome:false,learningPublished:false};
+        await saveJson(`${root}/recovery.json`,recovery);
+        if(await access(`${root}/report.json`).then(()=>true,()=>false)){const original=await loadJson(`${root}/report.json`) as {runId?:string};if(original.runId===input.data.plan.runId){const updated={...original,recovery};await saveJson(`${root}/report.json`,updated);await writeFile(`${root}/report.html`,htmlReport(updated));}}
+        console.log(JSON.stringify(recovery));return;
+      }
       let choose;if(input.ui.plan.exploration?.useExternalModel){const chat=configuredChat();if(!chat)throw Error('Approved exploration model is not configured');choose=geminiExplorationChooser(chat);}else if(input.ui.plan.exploration)choose=async(state:{availableActionIds:string[]})=>state.availableActionIds[0];
-      const report=await runDedicatedWorkflow(input,{history,knowledge:new KnowledgeIndex(history),data,root:'artifacts/dedicated-runs',apiOrigin:client.apiOrigin,identity:()=>client.identity(),policy:()=>loadJson(path),discover:()=>discoverOrg(client,['Account','Contact']),choose,validation:'live-salesforce'});console.log(JSON.stringify({mode:report.mode,status:report.status,created:report.created,cleaned:report.cleaned,learning:report.learning,reportPath:report.reportPath}));if(report.status!=='passed')process.exitCode=1;
+      const staticReview=await access('.state/dedicated-static-approval.json').then(()=>loadJson('.state/dedicated-static-approval.json'),()=>undefined);
+      const report=await runDedicatedWorkflow(input,{history,knowledge:new KnowledgeIndex(history),data,root:'artifacts/dedicated-runs',apiOrigin:client.apiOrigin,identity:()=>client.identity(),policy:()=>loadJson(path),discover:()=>discoverOrg(client,['Account','Contact']),choose,staticReview,validation:'live-salesforce'});console.log(JSON.stringify({mode:report.mode,status:report.status,created:report.created,cleaned:report.cleaned,learning:report.learning,reportPath:report.reportPath}));if(report.status!=='passed')process.exitCode=1;
     }finally{history.close();}return;
   }
   if(mode==='component-graph'){const graph=buildComponentGraph(IntelligenceSchema.parse(await loadJson(file||'.state/org-intelligence-latest.json')));await saveJson('.state/component-graph.json',graph);console.log(JSON.stringify({nodes:graph.nodes.length,edges:graph.edges.length,unknowns:graph.unknowns.length,networkCalls:0}));return;}

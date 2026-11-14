@@ -23,7 +23,7 @@ test('dedicated factory creates deterministic Account/Contact, independently ver
     await f.data.open(run,f.org);const created=await f.data.setup(run);assert.equal(created.length,2);const contact=f.records.get(created[1].id)!;assert.equal(contact.AccountId,created[0].id);assert.equal(contact.Description,run.plan.marker);assert.ok(f.queries.some(q=>q.includes('CreatedById')));
     const replay:Mutation={runId:run.plan.runId,object:'Account',operation:'create',values:{...run.plan.creates.Account}};assert.equal(await f.data.execute(run,replay,f.data.approval(run,replay)),created[0].id);assert.equal(f.writes.length,2);
     const wrong:Mutation={runId:run.plan.runId,object:'Contact',operation:'delete',id:outsider,values:{}};await assert.rejects(f.data.execute(run,wrong,f.data.approval(run,wrong)),/ownership/);assert.equal(f.writes.length,2);
-    await f.data.cleanup(run);f.data.finish(run);assert.equal(f.records.size,1);assert.ok(f.records.has(outsider));assert.deepEqual(f.writes.filter(w=>w.operation==='delete').map(w=>w.object),['Contact','Account']);await assert.rejects(f.data.open(run,f.org),/already reserved/);
+    await f.data.cleanup(run);f.data.finish(run);const absent=await f.data.verifyCleanup(run);assert.equal(absent.knownRecords,2);assert.equal(absent.absent,2);assert.equal(f.records.size,1);assert.ok(f.records.has(outsider));assert.deepEqual(f.writes.filter(w=>w.operation==='delete').map(w=>w.object),['Contact','Account']);await assert.rejects(f.data.open(run,f.org),/already reserved/);
   }finally{h.close();}
 });
 test('dedicated payload/action/scope limits block financial/admin objects, parent hijacking, user changes and foreign cascades',async()=>{
@@ -61,4 +61,18 @@ test('dedicated UI guard blocks outside records, mutating/mixed Aura actions and
     assert.equal(allowDedicatedRequest(g,{method:'GET',url:f.browserOrigin+`/services/data/v62.0/ui-api/records/${id}?fields=Account.Name`,type:'xhr'}),true);
     const changed=structuredClone(f.input.ui);changed.plan.workflows[0].steps=[{action:'click',locator:{by:'role',value:'button',name:'Delete'}}];changed.approval.hash=dedicatedUiHash(changed.plan);assert.throws(()=>reviewDedicatedUi(changed,f.policy,f.identity),/non-mutating/);
   }finally{h.close();}
+});
+
+test('cleanup requires existing verified record visibility and never changes user permissions',async()=>{
+  const h=new History(':memory:'),f=dedicatedFixture(h,'visibility');try {f.visible=false;await assert.rejects(f.data.open(f.input.data,f.org),/cleanup-visibility-unknown/);assert.equal(f.writes.length,0);
+    f.visible=true;await f.data.open(f.input.data,f.org);await f.data.setup(f.input.data);f.visible=false;await assert.rejects(f.data.cleanup(f.input.data),/cleanup-visibility-unknown/);assert.equal(f.writes.length,2);assert.equal(f.records.size,2);
+    f.visible=true;await f.data.cleanup(f.input.data);f.data.finish(f.input.data);assert.equal(f.records.size,0);assert.ok(f.queries.some(q=>q.includes('Profile.PermissionsViewAllData')));
+  }finally{h.close();}
+});
+
+test('explicit null child relationships are empty while missing child results remain blocked',async()=>{
+  const h=new History(':memory:'),f=dedicatedFixture(h,'null-children');try{f.emptyChildNull=true;await f.data.open(f.input.data,f.org);await f.data.setup(f.input.data);await f.data.cleanup(f.input.data);f.data.finish(f.input.data);assert.equal(f.records.size,0);assert.ok(f.queries.some(q=>q.includes('(SELECT Id FROM Contacts LIMIT 2)')));}finally{h.close();}
+  const other=new History(':memory:'),g=dedicatedFixture(other,'missing-children');try {await g.data.open(g.input.data,g.org);await g.data.setup(g.input.data);const original=g.api.get.bind(g.api);g.api.get=async<T>(path:string):Promise<T>=>{if(decodeURIComponent(path).includes('(SELECT Id FROM Contacts LIMIT 2)'))return {records:[{Id:g.data.owned(g.input.data).find(r=>r.object==='Account')!.id}]} as T;return original<T>(path);};
+    await assert.rejects(g.data.cleanup(g.input.data),/cleanup-read-denied/);assert.equal(g.writes.filter(w=>w.operation==='delete').length,1);assert.equal(g.data.owned(g.input.data).length,1);
+  }finally{other.close();}
 });

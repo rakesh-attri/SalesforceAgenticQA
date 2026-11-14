@@ -1,5 +1,7 @@
 # SalesforceAgenticQA
 
+Latest continuation: [browser authentication and selector readiness](docs/BROWSER_AUTHENTICATION.md) adds approved unchanged-state import, actual org/user proof for My Domain and Lightning, no-write readiness, observed-selector gates and exact static-resource review. Real Account/Contact setup, SOQL and cleanup passed within the dedicated personal QA scope: four created/four deleted, none retained. UI resource loading/selector discovery remains blocked pending the separate CDN review; no generated Salesforce UI pass or learning is claimed. 128 unit/integration and 3 existing headless tests pass.
+
 Latest increment: [dedicated personal QA org mode](docs/DEDICATED_QA.md) adds exact named org/test-user authorization, deterministic owned Account/Contact factories, guarded headless execution and verified execution learning. All three existing modes retain their boundaries. The full lifecycle passes with mocked Salesforce and real headless fixtures; the approved live attempt stopped before writes because UI Bridge lacked authorized web scope. No actual Salesforce UI/data pass is claimed.
 
 Latest milestone: [deep intelligence and intelligent planning](docs/DEEP_INTELLIGENCE.md) adds a live source-backed component graph, resumable reviewed embeddings, source-spanned stories, historical risk/learning and synthetic Lightning/LWC/Experience exploration. See the cumulative matrix for partial and blocked capabilities; Production dynamic journeys remain disabled.

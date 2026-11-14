@@ -1,5 +1,7 @@
 # Environment-aware QA and reviewed Gemini knowledge
 
+Browser/data continuation: see [BROWSER_AUTHENTICATION.md](BROWSER_AUTHENTICATION.md) for exact app/user prerequisites, approved narrowed state import, actual My Domain/Lightning identity proof, no-write readiness, cleanup and observed-selector gates. Dedicated real setup/SOQL/cleanup passed; UI resource discovery remains blocked pending separate exact static approval. No normal Production boundary or app permission is changed by the framework.
+
 This continues the existing framework. Its sandbox data factories, reviewed workflow generator, graph, history, failure investigation and verified-learning gates remain in place. Environment policy is an additional gate. JWT does not authenticate the browser.
 
 | Mode | Permitted after review | Execution boundary |

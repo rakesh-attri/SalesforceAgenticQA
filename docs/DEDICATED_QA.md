@@ -1,5 +1,7 @@
 # Dedicated personal QA org execution
 
+Latest browser/data continuation: [BROWSER_AUTHENTICATION.md](BROWSER_AUTHENTICATION.md) explains exact OAuth/user prerequisites, unchanged narrowed state import, strict browser org/user proof, cleanup compatibility and separate static-resource review. Both actual approved sessions and real two-record setup/SOQL/cleanup passed: four created/four deleted, none retained. UI observations remain blocked before generation; an exact 15-resource CDN review is pending. Latest verification: 128 unit/integration plus 3 existing headless tests. Dated first-increment evidence below remains historical; no complete live generated UI/learning lifecycle has passed.
+
 `DEDICATED_QA_ORG` is a separate, locally authorized mode for the operator-confirmed personal test org and dedicated JWT user. Salesforce may report `IsSandbox=false`. That value, an org alias, an environment variable or working credentials cannot enable this mode. The three existing modes retain their behavior. The ordinary `client.mutate()` and sandbox graph remain sandbox-only; generic POST remains denied.
 
 ## Authorization and execution boundary
@@ -38,6 +40,7 @@ Only after the named operator explicitly authorizes that exact package, create `
 # Attempt one-use UI Bridge authentication, or supply independently reviewed imported state:
 npm.cmd run platform -- dedicated-session .state/dedicated-qa-execution.json
 # npm.cmd run platform -- dedicated-session .state/dedicated-qa-execution.json .auth/imported-state.json
+npm.cmd run platform -- dedicated-check .state/dedicated-qa-execution.json
 npm.cmd run platform -- dedicated-run .state/dedicated-qa-execution.json
 # Recovery only after reviewing any failure and renewing the same exact approvals if expired:
 npm.cmd run platform -- dedicated-cleanup .state/dedicated-qa-execution.json

@@ -1,4 +1,4 @@
-import { chromium,type BrowserContext } from '@playwright/test';
+import { chromium,type BrowserContext,type Browser,type Request as BrowserRequest } from '@playwright/test';
 import { z } from 'zod';
 import { createHash } from 'node:crypto';
 import { readFile,writeFile,mkdir,realpath,chmod } from 'node:fs/promises';
@@ -7,8 +7,39 @@ import { WorkflowSchema } from '../agents/workflows.js';
 import { authorizeEnvironment,EnvironmentPolicySchema,environmentHash,type EnvironmentIdentity,type EnvironmentPolicy } from './environment.js';
 import { readPrivateSessionState,writePrivateSessionReceipt,checkSessionReceipt } from '../integrations/session-gate.js';
 import type { StructuredChat } from '../ai/types.js';
+import { authorizeAuthHandoffs,allowAuthHandoff } from './dedicated-auth-review.js';
+import { XMLParser } from 'fast-xml-parser';
+import { parseLightningIdentity,sameSalesforceIdentity } from './lightning-identity.js';
+import { DedicatedStaticReviewSchema,authorizeStaticReview,matchesStaticReview } from './dedicated-static.js';
 const Id=z.string().regex(/^[A-Za-z0-9]{15}(?:[A-Za-z0-9]{3})?$/);
-export const DedicatedGuardSchema=z.object({policy:EnvironmentPolicySchema,identity:z.object({Id,userId:Id,IsSandbox:z.boolean()}),origins:z.array(z.string().url()).min(1),documents:z.array(z.string().url()).max(20),owned:z.array(z.object({object:z.enum(['Account','Contact']),id:Id,display:z.string().optional()})).max(2),expiresAt:z.string().datetime()}).strict();
+export class DedicatedSessionError extends Error {
+  constructor(readonly code:'private-state'|'state-origin'|'session-cookie'|'identity-http'|'identity-mismatch'|'state-changed'|'verification-unavailable'|'receipt') {super(`Dedicated browser session denied: ${code}. Private session/provider details withheld; review the approved state, current user/org and origins.`);this.name='DedicatedSessionError';}
+}
+export function validateDedicatedState(raw:unknown,policy:EnvironmentPolicy,now=Date.now()) {
+  const parsed=z.object({cookies:z.array(z.object({name:z.string(),value:z.string(),domain:z.string(),path:z.string(),expires:z.number(),secure:z.boolean(),httpOnly:z.boolean()}).passthrough()).max(1000),origins:z.array(z.object({origin:z.string().url()}).passthrough()).max(20)}).safeParse(raw);
+  if(!parsed.success)throw new DedicatedSessionError('private-state');
+  const hosts=policy.allowedOrigins.map(o=>new URL(o).hostname);
+  if(parsed.data.origins.some(o=>!policy.allowedOrigins.includes(o.origin))||parsed.data.cookies.some(c=>!hosts.includes(c.domain.replace(/^\./,''))))throw new DedicatedSessionError('state-origin');
+  // Salesforce's requireHttpOnly is an optional org setting. Preserve server flags;
+  // secure transport, expiry and independent identity proof remain mandatory.
+  if(parsed.data.cookies.some(c=>c.name==='sid'&&(!c.secure||!c.value||(c.expires!==-1&&c.expires*1000<=now))))throw new DedicatedSessionError('session-cookie');
+  return parsed.data;
+}
+export function minimizeDedicatedState(raw:unknown,policy:EnvironmentPolicy) {
+  const source=z.object({cookies:z.array(z.object({domain:z.string()}).passthrough()),origins:z.array(z.object({origin:z.string()}).passthrough())}).safeParse(raw);if(!source.success)throw new DedicatedSessionError('private-state');
+  const hosts=policy.allowedOrigins.map(o=>new URL(o).hostname),state={cookies:source.data.cookies.filter(c=>hosts.includes(c.domain.replace(/^\./,''))),origins:source.data.origins.filter(o=>policy.allowedOrigins.includes(o.origin))};
+  validateDedicatedState(state,policy);return {state,removed:{cookies:source.data.cookies.length-state.cookies.length,origins:source.data.origins.length-state.origins.length}};
+}
+export async function minimizeDedicatedImport(statePath:string,outputPath:string,policy:EnvironmentPolicy) {
+  const source=await readPrivateSessionState(statePath),file=resolve(outputPath),root=await realpath('.auth'),rel=relative(root,file),parent=relative(root,await realpath(dirname(file)));
+  if(file===source.statePath||!rel||rel.startsWith('..')||isAbsolute(rel)||parent.startsWith('..')||isAbsolute(parent))throw new DedicatedSessionError('private-state');
+  let raw:unknown;try{raw=JSON.parse(await readFile(source.statePath,'utf8'));}catch{throw new DedicatedSessionError('private-state');}
+  const result=minimizeDedicatedState(raw,policy);
+  await writeFile(file,JSON.stringify(result.state),{flag:'wx',mode:0o600});await chmod(file,0o600);
+  if((await readPrivateSessionState(statePath)).hash!==source.hash)throw new DedicatedSessionError('state-changed');
+  return {statePath:file,removed:result.removed,originalUnchanged:true};
+}
+export const DedicatedGuardSchema=z.object({policy:EnvironmentPolicySchema,identity:z.object({Id,userId:Id,IsSandbox:z.boolean()}),origins:z.array(z.string().url()).min(1),documents:z.array(z.string().url()).max(20),owned:z.array(z.object({object:z.enum(['Account','Contact']),id:Id,display:z.string().optional()})).max(2),expiresAt:z.string().datetime(),staticReview:DedicatedStaticReviewSchema.optional()}).strict();
 export type DedicatedGuard=z.infer<typeof DedicatedGuardSchema>;
 const readActions=new Set(['aura://RecordUiController/ACTION$getRecord','aura://RecordUiController/ACTION$getRecordWithFields','aura://RecordUiController/ACTION$getObjectInfo','aura://RecordUiController/ACTION$getLayout','aura://RecordUiController/ACTION$getRecordLayout','serviceComponent://ui.force.components.controllers.recordGlobalValueProvider.RecordGvpController/ACTION$getRecord']);
 function ownedReadParams(g:DedicatedGuard,descriptor:string,params:unknown) {
@@ -43,10 +74,19 @@ export function allowDedicatedRequest(raw:DedicatedGuard,request:{method:string;
     return message.actions.every((a:{descriptor?:string;params?:unknown})=>!!a.descriptor&&readActions.has(a.descriptor)&&ownedReadParams(g,a.descriptor,a.params));
   }catch{return false;}
 }
-export async function installDedicatedBoundary(context:BrowserContext,raw:unknown,onBlocked:()=>void=()=>{}) {
+export async function installDedicatedBoundary(context:BrowserContext,raw:unknown,onBlocked:(request?:BrowserRequest)=>void=()=>{}) {
   const config=DedicatedGuardSchema.parse(raw);for(const origin of config.origins)authorizeEnvironment(config.policy,config.identity,'dedicated-ui',origin);
+  const assets=config.staticReview?authorizeStaticReview(config.staticReview,config.policy,config.identity,config.staticReview.plan.specVersion):undefined;
   await context.routeWebSocket('**/*',socket=>{onBlocked();socket.close();});
-  await context.route('**/*',route=>{try {if(allowDedicatedRequest(config,{method:route.request().method(),url:route.request().url(),type:route.request().resourceType(),body:route.request().postData()}))return route.fallback();}catch{/* Fail closed, without request/body diagnostics. */}onBlocked();return route.abort('blockedbyclient');});
+  await context.route('**/*',async route=>{try {
+    const request=route.request();
+    if(Date.parse(config.expiresAt)<=Date.now()){onBlocked(request);return route.abort('blockedbyclient');}
+    if(matchesStaticReview(assets,{method:request.method(),url:request.url(),type:request.resourceType()})){
+      const headers={...await request.allHeaders()};delete headers.authorization;if(!config.origins.includes(new URL(request.url()).origin)){if(headers.cookie){onBlocked(request);return route.abort('blockedbyclient');}delete headers.cookie;delete headers.referer;}
+      return route.fallback({headers});
+    }
+    if(allowDedicatedRequest(config,{method:request.method(),url:request.url(),type:request.resourceType(),body:request.postData()}))return route.fallback();
+  }catch{/* Fail closed, without request/body diagnostics. */}onBlocked(route.request());return route.abort('blockedbyclient');});
 }
 export async function installDedicatedGuardFile(context:BrowserContext,path:string) {const config=DedicatedGuardSchema.parse(JSON.parse(await readFile(path,'utf8')));await installDedicatedBoundary(context,config);}
 export const DedicatedUiPlanSchema=z.object({orgId:Id,userId:Id,runId:z.string(),policyHash:z.string(),dataPlanHash:z.string(),sourceVersion:z.string(),sessionReceipt:z.string().min(1),workflows:z.array(WorkflowSchema).min(1).max(2),maxActions:z.number().int().min(0).max(20),maxMs:z.number().int().min(1).max(60000),publishVerifiedExecutionLesson:z.literal(true),exploration:z.object({approved:z.literal(true),maxSteps:z.number().int().min(1).max(2),useExternalModel:z.boolean()}).strict().optional()}).strict();
@@ -61,32 +101,69 @@ export function reviewDedicatedUi(raw:unknown,policy:unknown,identity:Environmen
   for(const w of input.plan.workflows){authorizeEnvironment(p,identity,'dedicated-ui',w.origin);if(w.apiAssertions.length||w.steps.some(s=>s.action==='fill'||/delete|save|new|edit|pay|purchase|transfer|refund|permission/i.test(`${s.locator.value} ${s.locator.name??''}`)))throw Error('Dedicated browser workflow is restricted to reviewed non-mutating owned-record navigation');}
   return input;
 }
-export async function verifyDedicatedSession(statePath:string,policy:unknown,identity:EnvironmentIdentity,apiOrigin:string,receiptPath?:string) {
+export async function verifyDedicatedSession(statePath:string,policy:unknown,identity:EnvironmentIdentity,apiOrigin:string,receiptPath?:string,deps?:{launch:()=>Promise<Browser>}) {
   const p=EnvironmentPolicySchema.parse(policy);if(p.mode!=='DEDICATED_QA_ORG')throw Error('Dedicated browser session mode required');authorizeEnvironment(p,identity,'dedicated-ui',apiOrigin);
-  const before=await readPrivateSessionState(statePath),browser=await chromium.launch({headless:true});
-  try {const context=await browser.newContext({storageState:before.statePath,serviceWorkers:'block',acceptDownloads:false}),host=new URL(apiOrigin).hostname,cookies=await context.cookies(apiOrigin),sid=cookies.find(c=>c.name==='sid'&&(host===c.domain.replace(/^\./,'')||host.endsWith(c.domain)));
-    if(!sid)throw Error('missing session');
-    // Use the browser's actual session cookie, never the API client's JWT token, to prove the browser user/org.
-    const response=await context.request.get(`${apiOrigin}/services/oauth2/userinfo`,{headers:{Authorization:`Bearer ${sid.value}`},maxRedirects:0,timeout:15000});
-    if(!response.ok())throw Error('identity unavailable');const user=z.object({organization_id:z.string(),user_id:z.string()}).parse(await response.json());if(user.organization_id!==identity.Id||user.user_id!==identity.userId)throw Error('identity mismatch');
-    if((await readPrivateSessionState(statePath)).hash!==before.hash)throw Error('state changed');
-    if(receiptPath){const now=Date.now();await writePrivateSessionReceipt(receiptPath,{orgId:identity.Id,userId:identity.userId,persona:p.dedicatedQa!.persona,statePath:before.statePath,hash:before.hash,origins:p.allowedOrigins,reviewer:p.approval.operator,verifiedAt:new Date(now).toISOString(),expiresAt:new Date(Math.min(now+900000,Date.parse(p.approval.expiresAt))).toISOString()});}
+  let browser:Browser|undefined;
+  try {const before=await readPrivateSessionState(statePath);validateDedicatedState(JSON.parse(await readFile(before.statePath,'utf8')),p);
+    browser=await (deps?.launch()??chromium.launch({headless:true}));
+    const context=await browser.newContext({storageState:before.statePath,javaScriptEnabled:false,serviceWorkers:'block',acceptDownloads:false}),sessions:Array<{origin:string;session:string}>=[];
+    for(const origin of p.allowedOrigins){const cookies=await context.cookies(origin),sid=cookies.filter(c=>c.name==='sid');if(sid.length!==1||!sid[0].secure)throw new DedicatedSessionError('session-cookie');sessions.push({origin,session:sid[0].value});}
+    // Prove every approved origin's actual browser session, never the API JWT. An empty
+    // verifier context avoids an unrelated cookie authenticating a rejected Bearer token.
+    const verifier=await browser.newContext({serviceWorkers:'block',acceptDownloads:false});
+    for(const {origin,session} of sessions){await verifier.clearCookies();const response=await verifier.request.get(`${apiOrigin}/services/oauth2/userinfo`,{headers:{Authorization:`Bearer ${session}`},maxRedirects:0,timeout:15000});
+      let observed:unknown;
+      if(response.ok())observed=await response.json();
+      else {
+        // A normal UI session need not be an OAuth token accepted by userinfo.
+        // The fixed read-only SOAP utility proves that same browser session;
+        // it never substitutes the JWT/API token or calls login/create/update.
+        if(![400,401,403,404].includes(response.status()))throw new DedicatedSessionError('identity-http');
+        if(new URL(origin).hostname.endsWith('.lightning.force.com')){
+          const document=await context.request.get(`${origin}/lightning/page/home`,{maxRedirects:0,timeout:15000});
+          if(!document.ok()||!document.headers()['content-type']?.includes('text/html'))throw new DedicatedSessionError('identity-http');
+          try{observed=parseLightningIdentity(await document.text());}catch{throw new DedicatedSessionError('identity-mismatch');}
+        }else {
+        const version=process.env.SF_API_VERSION||'v62.0';if(!/^v\d+\.\d+$/.test(version))throw new DedicatedSessionError('verification-unavailable');
+        const escaped=session.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');await verifier.clearCookies();
+        const proof=await verifier.request.post(`${apiOrigin}/services/Soap/u/${version.slice(1)}`,{headers:{'Content-Type':'text/xml; charset=utf-8',SOAPAction:'getUserInfo'},data:`<env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:p="urn:partner.soap.sforce.com"><env:Header><p:SessionHeader><p:sessionId>${escaped}</p:sessionId></p:SessionHeader></env:Header><env:Body><p:getUserInfo/></env:Body></env:Envelope>`,maxRedirects:0,timeout:15000});
+        if(!proof.ok())throw new DedicatedSessionError('identity-http');const xml=await proof.text();if(xml.length>1000000||/<!DOCTYPE|<!ENTITY/i.test(xml))throw new DedicatedSessionError('identity-mismatch');
+        const parsed=new XMLParser({removeNSPrefix:true,ignoreAttributes:true,parseTagValue:false}).parse(xml),result=z.object({organizationId:Id,userId:Id}).safeParse(parsed?.Envelope?.Body?.getUserInfoResponse?.result);if(!result.success)throw new DedicatedSessionError('identity-mismatch');observed={organization_id:result.data.organizationId,user_id:result.data.userId};
+        }
+      }
+      const user=z.object({organization_id:z.string(),user_id:z.string()}).safeParse(observed);if(!user.success||!sameSalesforceIdentity(user.data.organization_id,identity.Id)||!sameSalesforceIdentity(user.data.user_id,identity.userId))throw new DedicatedSessionError('identity-mismatch');}
+    if((await readPrivateSessionState(statePath)).hash!==before.hash)throw new DedicatedSessionError('state-changed');
+    if(receiptPath){const now=Date.now();try{await writePrivateSessionReceipt(receiptPath,{orgId:identity.Id,userId:identity.userId,persona:p.dedicatedQa!.persona,statePath:before.statePath,hash:before.hash,origins:p.allowedOrigins,reviewer:p.approval.operator,verifiedAt:new Date(now).toISOString(),expiresAt:new Date(Math.min(now+900000,Date.parse(p.approval.expiresAt))).toISOString()});}catch{throw new DedicatedSessionError('receipt');}}
     return {statePath:before.statePath,orgId:identity.Id,userId:identity.userId,persona:p.dedicatedQa!.persona};
-  }catch{throw Error('Dedicated browser session could not be independently verified; session/provider details withheld');}finally{await browser.close();}
+  }catch(error){if(error instanceof DedicatedSessionError)throw error;throw new DedicatedSessionError('verification-unavailable');}finally{await browser?.close();}
 }
-export async function checkedDedicatedSession(receiptPath:string,policy:EnvironmentPolicy,identity:EnvironmentIdentity,apiOrigin:string) {const receipt=await checkSessionReceipt(receiptPath,{orgId:identity.Id,userId:identity.userId,persona:policy.dedicatedQa!.persona},policy.allowedOrigins);return verifyDedicatedSession(receipt.statePath,policy,identity,apiOrigin);}
-export async function createDedicatedSession(input:{policy:unknown;identity:EnvironmentIdentity;apiOrigin:string;statePath:string;receiptPath:string;bridge:()=>Promise<string>}) {
+export async function checkedDedicatedSession(receiptPath:string,policy:EnvironmentPolicy,identity:EnvironmentIdentity,apiOrigin:string) {const receipt=await checkSessionReceipt(receiptPath,{orgId:identity.Id,userId:identity.userId,persona:policy.dedicatedQa!.persona},policy.allowedOrigins);if(receipt.reviewer!==policy.approval.operator)throw new DedicatedSessionError('receipt');return verifyDedicatedSession(receipt.statePath,policy,identity,apiOrigin);}
+export type DedicatedBootstrapDiagnostic={phase:'navigation'|'landing'|'state-write';pageClass:'not-loaded'|'unapproved-origin'|'lightning'|'login'|'other';authHints:string[];blocked:{origin:number;method:number;unknown:number;websocket:number}};
+const authHandoffPaths=['/','/secur/sessionserver.jsp','/secur/session.jsp','/secur/frontdoor.jsp'] as const;
+export type DedicatedOriginReview={approved:false;definitionHash:string;operator:string;observations:Array<{origin:string;path:typeof authHandoffPaths[number]|'unsupported';resourceType:string;method:string}>};
+export async function createDedicatedSession(input:{policy:unknown;identity:EnvironmentIdentity;apiOrigin:string;statePath:string;receiptPath:string;bridge:()=>Promise<string>;authReview?:unknown;diagnostic?:(value:DedicatedBootstrapDiagnostic)=>Promise<void>;originReview?:(value:DedicatedOriginReview)=>Promise<void>}) {
   const policy=EnvironmentPolicySchema.parse(input.policy);authorizeEnvironment(policy,input.identity,'dedicated-ui',input.apiOrigin);
   if(policy.mode!=='DEDICATED_QA_ORG')throw Error('Dedicated mode required');
+  const handoffs=input.authReview?authorizeAuthHandoffs(input.authReview,policy,input.identity):undefined;
   await mkdir('.auth',{recursive:true});const file=resolve(input.statePath),rel=relative(await realpath('.auth'),file),parent=relative(await realpath('.auth'),await realpath(dirname(file)));
   if(!rel||rel.startsWith('..')||isAbsolute(rel)||parent.startsWith('..')||isAbsolute(parent))throw Error('Dedicated session must stay inside ignored .auth');
   const url=await input.bridge(),target=new URL(url);if(!policy.allowedOrigins.includes(target.origin)||target.protocol!=='https:'||target.pathname!=='/secur/frontdoor.jsp')throw Error('Approved one-time browser bridge required');
   const browser=await chromium.launch({headless:true});
+  const diagnostic:DedicatedBootstrapDiagnostic={phase:'navigation',pageClass:'not-loaded',authHints:[],blocked:{origin:0,method:0,unknown:0,websocket:0}},unapprovedOrigins=new Map<string,DedicatedOriginReview['observations'][number]>();let currentPage:import('@playwright/test').Page|undefined;
   try {const context=await browser.newContext({serviceWorkers:'block',acceptDownloads:false});
-    await context.route('**/*',route=>{const request=route.request(),u=new URL(request.url());if(!policy.allowedOrigins.includes(u.origin))return route.abort();const asset=['script','stylesheet','image','font'].includes(request.resourceType())&&/^\/(?:auraFW|sfsites|resource|img|images|icons|assets|static|fonts|jslibrary)\//.test(u.pathname);if(request.method()==='GET'&&(request.url()===url||['/lightning','/lightning/','/lightning/page/home'].includes(u.pathname)||asset))return route.continue();return route.abort();});
-    const page=await context.newPage();await page.goto(url,{waitUntil:'domcontentloaded',timeout:30000});if(!policy.allowedOrigins.includes(new URL(page.url()).origin)||!new URL(page.url()).pathname.startsWith('/lightning'))throw Error('browser bridge did not reach approved UI');
-    await writeFile(file,JSON.stringify(await context.storageState()),{flag:'wx',mode:0o600});await chmod(file,0o600);
-  }catch{throw Error('Dedicated browser authentication failed; one-time URL and session details withheld');}finally{await browser.close();}
+    await context.routeWebSocket('**/*',socket=>{diagnostic.blocked.websocket++;socket.close();});
+    await context.route('**/*',route=>{const request=route.request(),u=new URL(request.url());if(allowAuthHandoff(handoffs,{url:request.url(),method:request.method(),type:request.resourceType()}))return route.continue();if(!policy.allowedOrigins.includes(u.origin)){diagnostic.blocked.origin++;if(unapprovedOrigins.size<10&&u.protocol==='https:')unapprovedOrigins.set(`${u.origin}:${request.resourceType()}`,{origin:u.origin,path:authHandoffPaths.includes(u.pathname as typeof authHandoffPaths[number])?u.pathname as typeof authHandoffPaths[number]:'unsupported',resourceType:request.resourceType(),method:request.method()});return route.abort();}const asset=['script','stylesheet','image','font'].includes(request.resourceType())&&/^\/(?:auraFW|sfsites|resource|img|images|icons|assets|static|fonts|jslibrary)\//.test(u.pathname);if(request.method()==='GET'&&(request.url()===url||['/lightning','/lightning/','/lightning/page/home'].includes(u.pathname)||asset))return route.continue();diagnostic.blocked[request.method()==='GET'?'unknown':'method']++;return route.abort();});
+    const page=await context.newPage();currentPage=page;await page.goto(url,{waitUntil:'domcontentloaded',timeout:30000});diagnostic.phase='landing';
+    // frontdoor may redirect after DOMContentLoaded. Wait for the already approved
+    // landing rather than mistaking the intermediate auth document for a session.
+    await page.waitForURL(value=>policy.allowedOrigins.includes(value.origin)&&value.pathname.startsWith('/lightning'),{waitUntil:'domcontentloaded',timeout:15000});
+    if(!policy.allowedOrigins.includes(new URL(page.url()).origin)||!new URL(page.url()).pathname.startsWith('/lightning'))throw Error('browser bridge did not reach approved UI');
+    diagnostic.phase='state-write';
+    const captured=await context.storageState(),hosts=policy.allowedOrigins.map(o=>new URL(o).hostname),state={cookies:captured.cookies.filter(c=>hosts.includes(c.domain.replace(/^\./,''))),origins:captured.origins.filter(o=>policy.allowedOrigins.includes(o.origin))};
+    validateDedicatedState(state,policy);await writeFile(file,JSON.stringify(state),{flag:'wx',mode:0o600});await chmod(file,0o600);
+  }catch{if(currentPage){try{const final=new URL(currentPage.url());diagnostic.pageClass=final.protocol==='about:'?'not-loaded':!policy.allowedOrigins.includes(final.origin)?'unapproved-origin':final.pathname.startsWith('/lightning')?'lightning':/login|secur/.test(final.pathname)?'login':'other';
+      const text=await currentPage.locator('body').textContent({timeout:1000});for(const [label,pattern] of [['verification-required',/verify your identity|verification code|authenticator|multi.factor/i],['cookies-required',/enable cookies|cookies.*disabled/i],['session-rejected',/invalid session|session.*expired|url.*expired|invalid.*token|single.use/i],['access-denied',/access denied|insufficient privileges|not authorized/i],['login-form',/log in to salesforce|forgot your password/i]] as const)if(pattern.test(text??''))diagnostic.authHints.push(label);
+    }catch{/* No URL or raw provider/DOM text output. */}}await input.diagnostic?.(diagnostic);if(unapprovedOrigins.size)await input.originReview?.({approved:false,definitionHash:environmentHash(policy),operator:policy.approval.operator,observations:[...unapprovedOrigins.values()]});throw Error(`Dedicated browser authentication failed at ${diagnostic.phase}; one-time URL and session details withheld`);}finally{await browser.close();}
   return verifyDedicatedSession(file,policy,input.identity,input.apiOrigin,input.receiptPath);
 }
 export type OpaqueExplorationState={availableActionIds:string[];visitedActionIds:string[];lastAssertionPassed:boolean|null};
