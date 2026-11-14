@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { History } from '../core/history.js';
 import { redact,type Embed,SemanticKnowledge } from './rag.js';
-export const KnowledgeSchema=z.object({id:z.string().min(1),version:z.string().min(1),org:z.string().min(1),permission:z.string().min(1),kind:z.enum(['requirement','org','workflow','defect','lesson']),status:z.enum(['observed','proposed','verified','deprecated']),text:z.string().min(1),evidence:z.array(z.string().min(1)).min(1),testIds:z.array(z.string()).default([]),reviewer:z.string().optional(),capturedAt:z.string().datetime()});
+export const KnowledgeSchema=z.object({id:z.string().min(1),version:z.string().min(1),org:z.string().min(1),permission:z.string().min(1),kind:z.enum(['requirement','org','workflow','defect','lesson']),status:z.enum(['observed','proposed','verified','deprecated']),text:z.string().min(1),evidence:z.array(z.string().min(1)).min(1),testIds:z.array(z.string()).default([]),reviewer:z.string().optional(),capturedAt:z.string().datetime(),schemaVersion:z.string().optional(),defect:z.object({rootCause:z.string(),fix:z.string(),classification:z.string(),signature:z.string(),expected:z.string()}).optional()});
 export type Knowledge=z.infer<typeof KnowledgeSchema>;
 export type Scope={org:string;permission:string};
 export function chunks(text:string,max=1200) {
@@ -17,13 +17,28 @@ export class KnowledgeIndex {
     history.db.exec('CREATE TABLE IF NOT EXISTS knowledge_vector_spaces(org TEXT,permission TEXT,id TEXT,version TEXT,space TEXT,PRIMARY KEY(org,permission,id,version))');
   }
   async ingestMany(inputs:Knowledge[]) {
-    const docs=inputs.map(input=>KnowledgeSchema.parse(input));
+    const docs=inputs.map(input=>this.validateDocument(input));
     if(docs.some(d=>d.status==='verified'&&!d.reviewer?.trim()))throw Error('Verified knowledge requires named review');
-    const vectors=this.embed?await this.embed(docs.map(d=>redact(d.text))):undefined;
-    if(vectors&&(vectors.length!==docs.length||vectors.some(v=>!v.length||v.some(n=>!Number.isFinite(n)))))throw Error('Invalid batch vectors');
-    for(let i=0;i<docs.length;i++)await this.store(docs[i],vectors?.[i]);
+    const existing=docs.map(d=>this.vectorFor(d)),missing=docs.map((d,i)=>({doc:d,index:i})).filter(item=>!existing[item.index]);
+    const vectors=this.embed&&missing.length?await this.embed(missing.map(d=>d.doc.text)):undefined;
+    if(vectors&&(vectors.length!==missing.length||vectors.some(v=>!v.length||v.some(n=>!Number.isFinite(n)))))throw Error('Invalid batch vectors');
+    for(let i=0;i<missing.length;i++)existing[missing[i].index]=vectors?.[i];
+    for(let i=0;i<docs.length;i++)await this.store(docs[i],existing[i]);
   }
   async ingest(input:Knowledge) {return this.store(input);}
+  currentSchema(scope:Scope) {this.all(scope);const row=this.history.db.prepare('SELECT version FROM knowledge_schema WHERE org=? AND permission=?').get(scope.org,scope.permission);return row?String(row.version):undefined;}
+  staleLessons(scope:Scope) {const current=this.currentSchema(scope);return this.all(scope).filter(d=>['defect','lesson'].includes(d.kind)&&(d.status==='deprecated'||!current||d.schemaVersion!==current)).map(d=>({citation:`${d.id}@${d.version}`,reason:d.status==='deprecated'?'source-invalidated':!d.schemaVersion?'schema-binding-unknown':'schema-binding-stale'}));}
+  validateDocument(input:Knowledge) {
+    const doc=KnowledgeSchema.parse(input),row=this.history.db.prepare('SELECT payload FROM knowledge WHERE org=? AND permission=? AND id=? AND version=?').get(doc.org,doc.permission,doc.id,doc.version),previous=row?KnowledgeSchema.parse(JSON.parse(String(row.payload))):undefined;
+    if(doc.status==='verified'&&!doc.reviewer?.trim())throw Error('Verified knowledge requires named review');
+    if(previous&&previous.text!==redact(doc.text))throw Error('Source content changed without a new version');
+    return {...doc,text:redact(doc.text)};
+  }
+  vectorFor(input:Knowledge) {
+    const doc=this.validateDocument(input),row=this.history.db.prepare('SELECT k.vector,s.space FROM knowledge k JOIN knowledge_vector_spaces s USING(org,permission,id,version) WHERE k.org=? AND k.permission=? AND k.id=? AND k.version=?').get(doc.org,doc.permission,doc.id,doc.version);
+    return row?.vector&&row.space===this.embeddingSpace?JSON.parse(String(row.vector)) as number[]:undefined;
+  }
+  async ingestVector(input:Knowledge,vector:number[]) {return this.store(input,vector);}
   private async store(input:Knowledge,precomputed?:number[]) {
     const doc=KnowledgeSchema.parse(input);
     if(doc.status==='verified'&&!doc.reviewer?.trim())throw Error('Verified knowledge requires named review');
@@ -32,7 +47,7 @@ export class KnowledgeIndex {
     doc.text=redact(doc.text);const vectors=precomputed?[precomputed]:this.embed?await this.embed([doc.text]):undefined,vector=vectors?.[0];
     if(vectors&&vectors.length!==1)throw Error('Invalid vector count');
     if(vector&&(!vector.length||vector.some(v=>!Number.isFinite(v))))throw Error('Invalid vector');
-    if(this.remote&&doc.status==='verified')await this.remote.ingest({...doc,status:'verified'});
+    if(this.remote&&doc.status==='verified')await this.remote.ingest({...doc,status:'verified'},vector);
     const db=this.history.db;db.exec('BEGIN IMMEDIATE');
     try {
       for(const old of this.all({org:doc.org,permission:doc.permission}).filter(d=>d.id===doc.id&&d.version!==doc.version&&d.status!=='deprecated'))db.prepare('UPDATE knowledge SET payload=? WHERE org=? AND permission=? AND id=? AND version=?').run(JSON.stringify({...old,status:'deprecated'}),old.org,old.permission,old.id,old.version);

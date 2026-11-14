@@ -19,19 +19,27 @@ import { demonstrateLearning } from './demos/learning.js';
 import { healReviewedWorkflow,HealingSchema } from './agents/healing.js';
 import { configuredSandboxRuntime,configuredProbe,RuntimePolicySchema } from './integrations/live-runtime.js';
 import { issueSessionReceipt,BrowserIdentitySchema } from './integrations/session-gate.js';
-import { configuredChat,configuredEmbeddings } from './ai/providers.js';
+import { configuredChat,configuredEmbeddings,configuredEmbeddingSpace } from './ai/providers.js';
 import { ReasoningAgents,ReasoningRoleSchema } from './agents/reasoning.js';
 import { discoverOrgIntelligence,intelligenceVersion,IntelligenceSchema } from './agents/org-intelligence.js';
 import { planFromOrgIntelligence } from './agents/intelligence-plan.js';
 import { indexOrgIntelligence } from './knowledge/org-intelligence.js';
-import { SnapshotStore } from './knowledge/snapshots.js';
+import { SnapshotStore,schemaFingerprint,knowledgeFingerprint } from './knowledge/snapshots.js';
 import { prepareBrowserDiscovery } from './agents/browser-readiness.js';
 import { EnvironmentDefinitionSchema,environmentHash } from './execution/environment.js';
 import { observeProduction,ObservationRequestSchema,verifyObservationSession } from './execution/observation.js';
-import { prepareReviewBundle,ReviewBundleSchema,bundleHash,ingestReviewedBundle,authorizeAI,authorizePayload,payloadHash } from './knowledge/reviewed.js';
+import { prepareReviewBundle,ReviewBundleSchema,bundleHash,ingestReviewedBundle,authorizeAI,authorizePayload,payloadHash,reuseReviewedKnowledge } from './knowledge/reviewed.js';
 import { redactModelValue,environmentSecrets } from './ai/privacy.js';
 import { groundedPlanning } from './agents/grounded.js';
 import { createHash } from 'node:crypto';
+import { IngestionQueue,IngestionPolicySchema } from './knowledge/ingestion-queue.js';
+import { discoverDeepIntelligence } from './agents/deep-discovery.js';
+import { intelligentSpecPlan } from './agents/spec-intelligence.js';
+import { benchmarkRetrieval } from './knowledge/benchmarks.js';
+import { exploreFixture } from './agents/fixture-explorer.js';
+import { htmlReport } from './agents/evaluation.js';
+import { buildComponentGraph } from './agents/component-graph.js';
+import { access } from 'node:fs/promises';
 const [mode,file,arg]=process.argv.slice(2);
 async function planningKnowledge(history:History) {
   // Legacy entry points stay local until their exact external payload has been reviewed.
@@ -40,12 +48,24 @@ async function planningKnowledge(history:History) {
 async function reviewedKnowledge(history:History,remoteApproved=false) {
   if(process.env.SFQA_EMBEDDING_PROVIDER!=='gemini')throw Error('This reviewed destination requires the Gemini embedding provider');
   const embed=configuredEmbeddings();if(!embed)throw Error('Reviewed semantic flow requires configured embeddings');
-  const embeddingSpace=createHash('sha256').update(JSON.stringify([process.env.SFQA_EMBEDDING_PROVIDER,process.env.SFQA_EMBEDDING_MODEL||process.env.GEMINI_EMBEDDING_MODEL,process.env.SFQA_EMBEDDING_DIMENSIONS,process.env.SFQA_EMBEDDING_URL])).digest('hex');
+  const embeddingSpace=configuredEmbeddingSpace();
   if(process.env.CHROMA_HOST&&!remoteApproved)throw Error('Chroma transmission requires a separate reviewed destination');
   const remote=process.env.CHROMA_HOST?await SemanticKnowledge.connect(process.env.CHROMA_HOST,embed,process.env.CHROMA_TOKEN?{Authorization:`Bearer ${process.env.CHROMA_TOKEN}`} : {},embeddingSpace):undefined;
   return new KnowledgeIndex(history,embed,remote,embeddingSpace);
 }
 async function main() {
+  if(mode==='component-graph'){const graph=buildComponentGraph(IntelligenceSchema.parse(await loadJson(file||'.state/org-intelligence-latest.json')));await saveJson('.state/component-graph.json',graph);console.log(JSON.stringify({nodes:graph.nodes.length,edges:graph.edges.length,unknowns:graph.unknowns.length,networkCalls:0}));return;}
+  if(mode==='explore-fixture'){const report=await exploreFixture(await loadJson(file));await saveJson('artifacts/fixture-exploration.json',report);console.log(JSON.stringify({mode:report.mode,actions:report.actions,observations:report.observations.length,transitions:report.transitions.length,blockedRequests:report.blockedRequests,productionSupported:false}));return;}
+  if(mode==='intelligent-plan'){
+    const spec=await ingestSpec(file),org=OrgSnapshotSchema.parse(await loadJson(arg||'.state/org-snapshot.json')),h=new History();
+    const flag=async(name:string)=>{const i=process.argv.indexOf(name);return i>=0?await loadJson(process.argv[i+1]):undefined;};
+    try {const index=new KnowledgeIndex(h),permission=process.env.SFQA_KNOWLEDGE_PERMISSION||'authorized-api-reader',scope={org:org.orgIdentityHash??org.orgAlias,permission};index.bindSchema(scope,knowledgeFingerprint(org));
+      const exists=await access('.state/reviewed-rag.sqlite').then(()=>true,()=>false);if(exists){const reviewedHistory=new History('.state/reviewed-rag.sqlite');try{await reuseReviewedKnowledge(new KnowledgeIndex(reviewedHistory),index,scope,schemaFingerprint(org),knowledgeFingerprint(org));}finally{reviewedHistory.close();}}
+      const review=await flag('--review') as {reviewer:string;sourceVersion:string}|undefined,changes=await flag('--component-changes'),impact=changes?{graph:await flag('--graph')??await loadJson('.state/component-graph.json'),changed:changes}:undefined,report=await intelligentSpecPlan(spec,org,index,h,permission,await flag('--bindings')??[],review,impact),root=`artifacts/spec-intelligence/${spec.id}`;
+      await saveJson(`${root}/plan.json`,report);await mkdir(root,{recursive:true});await writeFile(`${root}/report.html`,htmlReport(report));for(const file of report.files)await writeFile(`${root}/${file.id}.spec.ts`,file.code);
+      console.log(JSON.stringify({path:`${root}/plan.json`,coverage:report.coverage,generatedFiles:report.files.length,mandatoryRegression:report.mandatoryRegression,execution:'not-executed'}));
+    }finally{h.close();}return;
+  }
   if(mode==='ai-payload-review') {const payload=redactModelValue(await loadJson(file),environmentSecrets());await saveJson('.state/ai-payload-review.json',{payload,bundleHash:payloadHash(payload),approved:false});console.log('Redacted payload saved locally for named content/destination review; no external requests.');return;}
   if(mode==='environment-review') {
     const observed=await SalesforceClient.reviewIdentity();
@@ -74,12 +94,20 @@ async function main() {
     await saveJson('.state/ai-review-bundle.json',bundle);await saveJson('.state/ai-review-request.json',{bundleHash:bundleHash(bundle),approved:false,requiredDestinations:['gemini-chat','gemini-embeddings']});
     console.log(`Structural metadata review bundle saved locally: ${bundle.facts.length} field facts. No AI or embedding requests performed.`);return;
   }
-  if(mode==='knowledge-publish'||mode==='grounded-plan') {
+  if(mode==='knowledge-publish'||mode==='grounded-plan'||mode==='knowledge-benchmark') {
     const bundle=ReviewBundleSchema.parse(await loadJson(file||'.state/ai-review-bundle.json')),review=await loadJson(arg||'.state/ai-review-approval.json');
     authorizeAI(bundle,review,'gemini-embeddings');if(process.env.CHROMA_HOST)authorizeAI(bundle,review,'chroma');
     const h=new History('.state/reviewed-rag.sqlite');try {
       const index=await reviewedKnowledge(h,!!process.env.CHROMA_HOST);
-      if(mode==='knowledge-publish'){console.log(JSON.stringify(await ingestReviewedBundle(bundle,review,index)));return;}
+      if(mode==='knowledge-benchmark'){const cases=bundle.facts.slice(0,2).map(f=>({id:f.id,query:`${f.object} ${f.field}`,scope:{org:bundle.org,permission:bundle.permission},relevant:[`${f.id}@${bundle.sourceVersion}`]})),report=await benchmarkRetrieval(index,cases,3);await saveJson(`artifacts/${bundle.story.id}/retrieval-benchmark.json`,report);console.log(JSON.stringify({cases:report.cases.length,mean:report.mean,limitations:report.limitations}));return;}
+      if(mode==='knowledge-publish'){
+        const setting=(name:string,fallback:number)=>process.env[name]?Number(process.env[name]):fallback;
+        const policy=IngestionPolicySchema.parse({batchSize:setting('SFQA_EMBEDDING_BATCH_SIZE',5),maxRequestsPerRun:setting('SFQA_INGEST_REQUESTS_PER_RUN',5),maxRequestsPerDay:setting('SFQA_INGEST_REQUESTS_PER_DAY',30),maxTextsPerDay:setting('SFQA_INGEST_TEXTS_PER_DAY',100),minIntervalMs:setting('SFQA_INGEST_MIN_INTERVAL_MS',1000)});
+        const embed=configuredEmbeddings({...process.env,SFQA_GEMINI_RETRIES:'0',SFQA_EMBEDDING_BATCH_SIZE:String(policy.batchSize)})!;
+        const queue=new IngestionQueue(h,index,embed,configuredEmbeddingSpace());queue.enqueue(bundle,review);
+        if(process.argv.includes('--retry-blocked'))queue.retryBlocked(bundle,review);
+        const result=await queue.drain(bundle,review,policy);console.log(JSON.stringify({sourceVersion:bundle.sourceVersion,...result}));if(result.status.some(s=>s.status==='pending'||s.status==='blocked'))process.exitCode=2;return;
+      }
       const chat=configuredChat();if(!chat)throw Error('Chat provider not configured');
       const report=await groundedPlanning(bundle,review,index,chat);await saveJson(`artifacts/${bundle.story.id}/grounded-plan.json`,report);
       console.log(JSON.stringify({status:report.status,scenarios:report.scenarios.length,roles:Object.keys(report.advice),evaluation:report.evaluation,executable:false}));
@@ -88,7 +116,9 @@ async function main() {
   if(mode==='org-plan') {const story=StorySchema.parse(await loadJson(file)),intel=IntelligenceSchema.parse(await loadJson(arg||'.state/org-intelligence-latest.json'));await saveJson(`artifacts/${story.id}/org-intelligence-plan.json`,planFromOrgIntelligence(story,intel));console.log(`Draft test/data plan saved for ${story.id}; no network calls or execution.`);return;}
   if(mode==='org-intelligence') {
     const story=StorySchema.parse(await loadJson(file));const client=await SalesforceClient.connect();
-    const result=await discoverOrgIntelligence(client,story,undefined,{allowNonSandboxRead:process.argv.includes('--allow-non-sandbox-read')}),version=intelligenceVersion(result),root=`.state/org-intelligence/${version}`;
+    let result=await discoverOrgIntelligence(client,story,undefined,{allowNonSandboxRead:process.argv.includes('--allow-non-sandbox-read')});
+    if(process.argv.includes('--deep')){const deep=await discoverDeepIntelligence(client,result);result=deep.intelligence;await saveJson('.state/component-graph.json',deep.graph);console.log(JSON.stringify({dependencyGraph:{nodes:deep.graph.nodes.length,edges:deep.graph.edges.length,unknowns:deep.graph.unknowns.length}}));}
+    const version=intelligenceVersion(result),root=`.state/org-intelligence/${version}`;
     await saveJson(`${root}/intelligence.json`,result);await saveJson('.state/org-intelligence-latest.json',result);
     await new SnapshotStore().save(result.snapshot);await saveJson('.state/org-snapshot.json',result.snapshot);
     await saveJson(`artifacts/${story.id}/org-intelligence-plan.json`,planFromOrgIntelligence(story,result));

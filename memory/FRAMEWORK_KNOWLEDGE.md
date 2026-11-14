@@ -1,5 +1,18 @@
 # Framework Knowledge Base
 
+## Deep intelligence and reliable reviewed learning — 2026-11-14
+
+- Dependency API name filters/queryMore are unsupported. Use a bounded supported inventory and preserve missing/capped coverage; actual corrected read returned 195 rows. API references are metadata evidence, never proof of runtime reachability. Regression: deep-intelligence.test.ts; official reference linked in DEEP_INTELLIGENCE.md.
+- Metadata names alone do not identify a component. Namespaced classes can share names; graph inventory IDs and exact source/version bindings prevent false merged edges. Regression: namespace and impact-scope tests.
+- A successful assignment query does not prove effective authorization. Current-user UI API flags are separate from grant/muting inventories, licenses/session activation and record sharing. Actual persona had zero assigned groups; group/muting semantics are mocked, not live-verified.
+- Persist vectors before index/mirror materialization, Retry-After timestamps across restarts, and request/text budgets before provider dispatch. Disable nested retries in queued requests, and hold a model-space lease. Exact reviewed org/permission/model/content hashes avoid repeated uploads. Actual five-fact repeat publication used zero requests. Regression: ingestion-queue.test.ts.
+- Source provenance hashes are retained as evidence but excluded from structural embedding content; unchanged facts can reuse cached vectors after reviewed version changes. The migration to normalized queue input incurs one initial publication. A provider-accepted request lost before local persistence can be repeated; do not claim exactly-once billing.
+- Unstructured story text is a source proposal. Keep exact LF-normalized spans, require review, and never invent UI text, selectors or outcomes. Unknown workflows become sandbox discovery tasks; absent negative/boundary/integration outcomes become questions. Regression: intelligent-specs.test.ts.
+- Captured business metadata can change without Describe field changes. Knowledge bindings include observed deep Flow/validation/permission content while ignoring capture time. Rediscovery invalidates incompatible lessons; unobserved source and live monitoring remain unknown. Regression: intelligence fingerprint and stale lesson tests.
+- Historical cause/fix reuse is a hypothesis for a current failure. Preserve structured reviewed evidence and require the existing failure/review/regression gate before confirmation. Actual synthetic demo held history constant and changed risk 35/mandatory=false to 75/mandatory=true with reviewed knowledge.
+- Real-time sleep assertions become flaky under CPU load even when pacing is correct. An injected clock verifies the exact interval and serialization. Windows browser output can remain briefly locked after child exit; bounded cleanup retries preserve assertions and surface persistent locks. Regressions: gemini.test.ts/spec-pipeline.test.ts.
+- Shadow DOM exploration is verified only for the synthetic loopback fixture. Real generated TypeScript executed against observed fixture states; Production JavaScript/forms/requests/actions remain restricted. No Salesforce UI pass is established. Regression: fixture-explorer.test.ts.
+
 ## Environment-aware QA and approved semantic planning — 2026-11-14
 
 - Production can be an intentional read-only QA target. Use an exact org/OAuth persona/origin/capability definition, named hash-bound expiry approval and the dedicated restricted observer. PRODUCTION_CONTROLLED_QA remains review-only. Regression: environment.test.ts and production-pipeline.test.ts.

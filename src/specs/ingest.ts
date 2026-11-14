@@ -4,19 +4,32 @@ import { createHash } from 'node:crypto';
 import { parse as yaml } from 'yaml';
 import { z } from 'zod';
 import { StorySchema } from '../core/types.js';
-export const CriterionSchema=z.object({id:z.string().min(1),text:z.string().min(1),expectedText:z.string().min(1).optional(),kind:z.enum(['positive','negative','boundary']).default('positive')});
-export const SpecSchema=StorySchema.extend({acceptanceCriteria:z.array(CriterionSchema).min(1),source:z.string().min(1),version:z.string().min(1),warnings:z.array(z.string()).default([])}).superRefine((s,c)=>{
+export const CriterionSchema=z.object({id:z.string().min(1),text:z.string().min(1),expectedText:z.string().min(1).optional(),kind:z.enum(['positive','negative','boundary','integration']).default('positive'),sourceSpan:z.object({start:z.number().int().nonnegative(),end:z.number().int().positive()}).optional()});
+export const SpecSchema=StorySchema.extend({acceptanceCriteria:z.array(CriterionSchema).min(1),source:z.string().min(1),version:z.string().min(1),warnings:z.array(z.string()).default([]),requiresReview:z.boolean().default(false)}).superRefine((s,c)=>{
   if(new Set(s.acceptanceCriteria.map(a=>a.id)).size!==s.acceptanceCriteria.length)c.addIssue({code:'custom',message:'Duplicate criterion identifiers'});
+  for(const ac of s.acceptanceCriteria)if(ac.sourceSpan&&s.description.slice(ac.sourceSpan.start,ac.sourceSpan.end)!==ac.text)c.addIssue({code:'custom',message:'Extracted criterion does not match its source span'});
+  if(s.requiresReview)for(const ac of s.acceptanceCriteria)if(ac.expectedText&&!ac.text.includes(ac.expectedText))c.addIssue({code:'custom',message:'Unstructured expected UI text must occur literally in the source criterion'});
 });
 export type Spec=z.infer<typeof SpecSchema>;
 export function parseText(text:string,source:string,version:string):Spec {
   const lines=text.replace(/\r/g,'').split('\n'),criteria:unknown[]=[];
   for(const line of lines) {
-    const match=line.match(/^\s*(?:[-*]\s*)?(AC[\w-]+)\s*[:.]\s*(?:\[(positive|negative|boundary)\]\s*)?(.+)$/i);
+    const match=line.match(/^\s*(?:[-*]\s*)?(AC[\w-]+)\s*[:.]\s*(?:\[(positive|negative|boundary|integration)\]\s*)?(.+)$/i);
     if(match)criteria.push({id:match[1],kind:match[2]?.toLowerCase()??'positive',text:match[3]});
   }
+  if(!criteria.length)return parseUnstructured(text,source,version);
   const value=(key:string)=>lines.find(l=>new RegExp(`^${key}:`,'i').test(l))?.split(':').slice(1).join(':').trim();
   return SpecSchema.parse({id:value('ID')??'imported-spec',title:value('Title')??lines.find(l=>l.startsWith('# '))?.slice(2)??'Imported specification',description:text.trim(),objects:value('Objects')?.split(',').map(s=>s.trim()).filter(Boolean)??[],persona:value('Persona'),acceptanceCriteria:criteria,source,version,warnings:['Only explicitly identified AC lines are executable requirements; prose needs review. PDF/DOCX extraction does not establish table/layout meaning.']});
+}
+export function parseUnstructured(text:string,source:string,version:string):Spec {
+  const canonical=text.replace(/\r/g,'').trim(),criteria:Array<z.infer<typeof CriterionSchema>>=[];
+  const kind=(quote:string)=>/\b(boundary|at most|at least|maximum|minimum|exactly \d+)\b/i.test(quote)?'boundary' as const:/\b(integration|API|synchroni[sz]|downstream)\b/i.test(quote)?'integration' as const:/\b(invalid|reject|denied|must not|should not|cannot)\b/i.test(quote)?'negative' as const:'positive' as const;
+  const add=(quote:string,start:number)=>criteria.push({id:`AC${criteria.length+1}`,text:quote,kind:kind(quote),sourceSpan:{start,end:start+quote.length}});
+  for(const match of canonical.matchAll(/^\s*Given\b[^]*?^\s*Then\b[^\n]*(?:\n\s*And\b[^\n]*)*/gmi))add(match[0],match.index!);
+  if(!criteria.length){const heading=/^\s*(?:acceptance criteria|requirements)\s*:\s*$/im.exec(canonical);if(heading){const tail=canonical.slice(heading.index+heading[0].length);for(const m of tail.matchAll(/^\s*(?:[-*]|\d+[.)])\s+([^\n]+)/gm))add(m[1],heading.index+heading[0].length+m.index!+m[0].indexOf(m[1]));}}
+  const actor=/\bAs an? ([^,\n]+?),?\s+I want\b/i.exec(canonical);
+  if(!criteria.length&&actor){const line=canonical.slice(actor.index).split('\n')[0];add(line,actor.index);}
+  return SpecSchema.parse({id:'imported-spec',title:canonical.split('\n').find(l=>l.startsWith('# '))?.slice(2)??'Unstructured story proposal',description:canonical,persona:actor?.[1],objects:[],source,version,acceptanceCriteria:criteria,requiresReview:true,warnings:['Source spans refer to LF-normalized description. Extracted actors/kinds/intent require review; no UI text, workflow, field, prerequisite or expected outcome was invented.']});
 }
 export function parseStructured(value:unknown,source:string,version:string):Spec {
   const object=z.record(z.string(),z.unknown()).parse(value);

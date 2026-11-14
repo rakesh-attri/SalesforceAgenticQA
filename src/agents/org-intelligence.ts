@@ -62,7 +62,7 @@ export async function discoverOrgIntelligence(client:IntelligenceReader,storyInp
   if(names.length){
     await querySection('record-types',`SELECT Id,SobjectType,DeveloperName,Name,IsActive FROM RecordType WHERE SobjectType IN (${where}) LIMIT 200`);
     await querySection('validation-rules',`SELECT Id,ValidationName,Active,EntityDefinitionId FROM ValidationRule WHERE EntityDefinition.QualifiedApiName IN (${where}) LIMIT 200`,true);
-    await querySection('metadata-dependencies',`SELECT MetadataComponentId,MetadataComponentName,MetadataComponentType,RefMetadataComponentName,RefMetadataComponentType FROM MetadataComponentDependency WHERE RefMetadataComponentName IN (${where}) LIMIT 200`,true);
+    await querySection('metadata-dependencies','SELECT MetadataComponentId,MetadataComponentName,MetadataComponentNamespace,MetadataComponentType,RefMetadataComponentId,RefMetadataComponentName,RefMetadataComponentNamespace,RefMetadataComponentType FROM MetadataComponentDependency LIMIT 200',true);
     await querySection('object-permissions',`SELECT ParentId,SobjectType,PermissionsRead,PermissionsCreate,PermissionsEdit,PermissionsDelete,PermissionsViewAllRecords,PermissionsModifyAllRecords FROM ObjectPermissions WHERE SobjectType IN (${where}) LIMIT 200`);
     await querySection('field-permissions',`SELECT ParentId,SobjectType,Field,PermissionsRead,PermissionsEdit FROM FieldPermissions WHERE SobjectType IN (${where}) LIMIT 200`);
     if(client.readMetadata)for(let offset=0;offset<names.length;offset+=10){const batch=names.slice(offset,offset+10),source=`metadata:readMetadata:CustomObject:${batch.join(',')}`;

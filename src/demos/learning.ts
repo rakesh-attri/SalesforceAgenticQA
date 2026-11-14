@@ -9,6 +9,7 @@ import { snapshotVersion } from '../knowledge/snapshots.js';
 import { PipelineInputSchema,createSpecPipeline,executionHash } from '../agents/pipeline.js';
 import { confirmDefect } from '../agents/intelligence.js';
 import { saveJson } from '../core/io.js';
+import { intelligentSpecPlan } from '../agents/spec-intelligence.js';
 export async function demonstrateLearning() {
   let broken=true,status='Unpaid';
   const server=createServer((req,res)=>{
@@ -33,7 +34,12 @@ export async function demonstrateLearning() {
     await confirmDefect(h,knowledge,scope,failed.investigations[0],{reviewer:'fixture-maintainer',rootCause:'Seeded fixture handler returned Declined',fix:'Return Paid from corrected fixture handler; assertions unchanged',regressionRun:`${id}-regression`});
     const future=await run('future',false);
     if(!future.analysis.selection.find(s=>s.id==='status-regression')?.lessons.length)throw Error('Verified lesson did not influence future plan');
-    const manifest={mode:'offline-fixture',seededFailure:failed.reportPath,verifiedRegression:fixed.reportPath,futurePlan:future.reportPath,lesson:failed.investigations[0].id,selected:future.analysis.selection,notes:'No Salesforce or financial transaction executed. Seeded failure is expected demonstration evidence.'};
+    const intelligent=await intelligentSpecPlan(spec,org,knowledge,h,scope.permission,future.input.mappings);
+    if(!intelligent.selection.find(s=>s.id==='status-regression')?.mandatory)throw Error('Confirmed defect did not influence intelligent spec planning');
+    const contrast=new History(':memory:');let learningImpact;
+    try {const without=await intelligentSpecPlan(spec,org,new KnowledgeIndex(contrast),h,scope.permission,future.input.mappings),before=without.selection.find(s=>s.id==='status-regression')!,after=intelligent.selection.find(s=>s.id==='status-regression')!;if(before.mandatory||after.score<=before.score)throw Error('Verified learning did not change regression priority');learningImpact={withoutReviewedKnowledge:{mandatory:before.mandatory,score:before.score},withReviewedKnowledge:{mandatory:after.mandatory,score:after.score}};}finally{contrast.close();}
+    const intelligentPlan=resolve(root,'intelligent-plan.json');await saveJson(intelligentPlan,intelligent);
+    const manifest={mode:'offline-fixture',seededFailure:failed.reportPath,verifiedRegression:fixed.reportPath,futurePlan:future.reportPath,intelligentPlan,lesson:failed.investigations[0].id,selected:future.analysis.selection,intelligentSelection:intelligent.selection,learningImpact,notes:'No Salesforce or financial transaction executed. Seeded failure is expected demonstration evidence.'};
     await saveJson(resolve(root,'manifest.json'),manifest);return {path:resolve(root,'manifest.json'),...manifest};
   }finally{h.close();await new Promise<void>((r,j)=>server.close(e=>e?j(e):r()));}
 }

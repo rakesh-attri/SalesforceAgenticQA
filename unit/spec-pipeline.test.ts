@@ -71,7 +71,7 @@ test('Specs -> generated browser/API checks -> failure evidence -> confirmed les
     const report=JSON.parse(await readFile(future.reportPath,'utf8'));assert.equal(report.execution.status,'not-executed');assert.ok(report.analysis.questions.some((q:string)=>q.includes('negative')));
     await assert.rejects(createSpecPipeline({history:h,knowledge:index,root}).invoke({input:{...make('stale'),orgVersion:'wrong'}}));
     await assert.rejects(createSpecPipeline({history:h,knowledge:index,root}).invoke({input:{...make('bad-approval'),executionApproval:{reviewer:'reviewer',hash:'wrong'}}}));
-  } finally {h.close();await new Promise<void>((r,j)=>server.close(e=>e?j(e):r()));await rm(root,{recursive:true,force:true});}
+  } finally {h.close();await new Promise<void>((r,j)=>server.close(e=>e?j(e):r()));await rm(root,{recursive:true,force:true,maxRetries:8,retryDelay:100});}
 });
 test('quality evaluation never counts blocked/unexecuted criteria as passed and HTML escapes evidence',()=>{
   assert.equal(evaluateReadiness([{id:'T',status:'blocked',evidence:['s']}],[]).passed,0);

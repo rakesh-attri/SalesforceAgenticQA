@@ -10,6 +10,7 @@ export function schemaFingerprint(snapshot:OrgSnapshot):string {
   const objects=[...parsed.objects].sort((a,b)=>a.name.localeCompare(b.name)).map(o=>({...o,fields:[...o.fields].sort((a,b)=>a.name.localeCompare(b.name))}));
   return createHash('sha256').update(JSON.stringify({orgIdentityHash:parsed.orgIdentityHash,orgAlias:parsed.orgAlias,source:parsed.source,objects})).digest('hex');
 }
+export function knowledgeFingerprint(snapshot:OrgSnapshot) {return snapshot.intelligenceFingerprint??schemaFingerprint(snapshot);}
 export function diffSnapshots(before:OrgSnapshot,after:OrgSnapshot) {
   if(before.orgIdentityHash!==after.orgIdentityHash||before.orgAlias!==after.orgAlias || before.source!==after.source) throw Error('Cannot compare snapshots across orgs or source types');
   const left=new Map(before.objects.map(o=>[o.name,o]));

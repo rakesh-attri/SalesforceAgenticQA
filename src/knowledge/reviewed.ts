@@ -1,13 +1,13 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import type { OrgIntelligence } from '../agents/org-intelligence.js';
-import { schemaFingerprint } from './snapshots.js';
+import { schemaFingerprint,knowledgeFingerprint } from './snapshots.js';
 import { StorySchema,type Story } from '../core/types.js';
 import { KnowledgeIndex,type Knowledge,KnowledgeSchema } from './index.js';
 import { redactModelText,environmentSecrets } from '../ai/privacy.js';
 const Name=z.string().regex(/^[A-Za-z][A-Za-z0-9_]*$/),Hash=z.string().regex(/^[a-f0-9]{64}$/);
 export const ReviewBundleSchema=z.object({
-  org:Hash,permission:z.string().min(1),sourceVersion:Hash,capturedAt:z.string().datetime(),story:StorySchema,
+  org:Hash,permission:z.string().min(1),sourceVersion:Hash,knowledgeVersion:Hash.optional(),capturedAt:z.string().datetime(),story:StorySchema,
   facts:z.array(z.object({id:z.string(),object:Name,field:Name,type:Name,required:z.boolean(),references:z.array(Name),source:z.string()}).strict()).min(1),
   history:z.array(KnowledgeSchema).default([]),
 }).strict();
@@ -27,18 +27,25 @@ export function prepareReviewBundle(intel:OrgIntelligence,story:Story,permission
   if(objects.some(name=>!selected.some(o=>o.name===name)))throw Error('Review bundle requests an unobserved object');
   const facts=selected.flatMap(o=>o.fields.filter(f=>!fields||fields.includes(`${o.name}.${f.name}`)).map(f=>({id:`field:${o.name}.${f.name}`,object:o.name,field:f.name,type:f.type,required:f.createable&&!f.nillable&&!f.defaultedOnCreate,references:f.referenceTo??[],source:`describe:${o.name}@${sourceVersion}`})));
   if(fields?.some(name=>!facts.some(f=>`${f.object}.${f.field}`===name)))throw Error('Field review requests an unobserved field');
-  return ReviewBundleSchema.parse({org,permission,sourceVersion,capturedAt:intel.observedAt,story:cleaned,facts,
-    history:history.filter(d=>d.org===org&&d.permission===permission&&['lesson','defect'].includes(d.kind)&&d.status==='verified').map(d=>({...d,text:redactModelText(d.text,secrets)})),
-  });
+  const reviewedHistory=history.filter(d=>d.org===org&&d.permission===permission&&['lesson','defect'].includes(d.kind)&&d.status==='verified'&&d.schemaVersion===knowledgeFingerprint(intel.snapshot)).map(d=>({...d,text:redactModelText(d.text,secrets)}));
+  return ReviewBundleSchema.parse({org,permission,sourceVersion,...(reviewedHistory.length?{knowledgeVersion:knowledgeFingerprint(intel.snapshot)}:{}),capturedAt:intel.observedAt,story:cleaned,facts,history:reviewedHistory});
 }
 export function authorizeAI(bundle:ReviewBundle,raw:unknown,destination:'gemini-chat'|'gemini-embeddings'|'chroma') {
   const review=AIReviewSchema.parse(raw);
   if(review.bundleHash!==bundleHash(bundle)||Date.parse(review.expiresAt)<=Date.now()||!review.destinations.includes(destination))throw Error('AI data review is missing, expired or does not cover exact content/destination');
   return review;
 }
+export function reviewedDocuments(bundle:ReviewBundle,operator:string):Knowledge[] {
+  return [...bundle.facts.map(fact=>({id:fact.id,version:bundle.sourceVersion,org:bundle.org,permission:bundle.permission,kind:'org' as const,status:'verified' as const,text:JSON.stringify(fact),evidence:[fact.source],reviewer:operator,capturedAt:bundle.capturedAt,testIds:[]})),...bundle.history];
+}
+export async function reuseReviewedKnowledge(source:KnowledgeIndex,target:KnowledgeIndex,scope:{org:string;permission:string},schemaVersion:string,knowledgeVersion=schemaVersion) {
+  const docs=source.all(scope).filter(d=>d.status==='verified'&&d.reviewer?.trim()&&((d.kind==='org'&&d.version===schemaVersion)||(['defect','lesson'].includes(d.kind)&&d.schemaVersion===knowledgeVersion)));
+  for(const doc of docs)await target.ingest(doc);
+  return docs.length;
+}
 export async function ingestReviewedBundle(bundle:ReviewBundle,rawReview:unknown,index:KnowledgeIndex) {
   const review=authorizeAI(bundle,rawReview,'gemini-embeddings');
-  index.bindSchema({org:bundle.org,permission:bundle.permission},bundle.sourceVersion);
+  index.bindSchema({org:bundle.org,permission:bundle.permission},bundle.knowledgeVersion??bundle.sourceVersion);
   authorizeAI(bundle,rawReview,'gemini-embeddings');
   await index.ingestMany(bundle.facts.map(fact=>({id:fact.id,version:bundle.sourceVersion,org:bundle.org,permission:bundle.permission,kind:'org',status:'verified' as const,text:JSON.stringify(fact),evidence:[fact.source],reviewer:review.operator,capturedAt:bundle.capturedAt,testIds:[]})));
   for(const item of bundle.history){authorizeAI(bundle,rawReview,'gemini-embeddings');await index.ingest(item);}

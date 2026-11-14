@@ -8,7 +8,7 @@ import { History } from '../core/history.js';
 import { KnowledgeIndex } from '../knowledge/index.js';
 import { WorkflowSchema,generateTest } from './workflows.js';
 import { proposeDataPlan } from './data-agent.js';
-import { snapshotVersion,schemaFingerprint } from '../knowledge/snapshots.js';
+import { snapshotVersion,knowledgeFingerprint } from '../knowledge/snapshots.js';
 import { prioritize } from './quality.js';
 import { executeGenerated } from '../execution/runner.js';
 import { investigateFailure } from './intelligence.js';
@@ -26,6 +26,7 @@ export const PipelineInputSchema=z.object({
   executionApproval:z.object({reviewer:z.string().trim().min(1),hash:z.string()}).optional(),
   sandbox:SandboxRequestSchema.optional(),dataSetup:DataSetupSchema.optional(),
   productionReadOnly:ObservationRequestSchema.optional(),
+  requirementsReview:z.object({reviewer:z.string().trim().min(1),sourceVersion:z.string()}).optional(),
 });
 export type PipelineInput=z.infer<typeof PipelineInputSchema>;
 export function executionHash(input:PipelineInput) {const {executionApproval,...payload}=PipelineInputSchema.parse(input);return createHash('sha256').update(JSON.stringify(payload)).digest('hex');}
@@ -35,6 +36,7 @@ export function analyze(input:PipelineInput,context:Context,history:History) {
   const scenarios=input.spec.acceptanceCriteria.map(ac=>{
     if(input.productionReadOnly){const read=input.productionReadOnly.plan.reads.find(r=>r.criterionId===ac.id),reasons=read&&read.expectedText===ac.expectedText?[]:['No reviewed read-only observation for criterion'];return {id:`${input.spec.id}-${ac.id}`,criterionId:ac.id,kind:ac.kind,expected:ac.expectedText??ac.text,evidence:[`${input.spec.source}@${input.spec.version}#${ac.id}`,...(read?[input.productionReadOnly.plan.documents[read.page]?.source??'unknown']:[])],status:reasons.length?'blocked' as const:'reviewed' as const,reasons};}
     const mapping=input.mappings.find(m=>m.criterionId===ac.id),reasons:string[]=[];
+    if(input.spec.requiresReview&&(!input.requirementsReview||input.requirementsReview.sourceVersion!==input.spec.version))reasons.push('Extracted requirements require exact named source review');
     if(!mapping)reasons.push('No reviewed workflow for criterion');
     if(!ac.expectedText)reasons.push('No explicit expectedText for executable assertion');
     if(mapping&&mapping.workflow.assertion.text!==ac.expectedText)reasons.push('Assertion differs from source expectedText');
@@ -65,6 +67,7 @@ export function createSpecPipeline(services:{history:History;knowledge:Knowledge
   const graph=new StateGraph(State)
     .addNode('spec_analyst',async state=>{
       const input=PipelineInputSchema.parse(state.input);
+      if(input.executionApproval&&input.spec.requiresReview&&(!input.requirementsReview||input.requirementsReview.sourceVersion!==input.spec.version))throw Error('Execution of extracted requirements requires exact named source review');
       if(input.orgVersion!==snapshotVersion(input.org))throw Error('Stale org knowledge binding');
       if(input.productionReadOnly){
         const request=input.productionReadOnly;
@@ -72,7 +75,7 @@ export function createSpecPipeline(services:{history:History;knowledge:Knowledge
         if(input.org.source!=='salesforce-api'||input.org.orgIdentityHash!==createHash('sha256').update(request.plan.identity.orgId).digest('hex'))throw Error('Production observation requires org-bound API metadata');
         if(!request.plan.reads.length||request.plan.reads.some(read=>!input.spec.acceptanceCriteria.some(ac=>ac.id===read.criterionId&&ac.expectedText===read.expectedText)))throw Error('Production assertions must exactly match reviewed source criteria');
       }
-      services.knowledge.bindSchema({org:input.org.orgIdentityHash??input.org.orgAlias,permission:input.permission},schemaFingerprint(input.org));
+      services.knowledge.bindSchema({org:input.org.orgIdentityHash??input.org.orgAlias,permission:input.permission},knowledgeFingerprint(input.org));
       if(new Set(input.mappings.map(m=>m.criterionId)).size!==input.mappings.length)throw Error('Ambiguous workflow mapping');
       return {input};
     })

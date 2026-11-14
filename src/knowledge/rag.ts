@@ -27,9 +27,9 @@ export class SemanticKnowledge {
     const name=embeddingSpace?`sfqa_${createHash('sha256').update(embeddingSpace).digest('hex').slice(0,24)}`:'sfqa_verified';
     return new SemanticKnowledge(await client.getOrCreateCollection({name,embeddingFunction:null}),embed);
   }
-  async ingest(input:Source) {
-    const source=SourceSchema.parse(input),text=redact(source.text),chunks=text.match(/[\s\S]{1,1200}/g)!;
-    const embeddings=await this.embed(chunks);
+  async ingest(input:Source,precomputed?:number[]) {
+    const source=SourceSchema.parse(input),text=redact(source.text),chunks=precomputed?[text]:text.match(/[\s\S]{1,1200}/g)!;
+    const embeddings=precomputed?[precomputed]:await this.embed(chunks);
     if(embeddings.length!==chunks.length||embeddings.some(e=>!e.length||e.some(v=>!Number.isFinite(v)))) throw Error('Invalid embeddings');
     const ids=chunks.map((_c,i)=>createHash('sha256').update(`${source.org}:${source.permission}:${source.id}:${source.version}:${i}`).digest('hex'));
     await this.collection.upsert({ids,documents:chunks,embeddings,metadatas:chunks.map(()=>({sourceId:source.id,version:source.version,org:source.org,permission:source.permission,status:source.status,capturedAt:source.capturedAt}))});return ids;

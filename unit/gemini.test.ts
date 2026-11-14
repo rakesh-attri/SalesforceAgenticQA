@@ -77,9 +77,9 @@ test('all reasoning roles return reviewed-source-cited proposals and reject inve
   assert.deepEqual(redactModelValue({password:'secret',nested:{clientId:'consumer'}},[]),{password:'[REDACTED]',nested:{clientId:'[REDACTED]'}});
 });
 test('Gemini requests are serialized and paced across concurrent callers',async()=>{
-  let active=0,maximum=0;const sleeps:number[]=[];
-  const chat=new GeminiChat({...options,minIntervalMs:100},{sleep:async ms=>{sleeps.push(ms);},fetch:async()=>{active++;maximum=Math.max(maximum,active);await new Promise(r=>setTimeout(r,5));active--;return chatResponse({ok:true});}});
-  await Promise.all([1,2].map(()=>chat.generate({system:'s',prompt:'p',schema})));assert.equal(maximum,1);assert.ok(sleeps.some(ms=>ms>0));
+  let active=0,maximum=0,time=0;const sleeps:number[]=[];
+  const chat=new GeminiChat({...options,minIntervalMs:100},{now:()=>time,sleep:async ms=>{sleeps.push(ms);time+=ms;},fetch:async()=>{active++;maximum=Math.max(maximum,active);await new Promise(r=>setTimeout(r,5));active--;return chatResponse({ok:true});}});
+  await Promise.all([1,2].map(()=>chat.generate({system:'s',prompt:'p',schema})));assert.equal(maximum,1);assert.deepEqual(sleeps,[100]);
 });
 test('spec graph invokes reasoning roles at their stages and never accepts model assertion changes',async()=>{
   await mkdir('.state',{recursive:true});
