@@ -1,0 +1,60 @@
+# Dedicated personal QA org execution
+
+`DEDICATED_QA_ORG` is a separate, locally authorized mode for the operator-confirmed personal test org and dedicated JWT user. Salesforce may report `IsSandbox=false`. That value, an org alias, an environment variable or working credentials cannot enable this mode. The three existing modes retain their behavior. The ordinary `client.mutate()` and sandbox graph remain sandbox-only; generic POST remains denied.
+
+## Authorization and execution boundary
+
+The strict environment definition binds one exact Organization ID, one active dedicated User ID/persona, canonical HTTPS origins, Account/Contact objects, enumerated actions and a named operator. Its hash and expiry are checked independently of the data-plan and workflow approvals. Authorization lasts at most one hour. The operator attests exclusive QA use, no customer data, synthetic-only data and reviewed nonfinancial automation, bound to the captured metadata fingerprint. A review artifact never activates itself.
+
+Before a session, the client executes OAuth userinfo and queries Organization identity. Data operations repeat fresh identity and active-user checks and reload the local policy. The pipeline re-describes Account/Contact and rejects schema drift. Captured automation is source-bound evidence, not complete runtime understanding: hidden/dynamic or subsequently changed automation remains unknown. Re-review after any automation change. The framework cannot guarantee that arbitrary unreviewed Salesforce triggers have no indirect effects; operator automation review is required before writes.
+
+The implemented factory is deliberately closed: one deterministic synthetic Account (`Name`, ownership `Description`) and one Contact (`LastName`, same marker, exact run-owned `AccountId`). API-required extra fields, incompatible field types and unverified parents fail closed. Every known create is journaled before SOQL verification of its creator, marker and exact values. No update, arbitrary payload, financial object, bulk delete or administrative permission change exists in this path. Destructive cleanup is separately included in the exact reviewed two-record plan; additional high-impact actions remain unsupported even with a broad textual approval.
+
+SQLite tracks org/user/run/plan/mutation hashes and record ownership. Only one open run per org is allowed; a bounded UTC daily quota applies across users in the same journal. Use a single protected local journal for the authorized operator: these local limits are not distributed org-wide locks across independent machines. Run IDs cannot replay. Uncertain network effects never automatically replay or adopt records found by name/marker. Recovery can prove that a known pending deletion is already absent without sending another delete; unknown create IDs require operator reconciliation. Approval expiry can intentionally block cleanup until the same exact scope is reauthorized.
+
+Cleanup selects only journal-owned IDs in reverse dependency order, re-verifies ownership and queries every declared cascade relationship before each delete. Any active dependent, inaccessible relationship query or unknown Describe shape blocks deletion. Even owned children must be explicitly deleted first. No matching-name cleanup, mass deletion, empty-the-org operation or cascade acceptance is available. This constrains framework requests; it does not replace the automation review described above.
+
+## Browser and exploration
+
+JWT API access is not browser authentication. `dedicated-session` uses Salesforce's separately authorized [UI Bridge API](https://help.salesforce.com/s/articleView?id=sf.frontdoor_singleaccess.htm&language=en_US&type=5), or imports independently approved private state. It does not change OAuth scopes, app configuration, user permissions or MFA. A one-use frontdoor URL stays in memory. Browser storage and a private, content-hashed, 15-minute receipt stay under ignored `.auth`. The browser's actual session cookie must authenticate userinfo for the exact current org/user; the API JWT token is never substituted as proof.
+
+The reviewed pipeline preflights this session **before creating data**, and checks it again before UI execution. Generated headless tests use exact owned-record URLs and approved assertions. Tracing is disabled for this path to avoid capturing session headers. Unknown browser requests, forms, mutations, custom Apex, WebSockets, service workers and downloads are blocked. Only limited static assets, exact owned UI API reads and explicitly parsed built-in Aura read actions are permitted. Record fields must be direct fields of the owned object; relationship traversal, mixed batches and extra parameters are denied. Unsupported Lightning/Experience bootstrap requests remain blocked, so full dynamic UI compatibility is still partial.
+
+Optional exploration requires both explicit policy action/capability and a separately hash-approved workflow budget. Its catalog contains at most the two reviewed owned pages. The model chooses opaque `action-0`/`action-1` identifiers; no org IDs, URLs, record values or DOM text are sent to Gemini. Deterministic limits control actions, time and steps, with ownership checks around observation. Models cannot add actions, change assertions or authorize mutations. Broader autonomous workflow discovery remains unfinished.
+
+## Local commands and review
+
+From the repository root, with the documented JWT `.env` and the existing read-only environment policy:
+
+```powershell
+npm.cmd run platform -- dedicated-review SFQA-DEDICATED-002
+```
+
+Inspect `.state/dedicated-qa-policy.review.json` and `.state/dedicated-qa-execution.review.json`. The proposed object pages/headings require actual workflow review; they are not discovered Salesforce selectors. The draft has `approved:false` and `REVIEW_REQUIRED` approval names. Review the linked local automation/dependency evidence, unknowns, exact org/user/origins, synthetic values, cleanup and UI assertions. Do not transmit these files to AI.
+
+Only after the named operator explicitly authorizes that exact package, create `.state/dedicated-qa-policy.json` from its `definition` plus `approval: {operator, definitionHash, expiresAt}`. Create `.state/dedicated-qa-execution.json` from the execution draft, replacing the two approval operators/expiries with the authorized name and a current short expiry. Preserve the exact `planHash` and UI `hash`; any plan/definition change needs recalculation and review. These are local review interfaces, not an environment flag. Do not replace `.state/environment-policy.json`; routine discovery stays read-only.
+
+```powershell
+# Attempt one-use UI Bridge authentication, or supply independently reviewed imported state:
+npm.cmd run platform -- dedicated-session .state/dedicated-qa-execution.json
+# npm.cmd run platform -- dedicated-session .state/dedicated-qa-execution.json .auth/imported-state.json
+npm.cmd run platform -- dedicated-run .state/dedicated-qa-execution.json
+# Recovery only after reviewing any failure and renewing the same exact approvals if expired:
+npm.cmd run platform -- dedicated-cleanup .state/dedicated-qa-execution.json
+```
+
+Reports live at `artifacts/dedicated-runs/<runId>/report.json` and `.html`; ownership/history live in `.state/dedicated-qa.sqlite`. A failed preflight reserves the pipeline run ID and cannot be retried as a fresh execution. Inspect evidence and review a new run ID after fixing the prerequisite. Known-owned cleanup uses the original plan/run; never substitute another run to clear uncertain records. Protect `.auth`, `.state` and artifacts with appropriate Windows ACLs; chmod alone does not configure a Windows ACL.
+
+The connected TypeScript service reuses intelligent planning/RAG, workflow generation, runner, history and investigations. Its successful end-to-end lifecycle publishes an evidence-linked **verified execution lesson**, forcing those regressions into future selection. It cannot declare a defect cause confirmed: the existing failure + named cause/fix review + passing regression gate remains separate. No external AI upload happens during this local planning/learning path unless the independently approved opaque exploration chooser is selected.
+
+## Actual validation — 2026-11-14
+
+| Scope | Executed result |
+|---|---|
+| Automated regression | Typecheck; 107 unit/integration tests; original demo/graph/failure-learning demos; 3 existing headless tests passed. Dedicated integration additionally executed two generated guarded headless tests and two bounded exploration observations. |
+| Mocked Salesforce | Full spec/discovery/reviewed data → two synthetic creates → headless UI → SOQL → reverse cleanup → report → verified execution lesson → future mandatory regression passed. Foreign records remained unchanged; normal modes, parent substitution, replay, uncertain effects, cascade denial and rate budgets were tested. Mock session approval is injected in the full integration; native Salesforce session issuance is not thereby proved. |
+| Actual Salesforce | Named Rakesh Attri authorization activated only the separate exact-org/current-user policy. OAuth identity, technical `IsSandbox=false`, Describe and active dedicated-user checks succeeded. UI Bridge returned a sanitized missing authorized `web` scope diagnostic. No app scopes or permissions were changed. |
+| Actual dedicated lifecycle | `dedicated-run` failed at the missing independently verified session gate. Report: **created=0, cleaned=0, active=0, uncertainEffects=0, execution not executed, learning blocked**. No actual Salesforce Account/Contact create/delete/UI pass or verified Salesforce execution lesson is claimed. |
+| Gemini/Chroma | Prior live reviewed Gemini chat/embedding/local retrieval evidence retained; new opaque exploration calls were mocked. No new external metadata upload or live external Chroma validation in this increment. |
+
+Continuation: provide an independently authorized browser session (or separately administer the required app scope outside this framework), review actual supported UI locators, and authorize a new exact run package. Do not relax the network boundary to make Lightning load. Complete the approved real lifecycle only when those gates succeed; retain richer factories/exploration, distributed recovery, effective sharing, connectors, broad AI evaluations and Reporting Labs in the cumulative registry.

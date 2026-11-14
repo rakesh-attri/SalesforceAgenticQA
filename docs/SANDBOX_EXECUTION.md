@@ -1,5 +1,7 @@
 # Sandbox execution readiness
 
+The separate, explicitly authorized personal-org exception is documented in [DEDICATED_QA.md](DEDICATED_QA.md). It does not change any sandbox contract in this guide or permit normal Production modes to write. Statements below about writable environments refer to this original sandbox pipeline.
+
 Environment-aware continuation: see [ENVIRONMENT_QA.md](ENVIRONMENT_QA.md). Production metadata/SOQL now require an exact named environment policy, and a separate strictly read-only observer can use separately reviewed imported state. The sandbox runner/factories remain sandbox-only. When an environment policy is configured, grant `sandbox-ui` for reviewed browser origins and `sandbox-data` for API factories in addition to required reads; mutation-specific approvals still apply. General `createBrowserSession`/probe APIs now require a fresh `verifySandbox` callback. Use the restricted production-session-verify command for Production, never those callbacks. Live sandbox write/UI validation still requires a different authorized sandbox.
 
 This increment connects existing services; it does not claim a live sandbox run. Verification used mocks, a real cookie-authenticated loopback browser and the real Chroma JS SDK against a local HTTP fixture.

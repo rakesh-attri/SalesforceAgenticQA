@@ -4,12 +4,12 @@ import { mkdir,writeFile,readFile } from 'node:fs/promises';
 import { z } from 'zod';
 import { ResultSchema,type Result } from '../core/history.js';
 const ReportSchema=z.object({suites:z.array(z.unknown()),errors:z.array(z.unknown()).optional()});
-export async function executeGenerated(root:string,runId:string,files:Array<{id:string;code:string}>,timeoutMs=120000,session?:{storageState?:string}) {
+export async function executeGenerated(root:string,runId:string,files:Array<{id:string;code:string}>,timeoutMs=120000,session?:{storageState?:string;trace?:'off'}) {
   if(!files.length||new Set(files.map(f=>f.id)).size!==files.length)throw Error('Distinct generated tests required');
   root=resolve(root);await mkdir(root,{recursive:true});
   for(const file of files){if(!/^[A-Za-z0-9_-]+$/.test(file.id))throw Error('Invalid generated test ID');await writeFile(join(root,`${file.id}.spec.ts`),file.code);}
   const report=join(root,'results.json'),config=join(root,'playwright.config.ts');
-  await writeFile(config,`import { defineConfig } from '@playwright/test'; export default defineConfig(${JSON.stringify({testDir:root,testMatch:files.map(f=>`${f.id}.spec.ts`),workers:1,retries:0,timeout:10000,outputDir:join(root,'evidence'),use:{headless:true,serviceWorkers:'block',storageState:session?.storageState,trace:'on',screenshot:'only-on-failure'},reporter:[['json',{outputFile:report}],['html',{outputFolder:join(root,'html'),open:'never'}],['junit',{outputFile:join(root,'junit.xml')}]]})});`);
+  await writeFile(config,`import { defineConfig } from '@playwright/test'; export default defineConfig(${JSON.stringify({testDir:root,testMatch:files.map(f=>`${f.id}.spec.ts`),workers:1,retries:0,timeout:10000,outputDir:join(root,'evidence'),use:{headless:true,serviceWorkers:'block',storageState:session?.storageState,trace:session?.trace??'on',screenshot:'only-on-failure'},reporter:[['json',{outputFile:report}],['html',{outputFolder:join(root,'html'),open:'never'}],['junit',{outputFile:join(root,'junit.xml')}]]})});`);
   const exitCode=await new Promise<number>((resolveExit,reject)=>{
     const child=spawn(process.execPath,[resolve('node_modules/@playwright/test/cli.js'),'test','--config',config],{shell:false,windowsHide:true,env:{...process.env,PWDEBUG:'0',PLAYWRIGHT_HTML_OPEN:'never'}});
     let output='';child.stdout.on('data',d=>{output=(output+d).slice(-20000);});child.stderr.on('data',d=>{output=(output+d).slice(-20000);});

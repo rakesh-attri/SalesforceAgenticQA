@@ -4,8 +4,10 @@ import { metadataRequest,parseMetadata } from './metadata.js';
 import { z } from 'zod';
 import { readFile } from 'node:fs/promises';
 import { authorizeEnvironment,type EnvironmentPolicy,type EnvironmentDefinition } from '../execution/environment.js';
+import { DedicatedData } from './dedicated-qa.js';
+import type { History } from '../core/history.js';
 export class SalesforceClient {
-  private environment?:{policy:EnvironmentPolicy;identity:{Id:string;IsSandbox:boolean;userId:string}};
+  private environment?:{policy:EnvironmentPolicy;identity:{Id:string;IsSandbox:boolean;userId:string};policyPath?:string};
   private constructor(private instance:string,private token:string, private version:string) {}
   private static async authenticate() {
     const token=await getSalesforceToken();
@@ -15,14 +17,15 @@ export class SalesforceClient {
     return new SalesforceClient(u.origin,token.access_token,process.env.SF_API_VERSION || 'v62.0');
   }
   static async reviewIdentity() {const client=await this.authenticate();return {identity:await client.identity(),origin:client.instance};}
-  static async connect() {
+  static async connect(policyPath?:string) {
     const client=await this.authenticate(),identity=await client.identity();
-    if(!identity.IsSandbox||process.env.SFQA_ENVIRONMENT_POLICY) {
+    if(!identity.IsSandbox||process.env.SFQA_ENVIRONMENT_POLICY||policyPath) {
       let policy:EnvironmentPolicy;
-      try {policy=JSON.parse(await readFile(process.env.SFQA_ENVIRONMENT_POLICY||'.state/environment-policy.json','utf8'));}
+      const path=policyPath||process.env.SFQA_ENVIRONMENT_POLICY||'.state/environment-policy.json';
+      try {policy=JSON.parse(await readFile(path,'utf8'));}
       catch {throw Error('Named environment approval required. Prepare and review an exact org/persona/origin policy before production reads.');}
       authorizeEnvironment(policy,identity,'metadata',client.instance);
-      client.environment={policy,identity};
+      client.environment={policy,identity,policyPath:path};
     }
     return client;
   }
@@ -37,14 +40,45 @@ export class SalesforceClient {
   async request<T>(method:'GET'|'POST',path:string,body?:unknown):Promise<T> {
     if(!path.startsWith('/services/data/')) throw Error('Only Salesforce data API paths are supported');
     if(method!=='GET') throw Error('Writes are disabled: verified sandbox identity and reviewed business factories are not implemented');
+    return this.readRequest(path,body);
+  }
+  private async readRequest<T>(path:string,body?:unknown,ownedVerification=false):Promise<T> {
     this.approveRead(path.includes('/query')?'soql':'metadata');
     const target=new URL(path,this.instance);
     if(target.origin!==this.instance || !target.pathname.startsWith('/services/data/') || path.includes('..') || path.includes('\\')) throw Error('Invalid Salesforce API path');
-    const response=await fetch(target,{method, redirect:'error', signal:AbortSignal.timeout(30000), headers:{Authorization:`Bearer ${this.token}`,'Content-Type':'application/json'},body:body ? JSON.stringify(body):undefined});
-    if(!response.ok) throw Error(`Salesforce API ${method} failed: ${response.status}`);
+    if(this.environment?.policy.mode==='DEDICATED_QA_ORG'&&!ownedVerification){
+      const decoded=decodeURIComponent(path),table=/\bFROM\s+([A-Za-z][A-Za-z0-9_]*)/i.exec(decoded)?.[1],metadataTables=['Organization','User','RecordType','ValidationRule','MetadataComponentDependency','ObjectPermissions','FieldPermissions','ApexClass','ApexTrigger','FlowDefinition','Flow','LightningComponentBundle','PermissionSetAssignment','PermissionSet','PermissionSetGroup','PermissionSetGroupComponent','MutingPermissionSet'];
+      if((path.includes('/query')&&(!table||!metadataTables.includes(table)))||/\/sobjects\/[A-Za-z0-9_]+\/[A-Za-z0-9]{15,18}(?:$|\?)/.test(path)||/\/ui-api\/records\//.test(path))throw Error('Dedicated business-record reads require the run-owned verification service');
+      if(table==='User'&&!decoded.includes(`Id='${this.environment.identity.userId}'`))throw Error('Dedicated user metadata must be scoped to the approved test user');
+    }
+    const response=await fetch(target,{method:'GET', redirect:'error', signal:AbortSignal.timeout(30000), headers:{Authorization:`Bearer ${this.token}`,'Content-Type':'application/json'},body:body ? JSON.stringify(body):undefined});
+    if(!response.ok) throw Error(`Salesforce API GET failed: ${response.status}`);
     return await response.json() as T;
   }
   get apiVersion(){return this.version;}
+  get apiOrigin(){return this.instance;}
+  async dedicatedBrowserBridge() {
+    if(this.environment?.policy.mode!=='DEDICATED_QA_ORG')throw Error('Dedicated browser bridge requires explicit dedicated QA authorization');
+    await this.authorizeCapability('dedicated-ui');
+    const response=await fetch(`${this.instance}/services/oauth2/singleaccess?redirect_uri=${encodeURIComponent('lightning/page/home')}`,{method:'GET',headers:{Authorization:`Bearer ${this.token}`},redirect:'error',signal:AbortSignal.timeout(30000)});
+    if(!response.ok){const body=await response.text();const scope=/Invalid_Scope/i.test(body);throw Error(scope?'Dedicated browser bridge requires an independently authorized web scope; no app permissions were changed':`Dedicated browser bridge failed (${response.status}); provider details withheld`);}
+    let raw:unknown;try{raw=await response.json();}catch{throw Error('Dedicated browser bridge response invalid; details withheld');}
+    const parsed=z.object({frontdoor_uri:z.string().url()}).safeParse(raw);if(!parsed.success)throw Error('Dedicated browser bridge response invalid; details withheld');
+    const target=new URL(parsed.data.frontdoor_uri);if(target.protocol!=='https:'||!this.environment.policy.allowedOrigins.includes(target.origin)||target.pathname!=='/secur/frontdoor.jsp'||target.username||target.password||!target.searchParams.has('otp')||target.searchParams.has('sid')||target.searchParams.has('access_token'))throw Error('Dedicated browser bridge origin/one-time URL denied');
+    return parsed.data.frontdoor_uri; // Credential-bearing one-time URL: consume in memory only, never report or trace.
+  }
+  dedicatedData(history:History) {
+    if(this.environment?.policy.mode!=='DEDICATED_QA_ORG')throw Error('Dedicated transport requires an explicitly connected dedicated QA policy');
+    const environment=this.environment;
+    return new DedicatedData(history,{origin:this.instance,apiVersion:this.version,identity:()=>this.identity(),get:<T>(path:string)=>this.readRequest<T>(path,undefined,true),policy:async()=>environment.policyPath?JSON.parse(await readFile(environment.policyPath,'utf8')):environment.policy,dispatch:async m=>{
+      // There is no public generic write transport. DedicatedData authorizes/journals each exact operation first.
+      if(!['Account','Contact'].includes(m.object))throw Error('Dedicated object denied');
+      const target=`${this.instance}/services/data/${this.version}/sobjects/${m.object}${m.operation==='delete'?'/'+m.id:''}`;
+      const response=await fetch(target,{method:m.operation==='create'?'POST':'DELETE',headers:{Authorization:`Bearer ${this.token}`,'Content-Type':'application/json'},body:m.operation==='create'?JSON.stringify(m.values):undefined,redirect:'error',signal:AbortSignal.timeout(30000)});
+      if(!response.ok)throw Error(`Dedicated mutation failed (${response.status}); reconcile local ownership journal before retry`);
+      return m.operation==='create'?await response.json() as {id:string;success:boolean}:undefined;
+    }});
+  }
   async identity() {
     const response=await fetch(`${this.instance}/services/oauth2/userinfo`,{headers:{Authorization:`Bearer ${this.token}`},redirect:'error',signal:AbortSignal.timeout(30000)});
     if(!response.ok)throw Error(`OAuth identity unavailable (${response.status})`);

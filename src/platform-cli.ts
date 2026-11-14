@@ -40,6 +40,11 @@ import { exploreFixture } from './agents/fixture-explorer.js';
 import { htmlReport } from './agents/evaluation.js';
 import { buildComponentGraph } from './agents/component-graph.js';
 import { access } from 'node:fs/promises';
+import { EnvironmentPolicySchema } from './execution/environment.js';
+import { DedicatedExecutionSchema,runDedicatedWorkflow } from './execution/dedicated-pipeline.js';
+import { dedicatedReviewPackage } from './execution/dedicated-review.js';
+import { createDedicatedSession,verifyDedicatedSession,geminiExplorationChooser } from './execution/dedicated-browser.js';
+import { discoverOrg } from './agents/org-discovery.js';
 const [mode,file,arg]=process.argv.slice(2);
 async function planningKnowledge(history:History) {
   // Legacy entry points stay local until their exact external payload has been reviewed.
@@ -54,6 +59,24 @@ async function reviewedKnowledge(history:History,remoteApproved=false) {
   return new KnowledgeIndex(history,embed,remote,embeddingSpace);
 }
 async function main() {
+  if(mode==='dedicated-review'){
+    if(!file)throw Error('Provide a new dedicated run ID');
+    const client=await SalesforceClient.connect(),identity=await client.identity(),org=OrgSnapshotSchema.parse(await loadJson('.state/org-snapshot.json'));
+    if(org.orgIdentityHash!==createHash('sha256').update(identity.Id).digest('hex'))throw Error('Saved discovery belongs to another org');
+    const fresh=await discoverOrg(client,['Account','Contact']);if(schemaFingerprint({...fresh,orgAlias:org.orgAlias,orgIdentityHash:org.orgIdentityHash})!==schemaFingerprint(org))throw Error('Rediscover org before reviewing dedicated authorization');
+    const browserOrigin=process.env.SFQA_BROWSER_ORIGIN||client.apiOrigin.replace('.my.salesforce.com','.lightning.force.com'),review=dedicatedReviewPackage({identity,origin:client.apiOrigin,browserOrigin,org,operator:'Rakesh Attri',runId:file});
+    await saveJson('.state/dedicated-qa-policy.review.json',review.policyReview);await saveJson('.state/dedicated-qa-execution.review.json',review.executionReview);
+    console.log('Exact-org dedicated policy/data/UI review package saved locally; no authorization activated and no records created.');return;
+  }
+  if(mode==='dedicated-session'||mode==='dedicated-run'||mode==='dedicated-cleanup'){
+    const input=DedicatedExecutionSchema.parse(await loadJson(file)),path='.state/dedicated-qa-policy.json',client=await SalesforceClient.connect(path),policy=EnvironmentPolicySchema.parse(await loadJson(path)),history=new History('.state/dedicated-qa.sqlite'),data=client.dedicatedData(history);
+    try {
+      if(mode==='dedicated-session'){await data.check(input.data,'dedicated-ui');const identity=await client.identity();if(arg)await verifyDedicatedSession(arg,policy,identity,client.apiOrigin,input.ui.plan.sessionReceipt);else await createDedicatedSession({policy,identity,apiOrigin:client.apiOrigin,statePath:`.auth/${input.data.plan.runId}-state.json`,receiptPath:input.ui.plan.sessionReceipt,bridge:()=>client.dedicatedBrowserBridge()});console.log('Dedicated browser state and identity receipt verified privately.');return;}
+      if(mode==='dedicated-cleanup'){await data.recoverCleanup(input.data);data.finish(input.data);console.log('Known owned cleanup/absence verified; uncertain create effects are never adopted automatically.');return;}
+      let choose;if(input.ui.plan.exploration?.useExternalModel){const chat=configuredChat();if(!chat)throw Error('Approved exploration model is not configured');choose=geminiExplorationChooser(chat);}else if(input.ui.plan.exploration)choose=async(state:{availableActionIds:string[]})=>state.availableActionIds[0];
+      const report=await runDedicatedWorkflow(input,{history,knowledge:new KnowledgeIndex(history),data,root:'artifacts/dedicated-runs',apiOrigin:client.apiOrigin,identity:()=>client.identity(),policy:()=>loadJson(path),discover:()=>discoverOrg(client,['Account','Contact']),choose,validation:'live-salesforce'});console.log(JSON.stringify({mode:report.mode,status:report.status,created:report.created,cleaned:report.cleaned,learning:report.learning,reportPath:report.reportPath}));if(report.status!=='passed')process.exitCode=1;
+    }finally{history.close();}return;
+  }
   if(mode==='component-graph'){const graph=buildComponentGraph(IntelligenceSchema.parse(await loadJson(file||'.state/org-intelligence-latest.json')));await saveJson('.state/component-graph.json',graph);console.log(JSON.stringify({nodes:graph.nodes.length,edges:graph.edges.length,unknowns:graph.unknowns.length,networkCalls:0}));return;}
   if(mode==='explore-fixture'){const report=await exploreFixture(await loadJson(file));await saveJson('artifacts/fixture-exploration.json',report);console.log(JSON.stringify({mode:report.mode,actions:report.actions,observations:report.observations.length,transitions:report.transitions.length,blockedRequests:report.blockedRequests,productionSupported:false}));return;}
   if(mode==='intelligent-plan'){

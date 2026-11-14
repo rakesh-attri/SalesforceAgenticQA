@@ -1,5 +1,15 @@
 # Framework Knowledge Base
 
+## Dedicated personal QA authorization — 2026-11-14
+
+- A technical Production org can enter the user-authorized personal QA exception only through a separate exact named org/test-user/origin/object/action/source-bound local policy. Never infer authority from IsSandbox=false, aliases, env flags or working credentials. Existing three modes and ordinary sandbox APIs must not inherit it. Regression: dedicated-qa.test.ts mode and wrong-identity cases.
+- Owned data needs a closed deterministic template, same-run parent, run journal, exact SOQL creator/marker/payload proof and individual reverse cleanup. Matching names/markers alone do not establish ownership. Refuse every active cascade child; unobserved server-side automation still needs explicit operator review and is not guaranteed isolated by the request boundary. Regression: foreign-parent/foreign-cascade tests.
+- Journal before dispatch, retain uncertain effects and never automatically replay/adopt an unknown create. A pending known delete may be reconciled only by independently proving absence. Keep one active org run and local-journal quotas; independent machines are not distributed-locked. Regression: uncertain-effect recovery and daily quota tests.
+- Session proof uses the actual browser cookie, independently verified exact org/user and content-hashed short-lived state receipt; JWT API authentication is not that proof. Actual approved Salesforce UI Bridge attempt failed for missing authorized web scope; no app scope/permissions changed, no records created. The actual pipeline stopped at session preflight and blocked learning. Runtime evidence: artifacts/dedicated-runs/SFQA-DEDICATED-001/report.json.
+- Network guards must remain ahead of fixture/renderer routes (use route.fallback), parse every Aura action/parameter and restrict UI API requests to exact owned IDs/direct fields. Unknown/dynamic bootstrap requests stay blocked. Dedicated execution disables tracing so authentication headers are not captured. Regression: dedicated guard/transport and actual headless fixture integration.
+- Model exploration can choose opaque reviewed action IDs without receiving org/record/DOM content. Enforce budgets and re-verify ownership around each action. Regression: dedicated-exploration.test.ts uses mocked native Gemini responses and real headless pages.
+- A complete passing spec/data/UI/SOQL/cleanup lifecycle can publish a verified execution lesson that forces future regression, but cannot confirm a defect cause. Full dedicated pipeline is offline-verified with two generated browser tests and unchanged unrelated record; actual live UI/data/learning remains blocked. Existing reviewed failure/regression gate remains authoritative.
+
 ## Deep intelligence and reliable reviewed learning — 2026-11-14
 
 - Dependency API name filters/queryMore are unsupported. Use a bounded supported inventory and preserve missing/capped coverage; actual corrected read returned 195 rows. API references are metadata evidence, never proof of runtime reachability. Regression: deep-intelligence.test.ts; official reference linked in DEEP_INTELLIGENCE.md.
