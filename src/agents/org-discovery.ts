@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createHash } from 'node:crypto';
 import { OrgSnapshotSchema,ObjectSchema, type OrgSnapshot } from '../core/types.js';
 import { SalesforceClient } from '../salesforce/client.js';
 const DescribeSchema=z.object({
@@ -25,5 +26,6 @@ export async function discoverOrg(client:DiscoveryReader,objectNames:string[]):P
 }
 export async function discoverLiveOrg(objectNames:string[]):Promise<OrgSnapshot> {
   if(!objectNames.length || objectNames.length>50 || objectNames.some(n=>!/^[A-Za-z][A-Za-z0-9_]*$/.test(n))) throw Error('Provide 1 to 50 valid explicit object names');
-  return discoverOrg(await SalesforceClient.connect(),objectNames);
+  const client=await SalesforceClient.connect(),identity=await client.identity();
+  return OrgSnapshotSchema.parse({...await discoverOrg(client,objectNames),orgIdentityHash:createHash('sha256').update(identity.Id).digest('hex')});
 }

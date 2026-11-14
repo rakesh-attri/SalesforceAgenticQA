@@ -21,7 +21,7 @@ export function sandboxRuntime(input:{factory:HybridFactory;approvalFor:(m:Mutat
     const org=await input.identity();if(!org.IsSandbox||org.Id!==target.orgId||org.userId!==target.userId)throw Error('Fresh sandbox API identity mismatch');
     await input.verifySchema(request);
     const receipt=await checkSessionReceipt(target.sessionReceipt,target,request.allowedOrigins);
-    const actual=await probeSession(receipt.statePath,request.allowedOrigins[0],request.allowedOrigins,input.probe);
+    const actual=await probeSession(receipt.statePath,request.allowedOrigins[0],request.allowedOrigins,input.probe,input.identity);
     if(actual.orgId!==target.orgId||actual.userId!==target.userId||actual.persona!==target.persona)throw Error('Fresh browser identity mismatch');
     return {storageState:receipt.statePath,orgId:org.Id,userId:org.userId,persona:actual.persona};
   }};

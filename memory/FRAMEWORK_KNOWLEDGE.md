@@ -1,5 +1,15 @@
 # Framework Knowledge Base
 
+## Environment-aware QA and approved semantic planning — 2026-11-14
+
+- Production can be an intentional read-only QA target. Use an exact org/OAuth persona/origin/capability definition, named hash-bound expiry approval and the dedicated restricted observer. PRODUCTION_CONTROLLED_QA remains review-only. Regression: environment.test.ts and production-pipeline.test.ts.
+- GET alone does not prove a safe browser operation. Require exact reviewed non-mutating document/asset URLs, block unknown traffic, disable scripts/service workers/downloads/WebSockets, and never accept action/evaluation callbacks in Production. Some Lightning pages cannot operate within this boundary; report that limitation. Synthetic real-browser regression: environment.test.ts. Live Salesforce UI remains unverified.
+- Ordinary callback authenticators/probes require a fresh sandbox verifier. Imported Production state must instead pass restricted DOM identity verification before a receipt is issued. API JWT is never treated as browser authentication.
+- Review metadata content before embedding, not merely its reviewer label. Whitelist structural fields, bind exact bundle/source/scope/destinations, minimize fields, and keep raw records/descriptions/formulas/permissions/code local. Actual operator-approved five-field flow succeeded; the 108-field attempt hit real HTTP 429. Regression: reviewed-rag.test.ts.
+- Org aliases can collide, and vector dimensions alone do not identify an embedding model. Use verified org identity hashes for live scope and provider/model/dimension namespaces for semantic vectors. Old unknown/mismatched spaces cannot contribute cosine scores. Regression: restart/scope/version/model test.
+- Model-selected IDs can be checked; free prose cannot establish org truth. Grounded planning resolves fields/outcomes locally, rejects invented or omitted references and retains reviewed historical regression IDs independently of AI priority. Actual five-role Gemini run is planning evidence, not UI execution or verified self-learning. Existing failure/review/passing-regression learning tests remain authoritative.
+- UI API picklists are specific to the observed record type/persona. Preserve controller indices, dependent values and source paths; never substitute global Describe values after denial. Two live reads succeeded; record-type breadth, effective sharing and business behavior remain partial/unknown. Regression: picklists.test.ts and org-intelligence.test.ts.
+
 ## Real org intelligence — 2026-11-14
 
 - JWT success does not prove an org is a sandbox. Actual identity returned IsSandbox=false; default discovery refused it, and only an explicit read-only metadata exception proceeded. No UI/data-write gate is relaxed. Regression: org-intelligence.test.ts.

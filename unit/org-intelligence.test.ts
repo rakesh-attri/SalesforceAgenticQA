@@ -20,6 +20,7 @@ function reader(sandbox=true):IntelligenceReader&{calls:string[]} {
     calls.push(path);
     if(path.endsWith('/sobjects/'))return {sobjects:catalog} as T;
     if(path.endsWith('/Account/describe'))return {name:'Account',label:'Account',createable:true,fields:[{name:'Name',type:'string',nillable:false,createable:true},{name:'ParentId',type:'reference',nillable:true,createable:true,referenceTo:['Account'],relationshipName:'Parent',relationshipOrder:null}],recordTypeInfos:[{recordTypeId:'012000000000001',name:'Business',active:true,available:true}],childRelationships:[{childSObject:'Contact',field:'AccountId',relationshipName:'Contacts',cascadeDelete:false}]} as T;
+    if(path.includes('/ui-api/'))return {picklistFieldValues:{Industry:{controllerValues:{},values:[{label:'Technology',value:'Technology',validFor:[]}]}}} as T;
     if(path.endsWith('/Contact/describe'))return {name:'Contact',label:'Contact',createable:true,fields:[{name:'LastName',type:'string',nillable:false,createable:true},{name:'AccountId',type:'reference',nillable:true,createable:true,referenceTo:['Account'],relationshipName:'Account'}]} as T;
     const query=decodeURIComponent(path);
     if(query.includes('FROM ValidationRule'))throw Error('private provider payload');
@@ -45,6 +46,7 @@ test('reviewed org intelligence reaches the actual spec graph without authorizin
 test('read-only intelligence validates identity, keeps record types/relationships and distinguishes denied/truncated sections',async()=>{
   const client=reader(),result=await discoverOrgIntelligence(client,story);
   assert.equal(result.identity.IsSandbox,true);assert.equal(result.snapshot.objects[0].recordTypeInfos?.[0].name,'Business');assert.equal(result.snapshot.objects[0].childRelationships?.[0].field,'AccountId');
+  assert.equal(result.sections.find(s=>s.area==='record-type-picklists')?.status,'observed');
   assert.equal(result.sections.find(s=>s.area==='validation-rules')?.status,'unknown');assert.equal(result.sections.find(s=>s.area==='field-permissions')?.status,'partial');
   assert.ok(result.unknowns.some(s=>s.includes('validation-rules coverage is unknown')));
   assert.ok(!JSON.stringify(result).includes('private provider payload'));assert.equal(intelligenceVersion(result).length,64);
@@ -61,8 +63,8 @@ test('live-shaped facts feed draft planner/data relationships and only reviewed 
   assert.deepEqual(plan.data.steps.find(s=>s.object==='Contact')?.dependsOn,['Account']);assert.deepEqual(plan.data.steps.find(s=>s.object==='Account')?.dependsOn,[]);
   assert.ok(plan.plan.scenarios[0].evidence.some(s=>s.includes('/describe')));assert.equal(plan.plan.scenarios[0].expected,story.acceptanceCriteria[0].text);
   const history=new History(':memory:'),index=new KnowledgeIndex(history);
-  try {await indexOrgIntelligence(result,index,'QA');assert.equal((await index.retrieve('Account',{org:result.orgAlias,permission:'QA'})).length,0);
-    await indexOrgIntelligence(result,index,'QA','fixture-reviewer');assert.ok((await index.retrieve('Account',{org:result.orgAlias,permission:'QA'})).length>0);assert.equal((await index.retrieve('Account',{org:result.orgAlias,permission:'other'})).length,0);
+  try {const org=result.snapshot.orgIdentityHash!;await indexOrgIntelligence(result,index,'QA');assert.equal((await index.retrieve('Account',{org,permission:'QA'})).length,0);
+    await indexOrgIntelligence(result,index,'QA','fixture-reviewer');assert.ok((await index.retrieve('Account',{org,permission:'QA'})).length>0);assert.equal((await index.retrieve('Account',{org,permission:'other'})).length,0);assert.equal((await index.retrieve('Account',{org:result.orgAlias,permission:'QA'})).length,0);
     const invalid=proposeDataPlan({...story,objects:['Account','Contact']},result.snapshot,[{object:'Contact',field:'Fabricated__c',parent:'Account',evidence:['story:S']}]);assert.equal(invalid.steps.find(s=>s.object==='Contact')?.status,'blocked');
   }finally{history.close();}
 });

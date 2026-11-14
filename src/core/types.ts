@@ -14,6 +14,7 @@ export const ObjectSchema = z.object({
   childRelationships:z.array(z.object({childSObject:z.string(),field:z.string(),relationshipName:z.string().nullable(),cascadeDelete:z.boolean().optional(),restrictedDelete:z.boolean().optional()})).optional(),
 });
 export const OrgSnapshotSchema = z.object({
+  orgIdentityHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),
   orgAlias: z.string(), observedAt: z.string(), source: z.enum(['fixture','salesforce-api']),
   objects: z.array(ObjectSchema),
   coverage: z.array(z.object({ area:z.string(), status:z.enum(['observed','unknown','blocked']), source:z.string(), detail:z.string() })).optional(),

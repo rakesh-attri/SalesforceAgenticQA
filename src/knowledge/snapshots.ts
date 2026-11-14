@@ -8,10 +8,10 @@ export function snapshotVersion(snapshot:OrgSnapshot):string {
 export function schemaFingerprint(snapshot:OrgSnapshot):string {
   const parsed=OrgSnapshotSchema.parse(snapshot);
   const objects=[...parsed.objects].sort((a,b)=>a.name.localeCompare(b.name)).map(o=>({...o,fields:[...o.fields].sort((a,b)=>a.name.localeCompare(b.name))}));
-  return createHash('sha256').update(JSON.stringify({orgAlias:parsed.orgAlias,source:parsed.source,objects})).digest('hex');
+  return createHash('sha256').update(JSON.stringify({orgIdentityHash:parsed.orgIdentityHash,orgAlias:parsed.orgAlias,source:parsed.source,objects})).digest('hex');
 }
 export function diffSnapshots(before:OrgSnapshot,after:OrgSnapshot) {
-  if(before.orgAlias!==after.orgAlias || before.source!==after.source) throw Error('Cannot compare snapshots across orgs or source types');
+  if(before.orgIdentityHash!==after.orgIdentityHash||before.orgAlias!==after.orgAlias || before.source!==after.source) throw Error('Cannot compare snapshots across orgs or source types');
   const left=new Map(before.objects.map(o=>[o.name,o]));
   const right=new Map(after.objects.map(o=>[o.name,o]));
   return {before:snapshotVersion(before),after:snapshotVersion(after),

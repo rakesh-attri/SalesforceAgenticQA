@@ -1,11 +1,12 @@
 import { chromium, type Page } from '@playwright/test';
 import { mkdir, chmod,realpath } from 'node:fs/promises';
 import { resolve, relative,isAbsolute } from 'node:path';
-export async function createBrowserSession(input:{origin:string;allowedOrigins:string[];persona:string;reviewer:string;authenticate:(page:Page)=>Promise<void>;verify:(page:Page)=>Promise<boolean>;root?:string}) {
+export async function createBrowserSession(input:{origin:string;allowedOrigins:string[];persona:string;reviewer:string;authenticate:(page:Page)=>Promise<void>;verify:(page:Page)=>Promise<boolean>;root?:string;verifySandbox?:()=>Promise<{Id:string;IsSandbox:boolean}>}) {
   const origin=new URL(input.origin);
   if(origin.protocol!=='https:'||!input.allowedOrigins.includes(origin.origin)||!input.reviewer.trim()||!input.persona.match(/^[a-zA-Z0-9_-]+$/)) throw Error('Approved persona and HTTPS origin required');
   const root=resolve(input.root??'.auth'),file=resolve(root,`${input.persona}.json`);
   const intended=relative(resolve('.auth'),file);if(intended.startsWith('..')||isAbsolute(intended)) throw Error('Sessions must remain inside ignored .auth');
+  if(!input.verifySandbox||(await input.verifySandbox()).IsSandbox!==true)throw Error('General browser authentication requires a freshly verified sandbox; production permits restricted observation only');
   const browser=await chromium.launch({headless:true});
   try {
     const context=await browser.newContext();
@@ -16,5 +17,6 @@ export async function createBrowserSession(input:{origin:string;allowedOrigins:s
     if(!input.allowedOrigins.includes(new URL(page.url()).origin)||!await input.verify(page)) throw Error('Authenticated persona not verified');
     await mkdir(root,{recursive:true});const actual=relative(await realpath('.auth'),await realpath(root));if(actual.startsWith('..')||isAbsolute(actual))throw Error('Session directory resolves outside .auth');await context.storageState({path:file});await chmod(file,0o600);
     return {file,persona:input.persona,reviewer:input.reviewer,verifiedAt:new Date().toISOString()};
-  } finally {await browser.close();}
+  }catch{throw Error('Approved sandbox browser authentication failed; private session/provider details withheld.');}
+  finally {await browser.close();}
 }

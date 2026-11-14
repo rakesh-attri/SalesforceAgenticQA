@@ -11,7 +11,7 @@ import { createSpecPipeline,PipelineInputSchema,executionHash } from '../src/age
 import { snapshotVersion } from '../src/knowledge/snapshots.js';
 import { OrgSnapshotSchema } from '../src/core/types.js';
 import { authorize,mutationHash,type Mutation } from '../src/salesforce/approval.js';
-import { SessionReceiptSchema,checkSessionReceipt,issueSessionReceipt } from '../src/integrations/session-gate.js';
+import { SessionReceiptSchema,checkSessionReceipt,issueSessionReceipt,readPrivateSessionState } from '../src/integrations/session-gate.js';
 import { sandboxRuntime } from '../src/execution/readiness.js';
 import { confirmDefect } from '../src/agents/intelligence.js';
 import { createBrowserSession } from '../src/integrations/browser-session.js';
@@ -26,6 +26,8 @@ test('session receipts enforce content integrity, identity, expiry and private p
     await assert.rejects(checkSessionReceipt(path,{...expected,userId:'005000000000002'},origins),/mismatch/);
     await writeFile(state,JSON.stringify({cookies:[],origins:[],changed:true}));await assert.rejects(checkSessionReceipt(path,expected,origins),/changed/);
     await writeFile(path,JSON.stringify({...receipt,expiresAt:'2000-01-01T00:00:00Z'}));await assert.rejects(checkSessionReceipt(path,expected,origins),/expired/);
+    await writeFile(state,'{"cookies": private-cookie-secret');await assert.rejects(readPrivateSessionState(state),error=>error instanceof Error&&error.message.includes('content withheld')&&!error.message.includes('private-cookie-secret'));
+    await writeFile(path,'{"reviewer": private-cookie-secret');await assert.rejects(checkSessionReceipt(path,expected,origins),error=>error instanceof Error&&error.message.includes('content withheld')&&!error.message.includes('private-cookie-secret'));
   }finally{await rm(root,{recursive:true,force:true});}
 });
 test('graph gates -> approved setup -> verified references -> authenticated browser -> cleanup; failures remain visible',{timeout:90000},async()=>{

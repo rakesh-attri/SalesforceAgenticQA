@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { OrgSnapshotSchema,StorySchema,type Story,type OrgSnapshot } from '../core/types.js';
 import { discoverOrg,type DiscoveryReader } from './org-discovery.js';
 import { PageSchema } from '../salesforce/operations.js';
+import { readRecordTypePicklists } from '../salesforce/picklists.js';
 const Name=z.string().regex(/^[A-Za-z][A-Za-z0-9_]*$/),Id=z.string().regex(/^[A-Za-z0-9]{15}(?:[A-Za-z0-9]{3})?$/);
 export const CatalogSchema=z.object({sobjects:z.array(z.object({name:Name,label:z.string(),labelPlural:z.string().optional(),queryable:z.boolean().optional(),createable:z.boolean().optional()}))});
 export type Catalog=z.infer<typeof CatalogSchema>['sobjects'];
@@ -45,6 +46,14 @@ export async function discoverOrgIntelligence(client:IntelligenceReader,storyInp
     }pending=[...parents].filter(n=>!seen.has(n));
   }
   const names=objects.map(o=>o.name),where=names.map(n=>`'${Name.parse(n)}'`).join(',');
+  for(const object of objects){
+    const types=(object.recordTypeInfos??[]).filter(r=>r.available===true&&r.active!==false),selected=types.slice(0,3);
+    for(const type of selected){const source=`/services/data/${client.apiVersion}/ui-api/object-info/${object.name}/picklist-values/${type.recordTypeId}`;
+      try {const result=await readRecordTypePicklists(client,object.name,type.recordTypeId);sections.push({area:'record-type-picklists',status:'observed',source,records:[result],detail:'UI API values for this authenticated API persona and exact record type only; business rules/UI workflows remain unverified.'});}
+      catch {sections.push({area:'record-type-picklists',status:'unknown',source,records:[],detail:'Scoped UI API values unavailable or malformed; global Describe values are not substituted.'});}
+    }
+    if(!selected.length||types.length>selected.length)coverage.push({area:'record-type-picklists',status:'unknown',source:`describe:${object.name}`,detail:'No available record type or the three-record-type budget omitted remaining types.'});
+  }
   const querySection=async(area:string,soql:string,tooling=false)=>{
     const source=`/services/data/${client.apiVersion}/${tooling?'tooling/':''}query?q=${encodeURIComponent(soql)}`;
     try{const page=PageSchema.parse(await client.get(source));sections.push({area,status:page.done&&page.records.length<200?'observed':'partial',source,records:page.records,detail:'Bounded metadata inventory, not proof of business workflow or effective access.'});}
@@ -68,9 +77,9 @@ export async function discoverOrgIntelligence(client:IntelligenceReader,storyInp
   const unknowns=[...(!identity.data.IsSandbox?['Configured org reports IsSandbox=false. This is metadata-only inspection; sandbox writes/UI execution are not authorized.']:[]),'Object relevance is proposed from catalog evidence; UI workflows and expected outcomes require review.','Configured permission rows do not prove effective user/record access, permission-set-group muting, sharing, restriction rules or UI visibility.','Apex/Flow inventories do not prove trigger behavior, validation formulas, async dependencies or business-valid data.','Record-type picklist restrictions and persona-specific browser workflows remain unverified.',...selection.unresolved.map(n=>`Story object ${n} is absent from the accessible catalog.`),...(pending.length||objects.length>=budget.maxObjects?['Discovery budget may omit parent objects; unresolved dependencies remain blocked.']:[])];
   unknowns.push(...sections.filter(s=>s.status!=='observed').map(s=>`${s.area} coverage is ${s.status}: ${s.detail}`),...coverage.filter(c=>c.status==='unknown').map(c=>`${c.area}: ${c.detail}`));
   if(!names.length)unknowns.push('No relevant object was successfully described; field-dependent planning remains blocked.');
-  for(const area of ['record-type-picklists','business-workflows','effective-sharing'])coverage.push({area,status:'unknown',source:'intelligence:scope',detail:'Not established by these metadata reads.'});
+  for(const area of ['business-workflows','effective-sharing'])coverage.push({area,status:'unknown',source:'intelligence:scope',detail:'Not established by these metadata reads.'});
   coverage.push(...sections.map(section=>({area:section.area,status:section.status==='observed'?'observed' as const:'unknown' as const,source:section.source,detail:`${section.status}: ${section.detail}`})));
-  const snapshot=OrgSnapshotSchema.parse({orgAlias:process.env.SFQA_ORG_ALIAS||'authorized-org',observedAt:new Date().toISOString(),source:'salesforce-api',objects,coverage});
+  const snapshot=OrgSnapshotSchema.parse({orgIdentityHash:createHash('sha256').update(identity.data.Id).digest('hex'),orgAlias:process.env.SFQA_ORG_ALIAS||'authorized-org',observedAt:new Date().toISOString(),source:'salesforce-api',objects,coverage});
   return IntelligenceSchema.parse({orgAlias:snapshot.orgAlias,observedAt:snapshot.observedAt,identity:identity.data,catalogCount:catalog.length,selection,snapshot,sections,unknowns});
 }
 export function intelligenceVersion(value:OrgIntelligence){return createHash('sha256').update(JSON.stringify(IntelligenceSchema.parse(value))).digest('hex');}

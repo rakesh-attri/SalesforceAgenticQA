@@ -1,5 +1,7 @@
 # SalesforceAgenticQA
 
+Environment-aware QA and reviewed Gemini planning: [operator guide](docs/ENVIRONMENT_QA.md), [cumulative feature matrix](docs/FEATURE_MATRIX.md), [actual implementation evidence](docs/IMPLEMENTATION_REPORT.md). Production supports explicitly approved read-only APIs and restricted observation only; production writes remain disabled. Gemini connectivity and a five-field metadata-to-retrieval-to-planning flow have been live-validated; Salesforce UI and external Chroma have not.
+
 **Standalone**, local-first Salesforce Agentic QA starter. No dependency on any earlier repository. Designed for Windows, Node 22+, TypeScript and headless Playwright.
 
 ## Current state

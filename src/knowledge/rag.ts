@@ -22,9 +22,10 @@ export function httpEmbeddings(endpoint:string,key:string,model:string):Embed {
 export function redact(text:string) {return redactModelText(text,environmentSecrets());}
 export class SemanticKnowledge {
   constructor(private collection:Pick<Collection,'upsert'|'query'>,private embed:Embed){}
-  static async connect(host:string,embed:Embed,headers:Record<string,string>={}) {
+  static async connect(host:string,embed:Embed,headers:Record<string,string>={},embeddingSpace?:string) {
     const client=new ChromaClient({host,ssl:true,headers,fetchOptions:{redirect:'error'}});
-    return new SemanticKnowledge(await client.getOrCreateCollection({name:'sfqa_verified',embeddingFunction:null}),embed);
+    const name=embeddingSpace?`sfqa_${createHash('sha256').update(embeddingSpace).digest('hex').slice(0,24)}`:'sfqa_verified';
+    return new SemanticKnowledge(await client.getOrCreateCollection({name,embeddingFunction:null}),embed);
   }
   async ingest(input:Source) {
     const source=SourceSchema.parse(input),text=redact(source.text),chunks=text.match(/[\s\S]{1,1200}/g)!;
