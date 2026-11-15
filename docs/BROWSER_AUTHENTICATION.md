@@ -1,5 +1,7 @@
 # Salesforce browser authentication and first live lifecycle
 
+Current continuation: [LIGHTNING_DIAGNOSTICS.md](LIGHTNING_DIAGNOSTICS.md) adds independent read-only grants and refreshed-state import without renewing expired factory/parent files, plus source-bound auth/static/render/read-contract triage. The exact 20-resource grant was exercised with actual API/browser identity and signed absence; the fresh session found 11 different static paths and a 31-resource proposal remains unapproved. No new lifecycle ran. [REPORTING_LABS.md](REPORTING_LABS.md) documents the real local npm reporter with no API account/key. Positive Account/Contact locators, generated live UI tests and learning remain unverified; earlier dated evidence below is historical.
+
 This guide continues the dedicated personal QA mode. It does not authorize ordinary Production writes, change app permissions or establish a browser session merely because JWT/API access works. Keep the default read-only policy separate from `.state/dedicated-qa-policy.json`.
 
 ## External Client App settings: administrator review only

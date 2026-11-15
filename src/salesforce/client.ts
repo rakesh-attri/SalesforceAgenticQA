@@ -7,6 +7,7 @@ import { authorizeEnvironment,type EnvironmentPolicy,type EnvironmentDefinition 
 import { DedicatedData } from './dedicated-qa.js';
 import type { History } from '../core/history.js';
 import { uiBridgeFailure,UiBridgeError } from './ui-bridge.js';
+import { authorizeDedicatedDiagnostics } from '../execution/diagnostic-review.js';
 export class SalesforceClient {
   private environment?:{policy:EnvironmentPolicy;identity:{Id:string;IsSandbox:boolean;userId:string};policyPath?:string};
   private constructor(private instance:string,private token:string, private version:string) {}
@@ -18,6 +19,20 @@ export class SalesforceClient {
     return new SalesforceClient(u.origin,token.access_token,process.env.SF_API_VERSION || 'v62.0');
   }
   static async reviewIdentity() {const client=await this.authenticate();return {identity:await client.identity(),origin:client.instance};}
+  static async connectDedicatedDiagnostics(parent:unknown,review:unknown) {
+    const client=await this.authenticate(),initial=await client.identity(),authority=authorizeDedicatedDiagnostics(review,parent,initial,client.instance);
+    client.environment={policy:authority.policy,identity:initial};
+    // No client, arbitrary GET, mutation, bridge or metadata SOAP operation is
+    // exposed. Absence queries are constructed only from the signed references.
+    return {apiOrigin:client.instance,apiVersion:client.version,policy:authority.policy,
+      async identity(){const identity=await client.identity();authorizeDedicatedDiagnostics(review,parent,identity,client.instance);return identity;},
+      async verifyAbsence(){const identity=await client.identity(),current=authorizeDedicatedDiagnostics(review,parent,identity,client.instance);
+        const user=z.object({records:z.array(z.object({Id:z.string(),IsActive:z.boolean()})).length(1)}).parse(await client.get(`/services/data/${client.version}/query?q=${encodeURIComponent(`SELECT Id,IsActive FROM User WHERE Id='${identity.userId}' LIMIT 1`)}`));
+        if(user.records[0].Id!==identity.userId||!user.records[0].IsActive)throw Error('Dedicated diagnostic user is not active');
+        for(const reference of current.review.plan.references){authorizeDedicatedDiagnostics(review,parent,identity,client.instance);const result=z.object({records:z.array(z.unknown()).max(1)}).parse(await client.readRequest(`/services/data/${client.version}/query?q=${encodeURIComponent(`SELECT Id FROM ${reference.object} WHERE Id='${reference.id}' LIMIT 1`)}`,undefined,true));if(result.records.length)throw Error('A diagnostic reference is present; metadata-only observation denied');}
+        return {absent:current.review.plan.references.length,verifiedAt:new Date().toISOString()};}
+    };
+  }
   static async connect(policyPath?:string) {
     const client=await this.authenticate(),identity=await client.identity();
     if(!identity.IsSandbox||process.env.SFQA_ENVIRONMENT_POLICY||policyPath) {

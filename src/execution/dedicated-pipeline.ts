@@ -59,7 +59,7 @@ export async function runDedicatedWorkflow(raw:unknown,s:DedicatedExecutionServi
     if(ui.plan.exploration){if(!s.choose)throw Error('Approved exploration chooser unavailable');exploration=await exploreDedicatedOwned({guard,workflows,statePath:session.statePath,maxSteps:ui.plan.exploration.maxSteps,maxMs:ui.plan.maxMs,maxActions:ui.plan.maxActions,choose:s.choose,verify:(object,id)=>s.data.verifyOwned(run,object,id)});if(exploration.status!=='passed')throw Error('Dedicated exploration failed');stages.push('bounded-approved-ai-exploration-complete');}
     const renderOrigins=[...new Set([...guard.origins,...(staticReview?.plan.assets.map(a=>new URL(a.url).origin)??[])])];
     const files=workflows.map(w=>({id:w.id,code:generateTest(w,renderOrigins,{module:s.guardModule??resolve('src/execution/dedicated-browser.ts').replaceAll('\\','/'),config})}));
-    execution=await (s.runTests??executeGenerated)(resolve(root,'execution'),run.plan.runId,files,ui.plan.maxMs,{storageState:session.statePath,trace:'off'});
+    execution=await (s.runTests??executeGenerated)(resolve(root,'execution'),run.plan.runId,files,ui.plan.maxMs,{storageState:session.statePath,trace:'off',validation:s.validation});
     for(const result of execution.results)s.history.record(result);stages.push('headless-reviewed-owned-record-workflows-executed');
     for(const record of owned)await s.data.verifyOwned(run,record.object,record.id);stages.push('post-browser-independent-soql-verification-complete');
     passed=execution.exitCode===0&&execution.results.length===workflows.length&&execution.results.every(r=>r.status==='passed');

@@ -1,15 +1,16 @@
 import { spawn } from 'node:child_process';
 import { resolve,join } from 'node:path';
-import { mkdir,writeFile,readFile } from 'node:fs/promises';
+import { mkdir,writeFile,readFile,access } from 'node:fs/promises';
 import { z } from 'zod';
 import { ResultSchema,type Result } from '../core/history.js';
 const ReportSchema=z.object({suites:z.array(z.unknown()),errors:z.array(z.unknown()).optional()});
-export async function executeGenerated(root:string,runId:string,files:Array<{id:string;code:string}>,timeoutMs=120000,session?:{storageState?:string;trace?:'off'}) {
+export async function executeGenerated(root:string,runId:string,files:Array<{id:string;code:string}>,timeoutMs=120000,session?:{storageState?:string;trace?:'off';validation?:'local-fixture'|'offline-mocked-salesforce'|'live-salesforce'|'unclassified-generated'}) {
   if(!files.length||new Set(files.map(f=>f.id)).size!==files.length)throw Error('Distinct generated tests required');
   root=resolve(root);await mkdir(root,{recursive:true});
   for(const file of files){if(!/^[A-Za-z0-9_-]+$/.test(file.id))throw Error('Invalid generated test ID');await writeFile(join(root,`${file.id}.spec.ts`),file.code);}
   const report=join(root,'results.json'),config=join(root,'playwright.config.ts');
-  await writeFile(config,`import { defineConfig } from '@playwright/test'; export default defineConfig(${JSON.stringify({testDir:root,testMatch:files.map(f=>`${f.id}.spec.ts`),workers:1,retries:0,timeout:10000,outputDir:join(root,'evidence'),use:{headless:true,serviceWorkers:'block',storageState:session?.storageState,trace:session?.trace??'on',screenshot:'only-on-failure'},reporter:[['json',{outputFile:report}],['html',{outputFolder:join(root,'html'),open:'never'}],['junit',{outputFile:join(root,'junit.xml')}]]})});`);
+  const reportingEnabled=process.env.SFQA_REPORTING_LABS!=='0',reportingFolder=join(root,'reporting-labs'),validation=session?.validation??'unclassified-generated';
+  await writeFile(config,`import { defineConfig } from '@playwright/test'; export default defineConfig(${JSON.stringify({testDir:root,testMatch:files.map(f=>`${f.id}.spec.ts`),workers:1,retries:0,timeout:10000,outputDir:join(root,'evidence'),use:{headless:true,serviceWorkers:'block',storageState:session?.storageState,trace:session?.trace??'on',screenshot:'only-on-failure'},reporter:[['json',{outputFile:report}],['html',{outputFolder:join(root,'html'),open:'never'}],['junit',{outputFile:join(root,'junit.xml')}],...(reportingEnabled?[[resolve('src/integrations/reporting-labs-reporter.ts'),{outputFolder:reportingFolder,validation}]]:[])]})});`);
   const exitCode=await new Promise<number>((resolveExit,reject)=>{
     const child=spawn(process.execPath,[resolve('node_modules/@playwright/test/cli.js'),'test','--config',config],{shell:false,windowsHide:true,env:{...process.env,PWDEBUG:'0',PLAYWRIGHT_HTML_OPEN:'never'}});
     let output='';child.stdout.on('data',d=>{output=(output+d).slice(-20000);});child.stderr.on('data',d=>{output=(output+d).slice(-20000);});
@@ -26,5 +27,7 @@ export async function executeGenerated(root:string,runId:string,files:Array<{id:
   }walk(raw.suites);
   if(results.length!==files.length||new Set(results.map(r=>r.testId)).size!==files.length)throw Error('Incomplete/duplicated execution report; no passing result inferred');
   if(exitCode!==0&&results.every(r=>r.status==='passed'))throw Error('Runner failed despite passing test rows');
-  return {exitCode,results,failures,report,runnerErrors:raw.errors??[]};
+  const reportingLabs=reportingEnabled?{status:'generated' as const,html:join(reportingFolder,'index.html'),json:join(reportingFolder,'report.json'),validation}:{status:'disabled' as const};
+  if(reportingEnabled)await access(join(reportingFolder,'index.html'));
+  return {exitCode,results,failures,report,runnerErrors:raw.errors??[],reportingLabs};
 }

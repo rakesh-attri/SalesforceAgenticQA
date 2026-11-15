@@ -1,0 +1,25 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdir,mkdtemp,writeFile,rm } from 'node:fs/promises';
+import { resolve,join,relative,isAbsolute } from 'node:path';
+import { History } from '../src/core/history.js';
+import { dedicatedFixture } from './support/dedicated.js';
+import { diagnoseUiDependencies } from '../src/execution/dependency-diagnostics.js';
+import { lightningFindings } from '../src/execution/lightning-evidence.js';
+async function fixture(){await mkdir('.auth',{recursive:true});const root=await mkdtemp(resolve('.auth/lightning-evidence-')),state=join(root,'state.json'),history=new History(':memory:'),f=dedicatedFixture(history),id='001000000000001',document=`${f.browserOrigin}/lightning/r/Account/${id}/view`;await writeFile(state,JSON.stringify({cookies:[],origins:[]}));return {root,state,history,f,id,document,guard:{policy:f.policy,identity:f.identity,origins:[f.browserOrigin],documents:[document],owned:[{object:'Account' as const,id}],expiresAt:f.policy.approval.expiresAt}};}
+async function dispose(f:Awaited<ReturnType<typeof fixture>>){f.history.close();const path=relative(resolve('.auth'),f.root);assert.ok(path&&!path.startsWith('..')&&!isAbsolute(path));await rm(f.root,{recursive:true,force:true,maxRetries:8,retryDelay:100});}
+test('headless metadata evidence separates static denial, supported diagnostic-blocked reads, unknown RPCs and script failures without values',async()=>{
+  const f=await fixture(),candidates:unknown[]=[];let escaped=0;
+  try{const report=await diagnoseUiDependencies({guard:f.guard,statePath:f.state,maxMs:4000,onStaticCandidate:a=>candidates.push(a),prepareContext:async context=>{await context.route('**/*',route=>{if(route.request().url()!==f.document){escaped++;return route.abort();}return route.fulfill({contentType:'text/html',body:`<h1>Fixture shell</h1><div role="alert">private-record-text</div><script src="https://b.static.lightning.force.com/framework/unapproved.js"></script><script>fetch('/services/data/v62.0/ui-api/records/${f.id}?fields=Account.Name').catch(()=>{});fetch('/unreviewed?token=private-query-value').catch(()=>{});fetch('/unreviewed-method',{method:'METHOD_CREDENTIAL_CANARY'}).catch(()=>{});throw new TypeError('private-provider-text private-cookie-value');</script>`});});}});
+    assert.equal(escaped,0);assert.equal(report.recordsCreated,0);assert.equal(report.businessRequestsExecuted,0);assert.equal(report.assertionsExecuted,0);assert.equal(candidates.length,1);assert.equal(report.runtime.unapprovedStatic.length,1);assert.ok(report.findings.readContracts.supportedButDiagnosticBlocked>=1);assert.ok(report.findings.readContracts.unsupportedOrUnknown>=1);assert.equal(report.runtime.scriptErrors.TypeError,1);assert.equal(report.runtime.pages[0].headings,1);assert.equal(report.runtime.pages[0].alerts,1);assert.equal(report.findings.denialsProvenCausal,false);assert.equal(report.findings.selectors.incorrectLocatorProven,false);assert.equal(report.findings.learningEligible,false);
+    const json=JSON.stringify(report);for(const secret of ['private-record-text','private-query-value','private-provider-text','private-cookie-value','METHOD_CREDENTIAL_CANARY',f.id,'https://'])assert.ok(!json.includes(secret));assert.ok(report.runtime.deniedContracts.some(c=>c.method==='other'));
+  }finally{await dispose(f);}
+});
+test('authentication redirect evidence never follows the denied target or implies a selector defect',async()=>{
+  const f=await fixture();let escaped=0;
+  try{const report=await diagnoseUiDependencies({guard:f.guard,statePath:f.state,maxMs:3000,prepareContext:async context=>{await context.route('**/*',route=>{if(route.request().url()===f.document)return route.fulfill({status:302,headers:{location:'https://login.salesforce.com/secur/frontdoor.jsp?otp=private-one-use'}});escaped++;return route.abort();});}});assert.equal(escaped,0);assert.equal(report.runtime.authenticationRedirects,1);assert.equal(report.findings.authentication.conclusion,'authentication-redirect-observed');assert.equal(report.findings.rootCause,'unconfirmed');assert.ok(!JSON.stringify(report).includes('private-one-use'));assert.equal(report.learningPublished,false);
+  }finally{await dispose(f);}
+});
+test('blank/ambiguous/mismatched evidence remains separate from proven incorrect locators or causal failures',()=>{
+  const findings=lightningFindings({resources:[],unapprovedStatic:[],deniedContracts:[],authenticationRedirects:0,scriptErrors:{},networkFailures:0,pages:[{documentHash:'fixture',navigation:'completed',exactApprovedDocument:true,readyState:'complete',elementCount:0,headings:0,alerts:0,busy:0,customElements:0,openShadowRoots:0}]},['ambiguous','text-mismatch','not-observed']);assert.equal(findings.rendering.emptyOrUnavailableDocuments,1);assert.equal(findings.selectors.ambiguous,1);assert.equal(findings.selectors.textMismatch,1);assert.equal(findings.selectors.unobserved,1);assert.equal(findings.selectors.incorrectLocatorProven,false);assert.equal(findings.rendering.renderingProven,false);assert.equal(findings.generatedExecutionProven,false);
+});

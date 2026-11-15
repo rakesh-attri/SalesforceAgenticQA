@@ -2,7 +2,7 @@
 
 ## Continuation status
 
-The current FEATURE_MATRIX.md table supersedes earlier inventory. Durable orchestration/history, bounded metadata clients, guarded API mutation journaling, semantic retrieval adapters and deterministic P1/P2 quality services now have working implementations. Next work should connect reviewed business recipes to hybrid API/UI creation, validate real sandbox/session/vector integrations, extend permission/dependency coverage, and build richer bounded action exploration, repair and model evaluations. Reporting Labs requires an identified provider/API contract. Do not treat offline coverage as live integration completion.
+The current FEATURE_MATRIX.md supersedes earlier inventory. Durable orchestration/history, bounded metadata clients, guarded API journaling, semantic retrieval and P1/P2 quality services have working implementations. Next work includes supported Lightning rendering/locators, richer hybrid recipes/exploration, live sandbox/vector breadth, permissions/impact, repair and AI evaluations. reportingLabs is the identified open-source reporting-labs npm package; local Playwright integration is implemented and offline verified, with no hosted account/API key. Advanced reporting/CI customization is engineering work. Fixtures and negative-page metadata never establish live workflow completion. See LIGHTNING_DIAGNOSTICS.md and REPORTING_LABS.md.
 
 ## Baseline and increment 1
 
@@ -20,10 +20,10 @@ Implemented first increment: response-validated discovery with explicit unknown 
 6. Add criteria-linked planning, reviewed code generation, independent API/UI assertions and generated-code validation.
 7. Add deterministic configurable change/risk selection, mandatory suites and verified history inputs.
 8. Add evidence-linked failure hypotheses, reviewed locator proposals, verified learning and bounded exploratory testing.
-9. Add Reporting Labs, trend/flakiness analytics, coverage gaps and TypeScript-native AI evaluations. Do not introduce Python to satisfy a vendor name.
+9. Extend implemented local reportingLabs with lifecycle/CI dashboards, trend/flakiness evaluations, coverage gaps and TypeScript-native AI evaluations. No Python or hosted reporting API is required.
 
 ## Integration prerequisites
 
-Authorized sandbox credentials, approved app/JWT configuration, uniquely configured org alias, reviewed business recipes, authorized browser session, model provider, remote Chroma and Reporting Labs configuration are not supplied by the repository. They block live verification, not implementation of local contracts and mocks.
+Live Salesforce requires current exact org/user/session/resource/factory approvals and budget; dedicated auth/setup/SOQL/cleanup have actual evidence, while positive UI execution remains unverified. Gemini chat/embedding/local retrieval have prior live evidence; external Chroma is unverified. These boundaries do not block local reporter engineering. reportingLabs configuration is supplied and tested and needs no API key/account.
 
 The master request is not complete. Remaining implementation is recorded explicitly in FEATURE_MATRIX.md.

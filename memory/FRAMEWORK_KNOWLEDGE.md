@@ -1,5 +1,21 @@
 # Framework Knowledge Base
 
+## Read-only Lightning diagnosis and reportingLabs - 2026-11-15 IST
+
+- Exact resource URLs may differ after refresh. The 20-resource draft correctly covered two earlier style variants, but a fresh actual session requested 11 new paths. Do not wildcard/normalize them or infer a deployment/business-rule change. Audit frozen plans against immutable observations and source hashes. The 31-resource proposal is unapproved until separately authorized. Regression: dependency-review.test.ts; baseline source archived in .state/diagnostic-20-source-evidence.
+
+- Do not renew factory approvals to inspect completed runs. The independent named diagnostic grant binds exact parent/org/user/run/data/UI/static/deleted references and exposes only fresh identity and absence through a read-only facade. Actual activation checked unchanged parent/factory files and two absent run-005 IDs. Wrong mode/identity/source/expiry, active/uncertain/foreign/present references deny. Regression: diagnostic-review.test.ts.
+
+- Native proof rejected stale state before page observation. Fresh independently approved state was narrowed to a new copy, original and flags unchanged, and passed both origins. Diagnostic import uses only the read-only grant, never overwrites receipts or edits factory/UI review. Source binding is checked again when importing and observing.
+
+- Record observations, not causality. Actual baseline: two document-200 responses, 11 denied static paths, no reviewed static completion recorded, no auth redirect observed and no exact document to inspect. Missing DOM differs from observed blank DOM, script errors, navigation and incorrect locators. Runtime exposes finite names/counts/hashes only; no raw header/body/DOM/error values. Read-like hints grant nothing. Regression: lightning-evidence.test.ts and dedicated-selectors.test.ts.
+
+- Metadata mode intentionally blocks all business RPCs, including implemented reads. Separate this from unknown contracts; join selector/dependency evidence only within matching run/data/policy/spec, label known-deleted pages, and publish no verified business knowledge or test pass. Preserve unknown reasons for legacy evidence.
+
+- reportingLabs is the local open-source reporting-labs package, not an unidentified paid API. Pinned 0.6.24 produced real fixture/generated HTML/JSON/history, including two-process failure/recovery history. Never serialize maskValues in Playwright reporter options: JSON reports contain that config. Derive masks in the adapter, constrain output/assets, disable /auto, open and PDF, and keep explicit fixture/mock/live/unclassified labels. Vendor heuristics confer no confirmed defect/learning. Regression: reporting-labs.test.ts.
+
+- UTC budget reset to zero used at 15 November 2026, 05:30 IST; no new lifecycle/authorization, quota increase or replay followed. Prior six/six cleanup evidence remains, not a positive UI pass. Fresh factory/UI approval, native state, source-backed locators, unchanged assertions and new ID remain required. Gemini chat and gemini-embedding-001 were retained; no new model or Chroma request. Latest checks: typecheck, 144 unit/integration tests, three headless fixtures and all demos. All 15 owners and cumulative requirements remain.
+
 ## Approved static isolation and run-005 engineering evidence - 2026-11-14
 
 - A valid API-host browser cookie can coexist with a redirected Lightning child identity proof. Never follow that redirect, borrow JWT/API identity or issue a receipt. Finite identity-redirect guidance and native mock regression are in dedicated-session.test.ts. Refreshed independently approved qa-user.json passed actual proof; immutable receipts and original state were preserved.

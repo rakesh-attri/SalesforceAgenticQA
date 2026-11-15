@@ -1,5 +1,11 @@
 # Architecture
 
+## Read-only diagnostics and local reporting
+
+An independent diagnostic plan binds parent definition, exact org/user, completed run/data/UI/static hashes and deleted IDs. Its separately approved one-hour authority is consumed by a read-only facade exposing identity and signed-ID absence checks only; persisted parent/factory approvals are not renewed. Bounded metadata observation blocks every business RPC and records hashes/status/MIME, finite errors and DOM counts, never raw headers, body text or credentials. Retrospective joins require matching run/data/policy/spec scope and never prove causality, positive selectors or learning. All environment modes and existing lifecycle gates remain. See LIGHTNING_DIAGNOSTICS.md.
+
+Playwright/generated execution delegates to the real local reporting-labs reporter through a typed privacy/output adapter. Masks remain private instead of entering serialized reporter configuration. Automatic API capture, hosted uploads, PDF and auto-open are disabled. Reports retain actual outcomes/history with explicit scope and infer no lifecycle/cleanup/learning success. No reporting API credential is needed. See REPORTING_LABS.md. Older architecture sections remain historical where superseded by FEATURE_MATRIX.md.
+
 ## Current sandbox-readiness integration
 
 The spec coordinator now wraps runtime preflight, approved hybrid setup/independent verification, verified-reference binding, authenticated execution and cleanup in a journaled lifecycle. It reserves run IDs before effects and distinguishes test outcomes from overall lifecycle success. Verification failures retain owned records for cleanup; cleanup failures cannot masquerade as passing runs or verified fixes. See SANDBOX_EXECUTION.md for current contracts. Older sections below describe historical states and are superseded by FEATURE_MATRIX.md.

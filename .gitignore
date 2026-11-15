@@ -20,3 +20,5 @@ test-results/
 coverage/
 tests/generated/
 *credentials*.json
+reporting-labs/
+reporting-labs.history.json

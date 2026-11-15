@@ -1,5 +1,7 @@
 # Local setup (Windows PowerShell)
 
+Local reportingLabs is included through pinned reporting-labs. npm.cmd test produces artifacts/reporting-labs/index.html, JSON and history alongside existing reporters; no Reporting Labs account/API key is required. SFQA_REPORTING_LABS=0 opts out of that reporter only. Automatic API capture and browser auto-open are disabled. See REPORTING_LABS.md for scope/privacy and LIGHTNING_DIAGNOSTICS.md for exact read-only commands; local tests authorize no Salesforce lifecycle.
+
 ## Story-driven org intelligence
 
 ```powershell

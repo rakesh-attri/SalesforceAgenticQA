@@ -39,6 +39,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "reporting-labs": "0.6.24",
     "tsx": "^4.0.0",
     "typescript": "^5.9.0"
   }
