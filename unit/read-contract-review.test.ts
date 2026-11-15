@@ -1,0 +1,23 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { prepareReadContractReview } from '../src/execution/read-contract-review.js';
+import { readContractCandidates } from '../src/execution/read-contract-evidence.js';
+import { DiagnosticPlanSchema,diagnosticPlanHash } from '../src/execution/diagnostic-review.js';
+import { summarizeDeniedRequest } from '../src/execution/browser-diagnostics.js';
+import { allowDedicatedRequest } from '../src/execution/dedicated-browser.js';
+import { History } from '../src/core/history.js';
+import { dedicatedFixture } from './support/dedicated.js';
+const hash=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
+function fixture(){
+  const plan=DiagnosticPlanSchema.parse({purpose:'deleted-owned-ui-dependencies',orgId:'00D000000000001',userId:'005000000000001',runId:'review-fixture',parentPolicyHash:'1'.repeat(64),dataPlanHash:'2'.repeat(64),uiPlanHash:'3'.repeat(64),specVersion:'4'.repeat(64),staticPlanHash:'5'.repeat(64),references:[{object:'Account',id:'001000000000001'}],recordWrites:false,businessRpc:false,assertions:false,learning:false,maxMs:10000});
+  const diagnostic={plan,approval:{operator:'Fixture reviewer',hash:diagnosticPlanHash(plan),expiresAt:'2020-01-01T00:00:00.000Z'}},binding={runId:plan.runId,planHash:plan.dataPlanHash,policyHash:plan.parentPolicyHash,sourceVersion:plan.specVersion},descriptor='serviceComponent://ui.fixture.OneController/ACTION$getCurrentApp',request={url:'https://fixture.example/aura?r=PRIVATE_QUERY_CANARY',method:'POST',type:'xhr',body:new URLSearchParams({message:JSON.stringify({actions:[{descriptor,params:{appContextIdOrName:'PRIVATE_VALUE_CANARY'}}]})}).toString()},runtime={resources:[],unapprovedStatic:[],deniedContracts:[],authenticationRedirects:0,scriptErrors:{},networkFailures:0,pages:[]},observation={binding,diagnosticGrant:diagnostic.approval.hash,runtimeEvidenceHash:hash(runtime),candidates:readContractCandidates(request,['https://fixture.example'],[]),approvalActivated:false,requestsExecuted:0},dependency={binding,diagnosticGrant:diagnostic.approval.hash,runtime,deniedRequests:[summarizeDeniedRequest({...request,reason:'metadata-only-rpc-denied'})],recordsCreated:0,businessRequestsExecuted:0,assertionsExecuted:0,learningPublished:false};
+  return {diagnostic,observation,dependency};
+}
+test('source-bound unsupported contract review remains non-executable even if locally marked approved',()=>{
+  const f=fixture(),review=prepareReadContractReview(f.observation,f.dependency,f.diagnostic);assert.equal(review.plan.candidates.length,1);assert.equal(review.plan.executionEnabled,false);assert.equal(review.plan.businessRpcAuthorized,false);assert.equal(review.plan.recordWritesAuthorized,false);assert.equal(review.approvalActivated,false);assert.equal(review.review.operator,'REVIEW_REQUIRED');assert.ok(!JSON.stringify(review).includes('PRIVATE_'));
+  const history=new History(':memory:'),d=dedicatedFixture(history);try{const altered={...review,review:{...review.review,operator:'Approved operator'}};assert.equal(altered.plan.executionEnabled,false);assert.equal(allowDedicatedRequest({policy:d.policy,identity:d.identity,origins:[d.browserOrigin],documents:[],owned:[],expiresAt:d.policy.approval.expiresAt},{url:d.browserOrigin+'/aura',method:'POST',type:'xhr',body:new URLSearchParams({message:JSON.stringify({actions:[{descriptor:review.plan.candidates[0].descriptor,params:{appContextIdOrName:'fixture'}}]})}).toString()}),false);}finally{history.close();}
+});
+test('contract review rejects cross-run/version/grant and unobserved or altered evidence',()=>{
+  const f=fixture();assert.throws(()=>prepareReadContractReview({...f.observation,binding:{...f.observation.binding,runId:'foreign'}},f.dependency,f.diagnostic),/binding/);assert.throws(()=>prepareReadContractReview({...f.observation,diagnosticGrant:'foreign'},f.dependency,f.diagnostic),/binding/);assert.throws(()=>prepareReadContractReview(f.observation,{...f.dependency,binding:{...f.dependency.binding,sourceVersion:'foreign'}},f.diagnostic),/binding/);assert.throws(()=>prepareReadContractReview(f.observation,{...f.dependency,runtime:{...f.dependency.runtime,networkFailures:1}},f.diagnostic),/binding/);assert.throws(()=>prepareReadContractReview(f.observation,{...f.dependency,deniedRequests:[]},f.diagnostic),/matching/);assert.throws(()=>prepareReadContractReview({...f.observation,candidates:[{...f.observation.candidates[0],descriptorHash:'0'.repeat(64)}]},f.dependency,f.diagnostic),/matching/);assert.throws(()=>prepareReadContractReview({...f.observation,candidates:[]},f.dependency,f.diagnostic),/No observed/);
+});

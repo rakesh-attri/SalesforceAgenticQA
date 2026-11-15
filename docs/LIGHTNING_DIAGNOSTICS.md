@@ -1,5 +1,28 @@
 # Lightning rendering diagnosis without a new data lifecycle
 
+## Approved 31-resource result and current continuation - 2026-11-15 IST
+
+Rakesh Attri explicitly approved the frozen 31-resource union and matching one-hour read-only diagnostic grant. Activation reverified exact org/user and two absent run-005 IDs; persisted parent/factory/UI approvals were byte-for-byte unchanged. Actual guarded headless observations recorded two document-200 responses and 12 reviewed static-200 completions, zero unapproved script/style URLs, zero static HTTP failures and no authentication redirect. Two exact owned-page captures remained loading with 96 elements and zero headings; another bounded attempt could not sample DOM and remains unknown. Thirteen failed-request events in the final sample classified as nine aborted/four other, not thirteen proven transport failures. Rendering, locator correctness and denial causality remain unconfirmed.
+
+The blocked read-like action was identified as serviceComponent://ui.global.components.one.one.controller.OneController/ACTION$getCurrentApp with string appContextIdOrName and one query key. Values/tokens were not retained. This is an unsupported app-context contract, not an owned-record read or an approved operation. A source-bound non-executable review binds run/grant/runtime/action evidence and requires server-effects/response, exact query/parameter, app/persona and independent contract review plus tests. Preparation and even editing its reviewer field cannot enable it. Metadata mode continues to deny all business RPCs; no browser policy or assertion was relaxed.
+
+The source-only review is at ignored .state/dedicated-read-contract-review.json, hash 5fa12aa7a9e255a800cc7b81f0e332c92453b08d62a15c1b880ae6e133cd0d1c. It is not an activation packet. Inspect server effects/response scope and the permitted app context before defining a supported exact read contract; the metadata grant explicitly forbids business RPCs. A query-bearing request is still rejected by the unchanged execution boundary. The public platform SDK getCurrentApp name is not evidence for this internal OneController action. No additional static-resource approval is indicated by this bounded observation; unseen resources remain unknown.
+
+To reproduce local retrospective review without contacting Salesforce:
+
+```powershell
+npm.cmd run platform -- dedicated-read-review .state/dedicated-qa-execution-005.json --diagnostic-approval .state/dedicated-diagnostic-current-session.approved.json
+npm.cmd run platform -- dedicated-ui-review .state/dedicated-qa-execution-005.json
+```
+
+Private read-contract-observations.json retains only action identifiers, parameter names/types, exact-owned-reference booleans and query presence/count. Public output retains counts/hash/status. Review preparation verifies exact run/plan/policy/spec/grant, runtime hash and corresponding blocked descriptor hint; stale/cross-run/unobserved/tampered sources fail. Metadata sessions preserve all business blocking. Existing 20-resource baseline and first 31-resource sources are archived separately and are not overwritten.
+
+Validation: typecheck, 149 unit/integration tests, all offline/graph/failure-learning demos and three headless fixture tests passed. Real local reportingLabs output remains verified; broad reporting/CI work remains engineering, not a paid API-key blocker.
+
+No record creation/deletion, lifecycle replay, quota increase, generated live UI test or Salesforce lesson occurred. The UTC budget has zero new runs, but fresh factory/UI/session/run authorization remains mandatory after rendering and actual locators are established. Gemini chat and gemini-embedding-001 are unchanged; no new model or external Chroma call was made. All 15 owners and cumulative P0/P1/P2 gaps remain registered.
+
+Earlier observations below remain historical evidence; their pending-31 language does not override the explicit approval and result above.
+
 ## Actual fresh-session observation - 2026-11-15 IST
 
 The exact 20-resource and independent read-only grants were approved. The stale browser export failed identity proof before observation; after the user refreshed qa-user.json, a new minimized copy passed native proof for both origins. The actual diagnostic reverified two absent run-005 IDs and recorded two document-200 responses, 11 unapproved static paths, no reviewed static completion during the bounded window and no authentication redirect. The exact document was unavailable at capture, so rendering and selectors remain unproven. No business RPC, record write, assertion, generated test or learning occurred.
