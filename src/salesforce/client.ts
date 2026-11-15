@@ -8,6 +8,7 @@ import { DedicatedData } from './dedicated-qa.js';
 import type { History } from '../core/history.js';
 import { uiBridgeFailure,UiBridgeError } from './ui-bridge.js';
 import { authorizeDedicatedDiagnostics } from '../execution/diagnostic-review.js';
+import { projectSelectedApp } from '../execution/lightning-initialization.js';
 export class SalesforceClient {
   private environment?:{policy:EnvironmentPolicy;identity:{Id:string;IsSandbox:boolean;userId:string};policyPath?:string};
   private constructor(private instance:string,private token:string, private version:string) {}
@@ -30,7 +31,18 @@ export class SalesforceClient {
         const user=z.object({records:z.array(z.object({Id:z.string(),IsActive:z.boolean()})).length(1)}).parse(await client.get(`/services/data/${client.version}/query?q=${encodeURIComponent(`SELECT Id,IsActive FROM User WHERE Id='${identity.userId}' LIMIT 1`)}`));
         if(user.records[0].Id!==identity.userId||!user.records[0].IsActive)throw Error('Dedicated diagnostic user is not active');
         for(const reference of current.review.plan.references){authorizeDedicatedDiagnostics(review,parent,identity,client.instance);const result=z.object({records:z.array(z.unknown()).max(1)}).parse(await client.readRequest(`/services/data/${client.version}/query?q=${encodeURIComponent(`SELECT Id FROM ${reference.object} WHERE Id='${reference.id}' LIMIT 1`)}`,undefined,true));if(result.records.length)throw Error('A diagnostic reference is present; metadata-only observation denied');}
-        return {absent:current.review.plan.references.length,verifiedAt:new Date().toISOString()};}
+        return {absent:current.review.plan.references.length,verifiedAt:new Date().toISOString()};},
+      async selectedAppMetadata(){
+        if(!authority.review.plan.initialization?.selectedAppMetadata)throw Error('Selected-app metadata requires separate exact initialization scope');
+        const identity=await client.identity();if(!authorizeDedicatedDiagnostics(review,parent,identity,client.instance).review.plan.initialization?.selectedAppMetadata)throw Error('Selected-app initialization scope was removed');
+        const user=z.object({records:z.array(z.object({Id:z.string(),IsActive:z.boolean()})).length(1)}).safeParse(await client.get(`/services/data/${client.version}/query?q=${encodeURIComponent(`SELECT Id,IsActive FROM User WHERE Id='${identity.userId}' LIMIT 1`)}`));
+        if(!user.success||user.data.records[0].Id!==identity.userId||!user.data.records[0].IsActive)throw Error('Dedicated initialization user is not active');
+        // Salesforce's documented GET is not the PATCH that changes selection.
+        // Its projection never contains labels, descriptions, tabs or raw IDs.
+        if(!authorizeDedicatedDiagnostics(review,parent,identity,client.instance).review.plan.initialization?.selectedAppMetadata)throw Error('Selected-app initialization scope was removed');
+        let result:unknown;try{result=await client.get(`/services/data/${client.version}/ui-api/apps/selected?formFactor=Large`);}catch(error){if(error instanceof Error&&/^Salesforce API GET failed: \d{3}$/.test(error.message))throw Error(error.message);throw Error('Selected-app metadata unavailable; provider details withheld');}
+        if(!authorizeDedicatedDiagnostics(review,parent,identity,client.instance).review.plan.initialization?.selectedAppMetadata)throw Error('Selected-app initialization scope was removed');return projectSelectedApp(result);
+      }
     };
   }
   static async connect(policyPath?:string) {
