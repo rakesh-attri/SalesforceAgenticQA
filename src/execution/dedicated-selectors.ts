@@ -2,6 +2,7 @@ import { chromium,type BrowserContext } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { WorkflowSchema,type Workflow } from '../agents/workflows.js';
+import {resolveLocator} from '../core/locators.js';
 import { DedicatedGuardSchema,installDedicatedBoundary,type DedicatedGuard } from './dedicated-browser.js';
 import { sameSalesforceIdentity } from './lightning-identity.js';
 import { DeniedRequestSchema,summarizeDeniedRequest } from './browser-diagnostics.js';
@@ -19,7 +20,7 @@ export async function observeDedicatedSelectors(input:{guard:DedicatedGuard;work
       const workflowDeadline=Math.min(deadline,Date.now()+Math.floor(Math.max(0,deadline-Date.now())/(input.workflows.length-observations.length)));
       if(w.steps.length){entry.reason='steps-require-discovery';observations.push(entry);continue;}
       try {await page.goto(document,{waitUntil:'domcontentloaded',timeout:Math.max(1,workflowDeadline-Date.now())});const final=new URL(page.url()),recordId=final.pathname.match(/^\/lightning\/r\/(?:Account\/|Contact\/)?([A-Za-z0-9]+)\/view$/)?.[1],sameRecord=!!recordId&&guard.owned.some(r=>sameSalesforceIdentity(recordId,r.id)&&document.includes(r.id));entry.finalPage={originApproved:guard.origins.includes(final.origin),sameRecord,query:!!final.search,fragment:!!final.hash,kind:sameRecord?'owned':final.pathname==='/lightning/page/home'?'lightning-home':final.pathname==='/one/one.app'?'one-shell':final.pathname.startsWith('/lightning')?'lightning-other':'other'};if(page.url()!==document){entry.reason='navigation-denied';observations.push(entry);continue;}
-        const l=w.assertion.locator,locator=l.by==='role'?page.getByRole(l.value as 'heading',{name:l.name??'',exact:true}):l.by==='label'?page.getByLabel(l.value,{exact:true}):page.getByTestId(l.value);
+        const locator=resolveLocator(page,w.assertion.locator);
         await locator.first().waitFor({state:'visible',timeout:Math.max(1,workflowDeadline-Date.now()-250)});entry.count=await locator.count();
         if(entry.count!==1)entry.reason='ambiguous';else if(await locator.textContent({timeout:Math.max(1,workflowDeadline-Date.now())})!==w.assertion.text)entry.reason='text-mismatch';else {entry.status='observed';entry.reason='unique-exact-match';}
       }catch{/* Unknown page behavior is evidence of a blocker, never a replacement selector. */}finally{await collect.capturePage(page,document,entry.finalPage?'completed':'blocked-or-timeout',Math.max(0,workflowDeadline-Date.now()));}

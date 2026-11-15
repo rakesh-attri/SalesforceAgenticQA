@@ -8,7 +8,9 @@ import { verifyDedicatedSession, validateDedicatedState } from './dedicated-brow
 import { readPrivateSessionState } from '../integrations/session-gate.js';
 import { authorizeBrowserSession, browserDocument, browserPlanHash, digest, fingerprint, resourceRule, resolveBrowserRecords, reserveBrowserSession, type BrowserReview, type BrowserRecord } from './browser-policy.js';
 import type { BoundaryDenialReason } from './browser-diagnostics.js';
-import { parseBrowserBuild } from './browser-build.js';
+import { parseBrowserBuild,proveReviewedBrowserBuild } from './browser-build.js';
+import { BrowserActionBroker } from './browser-actions.js';
+import {verifyLightningEngine} from './lightning-engine.js';
 import { BrowserBudget, BrowserResourceBroker, validResourceContentType } from './browser-resources.js';
 import { sameSalesforceIdentity } from './lightning-identity.js';
 import { browserNetworkDecision, type NetworkDecision } from './browser-network.js';
@@ -76,19 +78,36 @@ export function browserLocationClass(review:BrowserReview,url:string){
   try{const target=new URL(url);return{approvedOrigin:review.plan.origins.includes(target.origin),kind:target.protocol==='about:'?'not-loaded':/(?:^|\/)(?:login|Login)(?:\/|$)|^\/secur\//.test(target.pathname)?'authentication':target.pathname==='/lightning/page/home'?'lightning-home':/^\/lightning\/r\//.test(target.pathname)?'record-document':target.pathname.startsWith('/lightning')?'lightning-other':'other',query:!!target.search,fragment:!!target.hash};}catch{return{approvedOrigin:false,kind:'unavailable',query:false,fragment:false};}
 }
 
+export type ContextAttachmentInput={review:BrowserReview;parent:unknown;history:History;identity:EnvironmentIdentity;records:BrowserRecord[];statePath:string;apiOrigin:string;transport?:'native-reference'|'validated-cache';onBlocked?:Parameters<typeof installReviewedBrowserBoundary>[1]['onBlocked'];verifyContext?:typeof verifyActualContext;nativeBuild?:(context:BrowserContext)=>Promise<ReturnType<typeof parseBrowserBuild>>;resourceFetch?:typeof fetch;prepareContext?:(context:BrowserContext)=>Promise<void>};
+const attachedContexts=new WeakMap<BrowserContext,{hash:string;attachment:Promise<Awaited<ReturnType<typeof attachContext>>>}>();
+async function attachContext(context:BrowserContext,input:ContextAttachmentInput){
+  const authority=authorizeBrowserSession(input.review,input.parent,input.identity,input.review.plan);
+  if(input.review.plan.engineProfileHash)verifyLightningEngine(input.review.plan.engineProfileHash);
+  await(input.verifyContext??verifyActualContext)(context,input.statePath,input.review,authority.policy,input.identity,input.apiOrigin);
+  await input.prepareContext?.(context);
+  const build=input.nativeBuild?await input.nativeBuild(context):await proveReviewedBrowserBuild(context,input.review,input.parent,input.identity);
+  if(!sameSalesforceIdentity(build.orgId,input.identity.Id)||!sameSalesforceIdentity(build.userId,input.identity.userId))throw Error('Native browser build identity mismatch');
+  authorizeBrowserSession(input.review,input.parent,input.identity,build);
+  const sessionId=randomUUID();reserveBrowserSession(input.review,input.history,sessionId);
+  const boundary=await installReviewedBrowserBoundary(context,{...input,build});
+  return{context,boundary,build,sessionId,actions:new BrowserActionBroker(input.history,input.review,input.parent,input.identity,build,boundary.budget),validation:input.verifyContext||input.nativeBuild||input.resourceFetch||input.prepareContext?'offline-mocked-salesforce' as const:'live-salesforce' as const};
+}
+export async function attachReviewedBrowserContext(context:BrowserContext,input:ContextAttachmentInput){
+  const hash=fingerprint([browserPlanHash(input.review.plan),input.transport??'validated-cache',input.identity,input.statePath]),prior=attachedContexts.get(context);
+  if(prior){if(prior.hash!==hash)throw Error('A verified browser context cannot change policy, identity, transport or state');return prior.attachment;}
+  const attachment=attachContext(context,input);attachedContexts.set(context,{hash,attachment});context.once('close',()=>attachedContexts.delete(context));
+  try{return await attachment;}catch(error){await context.close().catch(()=>{});throw error;}
+}
+
 export async function probeReviewedBrowser(input: { review: BrowserReview; parent: unknown; history: History; statePath: string; apiOrigin: string; identity(): Promise<EnvironmentIdentity>; verifyReferences(): Promise<{ references: BrowserRecord[]; privateDisplays: Array<{ object: 'Account' | 'Contact'; id: string; display: string }>; proof: unknown }>; reference?: BrowserTrace; object?: 'Account' | 'Contact'; transport?:'native-reference'|'validated-cache';prepareContext?: (context: BrowserContext) => Promise<void>; verifyContext?: typeof verifyActualContext; resourceFetch?: typeof fetch; nativeBuild?: (context: BrowserContext) => Promise<ReturnType<typeof parseBrowserBuild>> }) {
   const review = input.review, identity = await input.identity(), preflight = await input.verifyReferences(), authority = authorizeBrowserSession(review, input.parent, identity, review.plan);
   const before = await readPrivateSessionState(input.statePath); if (before.hash !== review.plan.sessionStateHash) throw Error('Approved browser state changed');
-  const browser = await chromium.launch({ headless: true }), sessionId = randomUUID(), pages: unknown[] = []; let metrics: Awaited<ReturnType<Awaited<ReturnType<typeof installReviewedBrowserBoundary>>['finish']>> | undefined;
+  const browser = await chromium.launch({ headless: true }), pages: unknown[] = []; let sessionId='',metrics: Awaited<ReturnType<Awaited<ReturnType<typeof installReviewedBrowserBoundary>>['finish']>> | undefined;
   try {
     const context = await browser.newContext({ storageState: before.statePath, serviceWorkers: 'block', acceptDownloads: false });
-    await (input.verifyContext ?? verifyActualContext)(context, input.statePath, review, authority.policy, identity, input.apiOrigin); await input.prepareContext?.(context);
     const lightning = review.plan.origins.find(origin => new URL(origin).hostname.endsWith('.lightning.force.com')); if (!lightning) throw Error('Approved Lightning origin required');
-    const build = input.nativeBuild ? await input.nativeBuild(context) : await (async () => { const home = await context.request.get(`${lightning}/lightning/page/home`, { maxRedirects: 0, timeout: 15000 }); if (home.status() !== 200 || !home.headers()['content-type']?.includes('text/html') || Number(home.headers()['content-length'] ?? 0) > 2000000) throw Error('Native build proof unavailable'); return parseBrowserBuild(await home.text()); })();
-    if (!sameSalesforceIdentity(build.orgId, identity.Id) || !sameSalesforceIdentity(build.userId, identity.userId)) throw Error('Native browser build identity mismatch');
-    authorizeBrowserSession(review, input.parent, identity, build);
-    const policyHash = browserPlanHash(review.plan); reserveBrowserSession(review, input.history, sessionId);
-    const boundary = await installReviewedBrowserBoundary(context, { review, parent: input.parent, identity, build, history: input.history, records: preflight.references, resourceFetch: input.resourceFetch,transport:input.transport });
+    const attached=await attachReviewedBrowserContext(context,{...input,identity,records:preflight.references});sessionId=attached.sessionId;
+    const policyHash = browserPlanHash(review.plan),boundary=attached.boundary;
     const selected = preflight.privateDisplays.filter(record => !input.object || record.object === input.object); if (!selected.length) throw Error('Object is outside the approved browser reference scope');
     for (const record of selected) {
       const page = await context.newPage(), document = `${lightning}/lightning/r/${record.object}/${record.id}/view`; let exactHeading = 0, exactText = 0, visible = false, nativeDocumentVerified = false,phase='navigation',failure:unknown;

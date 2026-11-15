@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { readFile,writeFile,mkdir,realpath,chmod } from 'node:fs/promises';
 import { resolve,dirname,relative,isAbsolute } from 'node:path';
 import { WorkflowSchema } from '../agents/workflows.js';
+import {resolveLocator} from '../core/locators.js';
 import { authorizeEnvironment,EnvironmentPolicySchema,environmentHash,type EnvironmentIdentity,type EnvironmentPolicy } from './environment.js';
 import { readPrivateSessionState,writePrivateSessionReceipt,checkSessionReceipt } from '../integrations/session-gate.js';
 import type { StructuredChat } from '../ai/types.js';
@@ -183,7 +184,7 @@ export async function exploreDedicatedOwned(input:{guard:DedicatedGuard;workflow
       const id=await Promise.race([input.choose({availableActionIds:available,visitedActionIds:[...visited],lastAssertionPassed:observations.at(-1)?.assertionPassed??null}),new Promise<never>((_r,reject)=>{const timer=setTimeout(()=>reject(Error('Exploration model budget exceeded')),Math.max(1,deadline-Date.now()));timer.unref();})]);
       if(!available.includes(id))throw Error('AI exploration selected an unapproved action');const workflow=input.workflows[Number(id.slice(7))],target=new URL(workflow.path,workflow.origin),owned=g.owned.find(r=>target.pathname===`/lightning/r/${r.object}/${r.id}/view`);if(!owned)throw Error('Exploration target is not run-owned');
       if(actions+1+workflow.steps.length>input.maxActions)break;await input.verify(owned.object,owned.id);await page.goto(target.href,{timeout:Math.max(1,deadline-Date.now())});actions++;
-      const locator=(l:z.infer<typeof WorkflowSchema>['assertion']['locator'])=>l.by==='role'?page.getByRole(l.value as 'button',{name:l.name??'',exact:true}):l.by==='label'?page.getByLabel(l.value,{exact:true}):page.getByTestId(l.value);
+      const locator=(l:z.infer<typeof WorkflowSchema>['assertion']['locator'])=>resolveLocator(page,l);
       for(const step of workflow.steps){if(step.action!=='click')throw Error('Dedicated exploration mutation action denied');await locator(step.locator).click({timeout:Math.max(1,deadline-Date.now())});actions++;}
       const passed=(await locator(workflow.assertion.locator).textContent({timeout:Math.max(1,deadline-Date.now())}))===workflow.assertion.text;visited.push(id);observations.push({actionId:id,assertionPassed:passed});await input.verify(owned.object,owned.id);
     }

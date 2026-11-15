@@ -2,6 +2,7 @@ import { chromium } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { WorkflowSchema } from './workflows.js';
+import {resolveLocator} from '../core/locators.js';
 export const FixtureExplorationSchema=z.object({mode:z.literal('FIXTURE'),syntheticOnly:z.literal(true),origin:z.string().url(),reviewer:z.string().trim().min(1),source:z.string().min(1),paths:z.array(z.string().startsWith('/')).min(1).max(10),actions:z.array(z.object({path:z.string().startsWith('/'),locator:WorkflowSchema.shape.assertion.shape.locator,action:z.enum(['click','fill']),value:z.string().optional()})).max(30),maxActions:z.number().int().min(0).max(30).default(10),maxMs:z.number().int().min(1).max(60000).default(15000)}).strict();
 export async function exploreFixture(raw:unknown) {
   const input=FixtureExplorationSchema.parse(raw),origin=new URL(input.origin);
@@ -15,7 +16,7 @@ export async function exploreFixture(raw:unknown) {
       try {await page.goto(new URL(path,input.origin).href,{timeout:Math.max(1,deadline-Date.now())});
         const capture=async()=>{const elements=await page.locator('[data-testid]').evaluateAll(nodes=>nodes.slice(0,100).map(n=>({testId:n.getAttribute('data-testid')!,text:n.textContent?.slice(0,512)??null}))),state=createHash('sha256').update(JSON.stringify(elements)).digest('hex');observations.push({path,state,elements});return state;};
         let before=await capture();for(const action of input.actions.filter(a=>a.path===path)){if(actions>=input.maxActions||Date.now()>=deadline)break;
-          const l=action.locator,locator=l.by==='role'?page.getByRole(l.value as 'button',{name:l.name??'',exact:true}):l.by==='label'?page.getByLabel(l.value,{exact:true}):page.getByTestId(l.value);
+          const locator=resolveLocator(page,action.locator);
           if(await locator.count()!==1||!await locator.isVisible())throw Error('Fixture action locator is absent or ambiguous; no repair attempted');
           if(action.action==='fill')await locator.fill(action.value!,{timeout:Math.max(1,deadline-Date.now())});else await locator.click({timeout:Math.max(1,deadline-Date.now())});actions++;
           const after=await capture();transitions.push({path,before,after,action:actions});before=after;

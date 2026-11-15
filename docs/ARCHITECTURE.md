@@ -1,5 +1,11 @@
 # Architecture
 
+## Shared session owner and permission planes
+
+[LIGHTNING_SESSION_ARCHITECTURE.md](LIGHTNING_SESSION_ARCHITECTURE.md) is the current browser integration decision. `LightningSession` owns one nonpersistent headless context; direct Playwright and a private Playwright MCP SDK client attach through the same identity/build verification, lineage reservation, network boundary and action broker. Agents receive five constrained Salesforce MCP tools, never the native arbitrary navigation/script/file tools. Platform initialization does not authorize agent actions; reviewed workflow steps do not authorize factories or high-risk operations. Strict normal Production modes are unchanged.
+
+A reviewed view requires an exact source-linked name and separate content element, stable state and no visible busy/error indicator. A fresh independent unchanged reference comparison and live-only readiness receipt are required before managed lifecycle setup. Profile version/state/view changes invalidate readiness; no offline fixture can unlock live writes. Existing ownership, replay, cleanup, SOQL, reporting and verified-learning services remain authoritative. Engine pins include the actual installed Playwright/MCP versions. Local normal-baseline import requires explicit capture provenance and exact review; it grants nothing. No normal capture is available and no new Salesforce session ran in this increment. Actual rendering cause and selectors remain unresolved; no initialization permission was added.
+
 ## Dedicated Lightning execution boundary
 
 [BROWSER_EXECUTION.md](BROWSER_EXECUTION.md) records the current architecture decision and dependency chain. Keep strict Production observation and legacy metadata diagnosis unchanged. New dedicated policies independently bind org/user/persona, parent definition, native framework/app build, selected app, state hash, source version, records, resources, contracts, workflows and budgets. Public versioned resources use a bounded credential-free validated cache; a separately approved native-reference transport enables a policy-matched comparison. Routing still disables Playwright HTTP cache, so neither is described as unrestricted normal-browser behavior.

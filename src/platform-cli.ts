@@ -59,6 +59,11 @@ import { prepareReadContractReview } from './execution/read-contract-review.js';
 import { BrowserReviewSchema,browserPlanHash,resolveBrowserRecords } from './execution/browser-policy.js';
 import { prepareBrowserReview,prepareNativeInitializationReview,browserReviewSummary,BrowserReviewInputSchema } from './execution/browser-review.js';
 import {reviewCachedBrowserSources} from './execution/browser-source-review.js';
+import {openLiveLightningSession} from './execution/lightning-session.js';
+import {createLightningMcp} from './integrations/lightning-mcp.js';
+import {StdioServerTransport} from '@modelcontextprotocol/sdk/server/stdio.js';
+import {LightningReviewInputSchema,prepareLightningArchitecture} from './execution/lightning-review.js';
+import {prepareNormalBaseline,importNormalBaseline,compareNormalBaseline} from './execution/lightning-baseline.js';
 import { readPrivateSessionState } from './integrations/session-gate.js';
 import { probeReviewedBrowser } from './execution/browser-runtime.js';
 import { sanitizeBrowserHar,BrowserTraceSchema,compareBrowserTraces } from './execution/browser-trace.js';
@@ -78,6 +83,32 @@ async function reviewedKnowledge(history:History,remoteApproved=false) {
   return new KnowledgeIndex(history,embed,remote,embeddingSpace);
 }
 async function main() {
+  if(mode==='lightning-review'){
+    try{const input=LightningReviewInputSchema.parse(await loadJson(file)),source=await readPrivateSessionState(input.statePath),prepared=prepareLightningArchitecture(await loadJson(input.sourceReview),{runId:input.runId,stateHash:source.hash,view:input.viewPath?await loadJson(input.viewPath):undefined});await saveJson('.state/lightning-architecture.review.json',prepared.review);await saveJson('.state/lightning-architecture-summary.json',prepared.summary);console.log(JSON.stringify(prepared.summary));}catch{console.log(JSON.stringify({status:'architecture-source-gate',privateDetailsWithheld:true,approvalActivated:false,recordWrites:0}));process.exitCode=1;}return;
+  }
+  if(mode==='lightning-baseline-review'||mode==='lightning-baseline-import'||mode==='lightning-baseline-compare'){
+    try{
+      const path=await realpath(file),inside=await Promise.all(['.auth','.state'].map(async root=>{const rel=relative(await realpath(root),path);return!!rel&&!rel.startsWith('..')&&!isAbsolute(rel);}));
+      if(!inside.some(Boolean)||(await stat(path)).size>67108864)throw Error('Private bounded normal capture required');
+      const bytes=await readFile(path),review=await loadJson(arg),flag=mode==='lightning-baseline-review'?'--capture':'--receipt',position=process.argv.indexOf(flag);if(position<0)throw Error('Local capture declaration/review required');
+      if(mode==='lightning-baseline-review'){const receipt=prepareNormalBaseline(bytes,review,await loadJson(process.argv[position+1]));await saveJson('.state/lightning-normal-baseline.review.json',receipt);console.log(JSON.stringify({status:'normal-baseline-review-prepared',hash:receipt.approval.hash,approvalActivated:false,permissionsGranted:0}));}
+      else{const baseline=importNormalBaseline(bytes,review,await loadJson(process.argv[position+1]));await saveJson('.state/lightning-normal-baseline.json',baseline);if(mode==='lightning-baseline-compare'){const tracePosition=process.argv.indexOf('--trace');if(tracePosition<0)throw Error('Controlled trace required');const comparison=compareNormalBaseline(baseline,await loadJson(process.argv[tracePosition+1]));await saveJson('.state/lightning-normal-comparison.json',comparison);console.log(JSON.stringify(comparison));}else console.log(JSON.stringify({status:'normal-baseline-imported',entries:baseline.trace.entries.length,nativeIdentityEvidence:baseline.nativeIdentityEvidence,normalTransport:baseline.normalTransport,renderingEstablished:false,permissionsGranted:0}));}
+    }catch{console.log(JSON.stringify({status:'normal-capture-provenance-or-scope-gate',privateDetailsWithheld:true,permissionsGranted:0}));process.exitCode=1;}return;
+  }
+  if(mode==='lightning-observe'||mode==='lightning-mcp'){
+    const history=new History('.state/dedicated-qa.sqlite');let session:Awaited<ReturnType<typeof openLiveLightningSession>>|undefined;
+    try{
+      const viewPosition=process.argv.indexOf('--view'),view=viewPosition>=0?await loadJson(process.argv[viewPosition+1]):undefined;
+      session=await openLiveLightningSession({review:await loadJson(file),parent:await loadJson('.state/dedicated-qa-policy.json'),history,statePath:arg,view});
+      if(mode==='lightning-mcp'){
+        const server=createLightningMcp(session);await server.connect(new StdioServerTransport());const active=session;process.once('SIGINT',()=>{void active.close().finally(()=>history.close());});return;
+      }
+      const viaPosition=process.argv.indexOf('--via'),via=viaPosition>=0?process.argv[viaPosition+1]:'playwright';if(via!=='playwright'&&via!=='mcp')throw Error('Unknown observation transport');
+      const navigation=await session.navigate('Account',via),discovery=navigation.nativeDocumentVerified&&navigation.approvedDocument?await session.discover(via):{status:'native-document-not-proven'},readiness=await session.observe(via),report=await session.close();await saveJson('.state/lightning-session-latest.json',{navigation,discovery,readiness,report});
+      console.log(JSON.stringify({navigation,discovery,readiness,report:'.state/lightning-session-latest.json',recordWrites:0,learningPublished:false}));
+    }catch{if(mode==='lightning-mcp')console.error('Managed Lightning session gate failed; private details withheld.');else console.log(JSON.stringify({status:'lightning-session-gate',privateDetailsWithheld:true,recordWrites:0}));process.exitCode=1;}
+    finally{if(mode!=='lightning-mcp'||!session){await session?.close();history.close();}}return;
+  }
   if(mode==='browser-source-review'){
     const history=new History('.state/dedicated-qa.sqlite');
     try{const review=BrowserReviewSchema.parse(await loadJson(file)),report=reviewCachedBrowserSources(history,review,await loadJson(arg));await saveJson('.state/browser-source-review.json',report);console.log(JSON.stringify({status:'local-source-reviewed',inspectedSources:report.inspectedSources,inspectedBytes:report.inspectedBytes,partialSources:report.partialSources,skippedSources:report.skippedSources,blockedDescriptorCount:report.blockedDescriptorCount,matchedCandidates:report.candidates.length,unresolved:report.unresolvedActionHashes.length,newNetworkRequests:0,permissionsGranted:0,causalProof:false}));}catch{console.log(JSON.stringify({status:'source-scope-or-integrity-gate',privateDetailsWithheld:true,newNetworkRequests:0,permissionsGranted:0}));process.exitCode=1;}finally{history.close();}return;

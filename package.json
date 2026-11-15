@@ -17,7 +17,8 @@
     "discover:live": "tsx src/cli.ts discover --live",
     "plan": "tsx src/cli.ts plan stories/invoice-payment.json",
     "data:plan": "tsx src/cli.ts data-plan stories/invoice-payment.json",
-    "test": "playwright test",
+    "test": "node node_modules/@playwright/test/cli.js test",
+    "browsers:install": "node node_modules/@playwright/test/cli.js install chromium",
     "typecheck": "tsc --noEmit",
     "unit": "tsx --test --test-concurrency=4 unit/*.test.ts",
     "agents": "playwright init-agents --loop=codex",
@@ -26,7 +27,7 @@
   "dependencies": {
     "@langchain/langgraph": "^1.0.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "@playwright/mcp": "^0.0.60",
+    "@playwright/mcp": "0.0.84",
     "@playwright/test": "^1.55.0",
     "chromadb": "^3.0.0",
     "dotenv": "^17.0.0",

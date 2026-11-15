@@ -1,10 +1,9 @@
 import { z } from 'zod';
 import ts from 'typescript';
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
-const Locator=z.object({by:z.enum(['role','label','testId']),value:z.string().min(1),name:z.string().optional()});
+import {LocatorSchema as Locator,locatorSource as locator} from '../core/locators.js';
 export const WorkflowSchema=z.object({id:z.string().regex(/^[a-zA-Z0-9_-]+$/),criterion:z.string().min(1),source:z.string().min(1),reviewer:z.string().trim().min(1),origin:z.string().url(),path:z.string().startsWith('/'),steps:z.array(z.object({locator:Locator,action:z.enum(['click','fill']),value:z.string().optional()})),assertion:z.object({locator:Locator,text:z.string().min(1)}),apiAssertions:z.array(z.object({path:z.string().startsWith('/'),source:z.string().min(1),expected:z.record(z.string(),z.union([z.string(),z.number(),z.boolean(),z.null()]))})).default([])});
 export type Workflow=z.infer<typeof WorkflowSchema>;
-function locator(l:z.infer<typeof Locator>) {const q=JSON.stringify;return l.by==='role'?`page.getByRole(${q(l.value)} as any, { name: ${q(l.name??'')}, exact: true })`:l.by==='label'?`page.getByLabel(${q(l.value)}, { exact: true })`:`page.getByTestId(${q(l.value)})`;}
 export function generateTest(input:z.input<typeof WorkflowSchema>,allowedOrigins:string[],guard?:{module:string;config:string;ownsNetworkBoundary?:true}) {
   const w=WorkflowSchema.parse(input),url=new URL(w.path,w.origin);
   if(guard?.ownsNetworkBoundary&&w.apiAssertions.length)throw Error('Reviewed browser API assertions require the scoped Salesforce verification adapter');

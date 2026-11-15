@@ -1,6 +1,9 @@
 import ts from 'typescript';
 import { parseLightningIdentity } from './lightning-identity.js';
-import { digest } from './browser-policy.js';
+import { digest, BrowserReviewSchema, authorizeBrowserSession } from './browser-policy.js';
+import type { BrowserContext } from '@playwright/test';
+import type { EnvironmentIdentity } from './environment.js';
+import { sameSalesforceIdentity } from './lightning-identity.js';
 
 // A native document supplies the actual build; aliases/env vars supply none.
 export function parseBrowserBuild(html: string) {
@@ -23,4 +26,14 @@ export function parseBrowserBuild(html: string) {
   }
   if (versions.length !== 1) throw Error('Native Lightning build is missing or ambiguous; content withheld');
   return { orgId: identity.organization_id, userId: identity.user_id, buildHash: digest(versions[0].framework), appHash: digest(versions[0].app), documentHash: identity.documentHash };
+}
+
+export async function proveReviewedBrowserBuild(context:BrowserContext,raw:unknown,parent:unknown,identity:EnvironmentIdentity){
+  const review=BrowserReviewSchema.parse(raw),origin=review.plan.origins.find(origin=>new URL(origin).hostname.endsWith('.lightning.force.com'));
+  if(!origin)throw Error('Exact Lightning origin missing');
+  const response=await context.request.get(`${origin}/lightning/page/home`,{maxRedirects:0,timeout:15000});
+  if(response.status()!==200||!response.headers()['content-type']?.includes('text/html')||Number(response.headers()['content-length']??0)>2000000)throw Error('Native Lightning build proof unavailable');
+  const build=parseBrowserBuild(await response.text());
+  if(!sameSalesforceIdentity(build.orgId,identity.Id)||!sameSalesforceIdentity(build.userId,identity.userId))throw Error('Native build actor mismatch');
+  authorizeBrowserSession(review,parent,identity,build);return build;
 }

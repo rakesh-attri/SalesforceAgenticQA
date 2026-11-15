@@ -1,5 +1,7 @@
 # Local setup (Windows PowerShell)
 
+Use `npm.cmd run browsers:install` and `npm.cmd test`: both explicitly invoke the installed `@playwright/test` CLI. The pinned Playwright MCP package also supplies a `playwright` binary; invoking that ambiguous binary can select its different driver/reporter configuration. See [LIGHTNING_SESSION_ARCHITECTURE.md](LIGHTNING_SESSION_ARCHITECTURE.md) for inactive review preparation, restricted MCP configuration and observation commands. Those commands require fresh exact authorization and consume browser slots; installing dependencies grants no Salesforce access. All local state/HAR/MCP output stays ignored under `.auth`, `.state` or `.playwright-mcp`.
+
 Local reportingLabs is included through pinned reporting-labs. npm.cmd test produces artifacts/reporting-labs/index.html, JSON and history alongside existing reporters; no Reporting Labs account/API key is required. SFQA_REPORTING_LABS=0 opts out of that reporter only. Automatic API capture and browser auto-open are disabled. See REPORTING_LABS.md for scope/privacy and LIGHTNING_DIAGNOSTICS.md for exact read-only commands; local tests authorize no Salesforce lifecycle.
 
 ## Story-driven org intelligence

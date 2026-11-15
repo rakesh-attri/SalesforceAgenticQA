@@ -7,6 +7,7 @@ import { collectInitializationSources,inspectCurrentAppRequest,classifyInitializ
 import { InitializationScopeSchema } from './diagnostic-review.js';
 import type { z } from 'zod';
 import { WorkflowSchema } from '../agents/workflows.js';
+import {resolveLocator} from '../core/locators.js';
 import { createHash } from 'node:crypto';
 import { fetchReviewedStatic } from './static-transport.js';
 // Metadata-only negative-page diagnosis. Callers obtain references only through
@@ -27,7 +28,7 @@ export async function diagnoseUiDependencies(input:{guard:DedicatedGuard;statePa
     await context.route('**/*',route=>{const request=route.request();if(!['GET','HEAD'].includes(request.method())||['xhr','fetch','eventsource','ping'].includes(request.resourceType())){record(request,'metadata-only-rpc-denied');return route.abort('blockedbyclient');}return route.fallback();});
     const page=await context.newPage(),deadline=Date.now()+input.maxMs;collect.attachPage(page);if(scope)page.on('pageerror',error=>{if(clientErrors.length<8)clientErrors.push(classifyInitializationError(error));});
     for(let index=0;index<guard.documents.length;index++){if(Date.now()>=deadline)break;const document=guard.documents[index],pageDeadline=Math.min(deadline,Date.now()+Math.floor((deadline-Date.now())/(guard.documents.length-index)));let navigation:'completed'|'blocked-or-timeout'='blocked-or-timeout';try{await page.goto(document,{waitUntil:'domcontentloaded',timeout:Math.max(1,pageDeadline-Date.now()-250)});navigation='completed';}catch{}await new Promise(r=>setTimeout(r,Math.min(1500,Math.max(0,pageDeadline-Date.now()-250))));await collect.capturePage(page,document,navigation,Math.max(0,pageDeadline-Date.now()));
-      if(scope)for(const selector of input.initialization!.selectors.filter(row=>new URL(document).pathname.startsWith(`/lightning/r/${row.object}/`))){let count:number|null=null;if(page.url()===document&&Date.now()<pageDeadline){const l=selector.locator,locator=l.by==='role'?page.getByRole(l.value as 'heading',{name:l.name??'',exact:true}):l.by==='label'?page.getByLabel(l.value,{exact:true}):page.getByTestId(l.value);try{count=await locator.count();}catch{}}selectorSamples.push({documentHash:createHash('sha256').update(document).digest('hex'),locatorHash:createHash('sha256').update(JSON.stringify(selector.locator)).digest('hex'),count,context:'known-deleted',assertionExecuted:false});}
+      if(scope)for(const selector of input.initialization!.selectors.filter(row=>new URL(document).pathname.startsWith(`/lightning/r/${row.object}/`))){let count:number|null=null;if(page.url()===document&&Date.now()<pageDeadline){const locator=resolveLocator(page,selector.locator);try{count=await locator.count();}catch{}}selectorSamples.push({documentHash:createHash('sha256').update(document).digest('hex'),locatorHash:createHash('sha256').update(JSON.stringify(selector.locator)).digest('hex'),count,context:'known-deleted',assertionExecuted:false});}
     }
     runtime=await collect.finish();
   }finally{await browser.close();}

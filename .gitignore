@@ -22,3 +22,5 @@ tests/generated/
 *credentials*.json
 reporting-labs/
 reporting-labs.history.json
+.playwright-mcp/
+*.[hH][aA][rR]
