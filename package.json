@@ -19,7 +19,7 @@
     "data:plan": "tsx src/cli.ts data-plan stories/invoice-payment.json",
     "test": "playwright test",
     "typecheck": "tsc --noEmit",
-    "unit": "tsx --test unit/*.test.ts",
+    "unit": "tsx --test --test-concurrency=4 unit/*.test.ts",
     "agents": "playwright init-agents --loop=codex",
     "mcp:browser": "npx @playwright/mcp --headless"
   },

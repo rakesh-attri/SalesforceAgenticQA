@@ -44,6 +44,7 @@ export async function minimizeDedicatedImport(statePath:string,outputPath:string
 export const DedicatedGuardSchema=z.object({policy:EnvironmentPolicySchema,identity:z.object({Id,userId:Id,IsSandbox:z.boolean()}),origins:z.array(z.string().url()).min(1),documents:z.array(z.string().url()).max(20),owned:z.array(z.object({object:z.enum(['Account','Contact']),id:Id,display:z.string().optional()})).max(2),expiresAt:z.string().datetime(),staticReview:DedicatedStaticReviewSchema.optional()}).strict();
 export type DedicatedGuard=z.infer<typeof DedicatedGuardSchema>;
 const readActions=new Set(['aura://RecordUiController/ACTION$getRecord','aura://RecordUiController/ACTION$getRecordWithFields','aura://RecordUiController/ACTION$getObjectInfo','aura://RecordUiController/ACTION$getLayout','aura://RecordUiController/ACTION$getRecordLayout','serviceComponent://ui.force.components.controllers.recordGlobalValueProvider.RecordGvpController/ACTION$getRecord']);
+export function hasDedicatedReadDescriptor(descriptor:string){return readActions.has(descriptor);}
 function ownedReadParams(g:DedicatedGuard,descriptor:string,params:unknown) {
   if(!params||typeof params!=='object'||Array.isArray(params))return false;
   const p=params as Record<string,unknown>,recordRead=/\$(?:getRecord|getRecordWithFields|getRecordLayout)$/.test(descriptor);

@@ -58,6 +58,7 @@ import type { ReadContractCandidate } from './execution/read-contract-evidence.j
 import { prepareReadContractReview } from './execution/read-contract-review.js';
 import { BrowserReviewSchema,browserPlanHash,resolveBrowserRecords } from './execution/browser-policy.js';
 import { prepareBrowserReview,prepareNativeInitializationReview,browserReviewSummary,BrowserReviewInputSchema } from './execution/browser-review.js';
+import {reviewCachedBrowserSources} from './execution/browser-source-review.js';
 import { readPrivateSessionState } from './integrations/session-gate.js';
 import { probeReviewedBrowser } from './execution/browser-runtime.js';
 import { sanitizeBrowserHar,BrowserTraceSchema,compareBrowserTraces } from './execution/browser-trace.js';
@@ -77,6 +78,10 @@ async function reviewedKnowledge(history:History,remoteApproved=false) {
   return new KnowledgeIndex(history,embed,remote,embeddingSpace);
 }
 async function main() {
+  if(mode==='browser-source-review'){
+    const history=new History('.state/dedicated-qa.sqlite');
+    try{const review=BrowserReviewSchema.parse(await loadJson(file)),report=reviewCachedBrowserSources(history,review,await loadJson(arg));await saveJson('.state/browser-source-review.json',report);console.log(JSON.stringify({status:'local-source-reviewed',inspectedSources:report.inspectedSources,inspectedBytes:report.inspectedBytes,partialSources:report.partialSources,skippedSources:report.skippedSources,blockedDescriptorCount:report.blockedDescriptorCount,matchedCandidates:report.candidates.length,unresolved:report.unresolvedActionHashes.length,newNetworkRequests:0,permissionsGranted:0,causalProof:false}));}catch{console.log(JSON.stringify({status:'source-scope-or-integrity-gate',privateDetailsWithheld:true,newNetworkRequests:0,permissionsGranted:0}));process.exitCode=1;}finally{history.close();}return;
+  }
   if(mode==='browser-review'){
     try {
       const input=BrowserReviewInputSchema.parse(await loadJson(file)),source=await readPrivateSessionState(input.statePath),parent=EnvironmentPolicySchema.parse(await loadJson('.state/dedicated-qa-policy.json')),initialization=await loadJson(input.initializationSource);

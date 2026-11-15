@@ -107,7 +107,49 @@ export function resolveBrowserRecords(plan: BrowserPlan, history?: History): Bro
   return records.map(record => BrowserRecordSchema.parse({ object: record.object, id: record.id, purpose: 'owned-run' }));
 }
 export function reserveBrowserSession(review: BrowserReview, history: History, nonce: string) {
-  history.db.exec('CREATE TABLE IF NOT EXISTS browser_execution_sessions(policy TEXT,nonce TEXT UNIQUE,status TEXT,PRIMARY KEY(policy,nonce)); PRAGMA busy_timeout=5000');
+  initializeBrowserSessionLedger(history);
   const hash = browserPlanHash(review.plan); history.db.exec('BEGIN IMMEDIATE');
-  try { if (Number(history.db.prepare('SELECT COUNT(*) AS count FROM browser_execution_sessions WHERE policy=?').get(hash)?.count) >= review.plan.budgets.sessions) throw Error('Reviewed browser session budget exhausted'); history.db.prepare("INSERT INTO browser_execution_sessions VALUES(?,?,'started')").run(hash, nonce); history.db.exec('COMMIT'); } catch (error) { history.db.exec('ROLLBACK'); throw error; }
+  try {
+    const lineage=browserSessionLineage(history,review);
+    if(lineage.revoked)throw Error('Browser state source was superseded; session reservation denied');
+    const cap=Number(history.db.prepare('SELECT cap FROM browser_session_grants WHERE root=?').get(lineage.root)?.cap);
+    if(!Number.isInteger(cap)||cap<1||cap>review.plan.budgets.sessions||browserSessionCount(history,lineage.root)>=cap)throw Error('Reviewed browser session budget exhausted');
+    history.db.prepare("INSERT INTO browser_execution_sessions VALUES(?,?,'started')").run(hash, nonce);history.db.exec('COMMIT');
+  } catch (error) { history.db.exec('ROLLBACK'); throw error; }
+}
+
+function initializeBrowserSessionLedger(history:History){
+  history.db.exec(`CREATE TABLE IF NOT EXISTS browser_execution_sessions(policy TEXT,nonce TEXT UNIQUE,status TEXT,PRIMARY KEY(policy,nonce));
+    CREATE TABLE IF NOT EXISTS browser_session_lineage(policy TEXT PRIMARY KEY,root TEXT NOT NULL,revoked INTEGER NOT NULL DEFAULT 0);
+    CREATE TABLE IF NOT EXISTS browser_session_grants(root TEXT PRIMARY KEY,cap INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS browser_state_replacements(previous TEXT PRIMARY KEY,replacement TEXT UNIQUE NOT NULL,replacedAt INTEGER NOT NULL);
+    PRAGMA busy_timeout=5000`);
+}
+function browserSessionLineage(history:History,review:BrowserReview){
+  const hash=browserPlanHash(review.plan),prior=history.db.prepare('SELECT root,revoked FROM browser_session_lineage WHERE policy=?').get(hash);
+  if(prior)return{root:String(prior.root),revoked:!!prior.revoked};
+  history.db.prepare('INSERT INTO browser_session_grants VALUES(?,?)').run(hash,review.plan.budgets.sessions);
+  history.db.prepare('INSERT INTO browser_session_lineage VALUES(?,?,0)').run(hash,hash);
+  return{root:hash,revoked:false};
+}
+function browserSessionCount(history:History,root:string){
+  return Number(history.db.prepare('SELECT COUNT(*) AS count FROM browser_execution_sessions s JOIN browser_session_lineage l ON l.policy=s.policy WHERE l.root=?').get(root)?.count);
+}
+
+// Both artifacts must already carry explicit local named authorization. This
+// does not approve a new state or verify its cookies: the caller must first run
+// native proof. It only retires the old source and preserves the original total
+// session quota when a separately approved replacement changes its state hash.
+export function registerBrowserStateReplacement(previousRaw:unknown,replacementRaw:unknown,history:History,parent:unknown,identity:EnvironmentIdentity,build:{buildHash:string;appHash:string},now=Date.now()){
+  const previous=authorizeBrowserSession(previousRaw,parent,identity,build,now).review,replacement=authorizeBrowserSession(replacementRaw,parent,identity,build,now).review;
+  if(previous.plan.ownedDataPlanHash||previous.plan.budgets.actions||previous.plan.mode!=='DEDICATED_REVIEWED_EXECUTION'||previous.plan.sessionStateHash===replacement.plan.sessionStateHash||replacement.approval.expiresAt!==previous.approval.expiresAt||replacement.approval.operator!==previous.approval.operator||fingerprint(previous.initializationApprovals)!==fingerprint(replacement.initializationApprovals)||browserPlanHash({...previous.plan,sessionStateHash:replacement.plan.sessionStateHash})!==browserPlanHash(replacement.plan))throw Error('Replacement may change only the explicitly approved observation state binding');
+  initializeBrowserSessionLedger(history);history.db.exec('BEGIN IMMEDIATE');
+  try{
+    const lineage=browserSessionLineage(history,previous),from=browserPlanHash(previous.plan),to=browserPlanHash(replacement.plan),cap=Number(history.db.prepare('SELECT cap FROM browser_session_grants WHERE root=?').get(lineage.root)?.cap);
+    if(lineage.revoked||browserSessionCount(history,lineage.root)>=cap||history.db.prepare('SELECT policy FROM browser_session_lineage WHERE policy=?').get(to))throw Error('Replacement cannot replay a source or replenish its session budget');
+    history.db.prepare('INSERT INTO browser_session_lineage VALUES(?,?,0)').run(to,lineage.root);
+    history.db.prepare('UPDATE browser_session_lineage SET revoked=1 WHERE policy=?').run(from);
+    history.db.prepare('INSERT INTO browser_state_replacements VALUES(?,?,?)').run(from,to,now);
+    history.db.exec('COMMIT');return{fromPolicyHash:from,toPolicyHash:to,remainingSessions:cap-browserSessionCount(history,lineage.root),expiresAt:previous.approval.expiresAt,permissionsChanged:false};
+  }catch(error){history.db.exec('ROLLBACK');throw error;}
 }

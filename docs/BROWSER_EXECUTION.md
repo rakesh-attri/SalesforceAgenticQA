@@ -1,5 +1,7 @@
 # Reviewed Salesforce Lightning browser execution
 
+Current live follow-up: [LIGHTNING_BROWSER_PROOF.md](LIGHTNING_BROWSER_PROOF.md) records actual named activation, a user-approved state-only refresh with shared quota, two consumed observations, successful exact OneController response and incomplete positive record rendering. The original expiry/permissions were retained. The architecture below remains; earlier pending-approval text describes preparation before that follow-up.
+
 This increment continues `d0bf874` on `feature/verified-discovery`. It adds a dedicated execution boundary alongside the existing observers; it does not replace their behavior. Live rendering is **unresolved** until the new scope is explicitly approved, a fresh native session passes, and an actual Account observation succeeds. The nominated existing QA Account is an observation reference, never factory-owned data.
 
 ## Dependency chain and architecture decision
@@ -69,6 +71,10 @@ npm.cmd run platform -- browser-compare .state/browser-reference.sanitized.json 
 Import retains neither credentials nor request/response values, never proves identity, and grants no permission. Comparisons require matching org/user/build/app/record scope. HTTP 200 Aura ERROR is not success. Blocked requests, actual HTTP/Aura errors, resource validation failures and unavailable response inspections remain distinct. Correlation never becomes a proven rendering cause automatically.
 
 ## Lifecycle continuation and validation
+
+For an explicitly approved observation-state replacement, `registerBrowserStateReplacement` accepts only two named exact reviews differing in `sessionStateHash`; it rejects changed expiry/operator/resources/records/actions and owned-run grants. Native state/build verification must precede registration. An atomic lineage ledger retires the old source and shares the original total across all replacements, including pre-lineage reservations. It neither approves a state nor resets/extends a grant. Tests cover replay, source retirement, total exhaustion and scope widening. No automatic replacement or activation CLI exists.
+
+After an authorized observation, `browser-source-review REVIEW_FILE TRACE_FILE` correlates blocked action hashes with literals in that exact policy's cached public code. It performs no new network/model request, checks scope and integrity, inspects at most six sources/2 MB each/8 MB total and marks prefix/omitted coverage. The private report proposes source evidence only; an existing validator descriptor match does not establish support for the actual observed parameters or server purity.
 
 After real rendering and actual Account/Contact selectors are reviewed, prepare a **new** data run and exact factory/UI/session approvals. Its browser policy must have `ownedDataPlanHash`, empty observation references, `validated-cache` only, sufficient bounded sessions, and its hash in `ui.plan.browserSessionPolicyHash`. The pipeline proves native identity/build/app before reserving data, derives actual record IDs from the certain factory journal, reviews unchanged selectors, and runs generated tests with the sole browser boundary. Each generated context repeats fresh API, actual browser, build, ownership and session-budget checks.
 

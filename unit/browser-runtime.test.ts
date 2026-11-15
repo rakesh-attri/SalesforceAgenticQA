@@ -11,6 +11,8 @@ import { currentAppAction } from '../src/execution/browser-native-contracts.js';
 import { sanitizeBrowserHar, compareBrowserTraces, browserTraceScope, summarizeBrowserExchange } from '../src/execution/browser-trace.js';
 import { SalesforceClient } from '../src/salesforce/client.js';
 import { browserNetworkDecision } from '../src/execution/browser-network.js';
+import { chromium } from '@playwright/test';
+import { installReviewedBrowserBoundary } from '../src/execution/browser-runtime.js';
 
 test('undocumented current-app request needs a separate exact risk receipt and cannot be relabeled pure', () => {
   const b=browserFixture();
@@ -61,6 +63,22 @@ test('HAR comparison retains no credentials or values, distinguishes HTTP 200 Au
     const comparison=compareBrowserTraces(reference,controlled);assert.equal(comparison.blockedDifferences[0].referenceSucceeded,false);assert.equal(comparison.permissionsGranted,0);assert.equal(comparison.rootCause,'unresolved');assert.ok(!JSON.stringify(reference).includes('PRIVATE_'));assert.ok(!JSON.stringify(reference).includes(b.appId));
     assert.throws(()=>compareBrowserTraces(reference,{...controlled,scope:{...controlled.scope,org:digest('other-org')}}));
   }finally{b.history.close();}
+});
+
+test('native public-resource credential denial is explicit while cached transport never forwards browser credentials',{timeout:20000},async()=>{
+ const b=browserFixture(),browser=await chromium.launch({headless:true});b.plan.transports=['native-reference','validated-cache'];let publicEffects=0;
+ try{const review=b.approve();
+  for(const transport of ['native-reference','validated-cache'] as const){
+   const context=await browser.newContext({serviceWorkers:'block'});await context.addCookies([{name:'sid',value:'PRIVATE_CDN_COOKIE',url:'https://b.static.lightning.force.com',secure:true,sameSite:'Lax'}]);
+   await context.route('**/*',route=>{if(new URL(route.request().url()).origin==='https://b.static.lightning.force.com'){publicEffects++;return route.fulfill({contentType:'application/javascript',body:'window.fixture=true;'});}return route.fulfill({contentType:'text/html',body:`<!doctype html><script src="${b.resource.replaceAll('&','&amp;')}"></script><h1>Fixture</h1>`});});
+   const boundary=await installReviewedBrowserBoundary(context,{review,parent:b.f.policy,identity:b.f.identity,build:b.build,history:b.history,records:b.plan.records,transport,resourceFetch:async(_url,init)=>{assert.equal(init?.credentials,'omit');assert.ok(!JSON.stringify(init?.headers).includes('PRIVATE_'));return new Response('window.fixture=true;',{headers:{'content-type':'application/javascript'}});}});
+   const page=await context.newPage();await page.goto(`${b.f.browserOrigin}/lightning/r/Account/${b.recordId}/view`,{waitUntil:'domcontentloaded'});
+   const metrics=await boundary.finish();assert.equal(metrics.publicCredentialRequests,1);assert.ok(!JSON.stringify(metrics).includes('PRIVATE_'));
+   if(transport==='native-reference'){assert.equal(metrics.blocked,1);assert.ok(metrics.trace.entries.some(entry=>entry.reason==='public-resource-credentials'));}else{assert.equal(metrics.blocked,0);assert.equal(metrics.cacheMisses,1);}
+   await context.close();
+  }
+  assert.equal(publicEffects,0);
+ }finally{await browser.close();b.history.close();}
 });
 
 test('reviewed browser API facade reads only exact approved reference, checks active actor/app and exposes no write or generic transport',async()=>{
