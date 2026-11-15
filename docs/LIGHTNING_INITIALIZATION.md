@@ -1,5 +1,7 @@
 # Lightning initialization evidence and risk review
 
+Current architecture: [BROWSER_EXECUTION.md](BROWSER_EXECUTION.md) implements a separate exact native-initialization risk receipt without claiming undocumented server purity. It retains the source evidence and observer below, preserves normal Production restrictions, and replaces per-context URL approval churn with reviewed native-build resource policies. Both transports and the complete generated fixture lifecycle pass offline; live policy/risk approval and a no-create positive Account proof are still pending. No RPC is enabled by merely preparing a review.
+
 ## Actual validation - 2026-11-15 IST
 
 Named operator Rakesh Attri approved exact initialization scopes and the 31 then 33 static bundles. Fresh API identity/active user and two signed run-005 absences passed. The stale browser export failed native identity-http before observation; after the user refreshed qa-user.json, a new minimized copy passed both actual origins. The fixed documented GET /ui-api/apps/selected?formFactor=Large passed independently; its projection retained only app ID/developer-name hashes. The emitted OneController.getCurrentApp request contained one action and exactly one string appContextIdOrName; its value hash matched that selected app ID in both Account and Contact observations. Query values, tokens and parameter values were not retained.

@@ -9,6 +9,8 @@ import type { History } from '../core/history.js';
 import { uiBridgeFailure,UiBridgeError } from './ui-bridge.js';
 import { authorizeDedicatedDiagnostics } from '../execution/diagnostic-review.js';
 import { projectSelectedApp } from '../execution/lightning-initialization.js';
+import { authorizeBrowserSession, BrowserReviewSchema, resolveBrowserRecords, digest } from '../execution/browser-policy.js';
+import { sameSalesforceIdentity } from '../execution/lightning-identity.js';
 export class SalesforceClient {
   private environment?:{policy:EnvironmentPolicy;identity:{Id:string;IsSandbox:boolean;userId:string};policyPath?:string};
   private constructor(private instance:string,private token:string, private version:string) {}
@@ -20,6 +22,35 @@ export class SalesforceClient {
     return new SalesforceClient(u.origin,token.access_token,process.env.SF_API_VERSION || 'v62.0');
   }
   static async reviewIdentity() {const client=await this.authenticate();return {identity:await client.identity(),origin:client.instance};}
+  static async connectReviewedBrowser(parent:unknown,raw:unknown,history?:History) {
+    const review=BrowserReviewSchema.parse(raw),client=await this.authenticate(),initial=await client.identity(),build={buildHash:review.plan.buildHash,appHash:review.plan.appHash},authority=authorizeBrowserSession(review,parent,initial,build);
+    client.environment={policy:authority.policy,identity:initial};
+    return {apiOrigin:client.instance,policy:authority.policy,
+      async identity(){const identity=await client.identity();authorizeBrowserSession(review,parent,identity,build);return identity;},
+      async preflight(){
+        const identity=await client.identity();authorizeBrowserSession(review,parent,identity,build);
+        let actor:unknown,selected:unknown;try{actor=await client.get(`/services/data/${client.version}/query?q=${encodeURIComponent(`SELECT Id,IsActive FROM User WHERE Id='${identity.userId}' LIMIT 1`)}`);selected=await client.get(`/services/data/${client.version}/ui-api/apps/selected?formFactor=Large`);}catch{throw Error('Browser actor/app preflight unavailable; provider details withheld');}
+        const active=z.object({records:z.array(z.object({Id:z.string(),IsActive:z.literal(true)})).length(1)}).safeParse(actor);
+        if(!active.success||active.data.records[0].Id!==identity.userId||projectSelectedApp(selected).appIdHash!==review.plan.selectedAppIdHash)throw Error('Browser actor/app preflight changed');return identity;
+      },
+      async verifyReferences(){
+        const identity=await client.identity();authorizeBrowserSession(review,parent,identity,build);
+        const active=z.object({records:z.array(z.object({Id:z.string(),IsActive:z.boolean()})).length(1)}).safeParse(await client.get(`/services/data/${client.version}/query?q=${encodeURIComponent(`SELECT Id,IsActive FROM User WHERE Id='${identity.userId}' LIMIT 1`)}`));
+        if(!active.success||!active.data.records[0].IsActive||active.data.records[0].Id!==identity.userId)throw Error('Reviewed browser requires the active exact QA user');
+        const references=resolveBrowserRecords(review.plan,history),privateDisplays:Array<{object:'Account'|'Contact';id:string;display:string}>=[],referenceVersions:string[]=[];
+        for(const reference of references){authorizeBrowserSession(review,parent,identity,build);const field=reference.object==='Account'?'Name':'LastName';
+          let rawRecord:unknown;try{rawRecord=await client.readRequest(`/services/data/${client.version}/query?q=${encodeURIComponent(`SELECT Id,${field},LastModifiedDate FROM ${reference.object} WHERE Id='${reference.id}' LIMIT 1`)}`,undefined,true);}catch{throw Error('Approved browser reference read unavailable; provider details withheld');}
+          const record=z.object({records:z.array(z.object({Id:z.string(),Name:z.string().optional(),LastName:z.string().optional(),LastModifiedDate:z.string().min(1)})).length(1)}).safeParse(rawRecord);
+          if(!record.success||!sameSalesforceIdentity(record.data.records[0].Id,reference.id)||!record.data.records[0][field])throw Error('Approved browser reference is missing or unreadable');
+          privateDisplays.push({object:reference.object,id:reference.id,display:record.data.records[0][field]!});
+          referenceVersions.push(digest(JSON.stringify([reference.id,record.data.records[0][field],record.data.records[0].LastModifiedDate])));
+        }
+        let selected:unknown;try{selected=await client.get(`/services/data/${client.version}/ui-api/apps/selected?formFactor=Large`);}catch{throw Error('Approved app metadata unavailable; provider details withheld');}
+        if(projectSelectedApp(selected).appIdHash!==review.plan.selectedAppIdHash)throw Error('Reviewed browser app context changed');
+        return {references,privateDisplays,proof:{verifiedAt:new Date().toISOString(),orgHash:digest(identity.Id),userHash:digest(identity.userId),referenceHashes:references.map(record=>digest(record.id)),referenceVersions,recordWrites:0}};
+      }
+    };
+  }
   static async connectDedicatedDiagnostics(parent:unknown,review:unknown) {
     const client=await this.authenticate(),initial=await client.identity(),authority=authorizeDedicatedDiagnostics(review,parent,initial,client.instance);
     client.environment={policy:authority.policy,identity:initial};

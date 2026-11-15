@@ -3,7 +3,8 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { InitializationScopeSchema } from './diagnostic-review.js';
 
-export const currentAppAction='serviceComponent://ui.global.components.one.one.controller.OneController/ACTION$getCurrentApp';
+import { currentAppAction } from './browser-native-contracts.js';
+export { currentAppAction } from './browser-native-contracts.js';
 const digest=(value:string|Buffer)=>createHash('sha256').update(value).digest('hex');
 const Hash=z.string().regex(/^[a-f0-9]{64}$/);
 export function classifyInitializationError(error:{name:string;message:string}){

@@ -56,6 +56,13 @@ import { dedicatedPlanHash } from './salesforce/dedicated-qa.js';
 import { diagnoseUiDependencies } from './execution/dependency-diagnostics.js';
 import type { ReadContractCandidate } from './execution/read-contract-evidence.js';
 import { prepareReadContractReview } from './execution/read-contract-review.js';
+import { BrowserReviewSchema,browserPlanHash,resolveBrowserRecords } from './execution/browser-policy.js';
+import { prepareBrowserReview,prepareNativeInitializationReview,browserReviewSummary,BrowserReviewInputSchema } from './execution/browser-review.js';
+import { readPrivateSessionState } from './integrations/session-gate.js';
+import { probeReviewedBrowser } from './execution/browser-runtime.js';
+import { sanitizeBrowserHar,BrowserTraceSchema,compareBrowserTraces } from './execution/browser-trace.js';
+import { stat,readFile,realpath } from 'node:fs/promises';
+import { relative,resolve,isAbsolute } from 'node:path';
 const [mode,file,arg]=process.argv.slice(2);
 async function planningKnowledge(history:History) {
   // Legacy entry points stay local until their exact external payload has been reviewed.
@@ -70,6 +77,35 @@ async function reviewedKnowledge(history:History,remoteApproved=false) {
   return new KnowledgeIndex(history,embed,remote,embeddingSpace);
 }
 async function main() {
+  if(mode==='browser-review'){
+    try {
+      const input=BrowserReviewInputSchema.parse(await loadJson(file)),source=await readPrivateSessionState(input.statePath),parent=EnvironmentPolicySchema.parse(await loadJson('.state/dedicated-qa-policy.json')),initialization=await loadJson(input.initializationSource);
+      const review=prepareBrowserReview({parent,staticSource:await loadJson(input.staticSource),initialization,stateHash:source.hash,runId:input.runId,references:input.references});
+      await saveJson('.state/dedicated-browser-base.review.json',review);
+      const candidate=prepareNativeInitializationReview(review.plan,initialization,parent.approval.operator);
+      await saveJson('.state/dedicated-browser-execution.review.json',candidate);
+      console.log(JSON.stringify({approved:false,basePolicyHash:review.approval.hash,policyHash:candidate.approval.hash,nativeExceptionHash:candidate.initializationApprovals[0].approval.hash,serverEffects:'not-established',...browserReviewSummary(candidate.plan)}));
+    }catch{console.log(JSON.stringify({approved:false,status:'review-source-unavailable',recordWrites:0,privateDetailsWithheld:true}));process.exitCode=1;}return;
+  }
+  if(mode==='browser-reference-import'){
+    try{const path=await realpath(file),inside=await Promise.all(['.state','.auth'].map(async root=>{const rel=relative(await realpath(root),path);return !!rel&&!rel.startsWith('..')&&!isAbsolute(rel);}));if(!inside.some(Boolean)||(await stat(path)).size>67108864)throw Error('Private bounded reference required');const review=BrowserReviewSchema.parse(await loadJson(arg)),history=new History('.state/dedicated-qa.sqlite');try{const trace=sanitizeBrowserHar(JSON.parse(await readFile(path,'utf8')),review.plan,resolveBrowserRecords(review.plan,history));await saveJson('.state/browser-reference.sanitized.json',trace);console.log(JSON.stringify({status:'sanitized-reference-imported',entries:trace.entries.length,identityVerified:false,permissionsGranted:0,rawValuesRetained:false}));}finally{history.close();}}catch{console.log(JSON.stringify({status:'reference-import-blocked',privateDetailsWithheld:true,permissionsGranted:0}));process.exitCode=1;}return;
+  }
+  if(mode==='browser-compare'){
+    try{const report=compareBrowserTraces(await loadJson(file),await loadJson(arg));await saveJson('.state/browser-comparison.json',report);console.log(JSON.stringify(report));}catch{console.log(JSON.stringify({status:'comparison-source-or-scope-mismatch',rootCause:'unresolved',permissionsGranted:0}));process.exitCode=1;}return;
+  }
+  if(mode==='browser-probe'){
+    const history=new History('.state/dedicated-qa.sqlite');
+    try {
+      const review=BrowserReviewSchema.parse(await loadJson(file)),parent=await loadJson('.state/dedicated-qa-policy.json'),client=await SalesforceClient.connectReviewedBrowser(parent,review,history);
+      const option=(name:string)=>{const position=process.argv.indexOf(name);return position>=0?process.argv[position+1]:undefined;};
+      const referencePath=option('--reference'),reference=referencePath?BrowserTraceSchema.parse(await loadJson(referencePath)):undefined,object=option('--object'),transport=option('--transport')??'validated-cache';
+      if(object!==undefined&&!['Account','Contact'].includes(object)||!['native-reference','validated-cache'].includes(transport))throw Error('Browser option denied');
+      const report=await probeReviewedBrowser({review,parent,history,statePath:arg,apiOrigin:client.apiOrigin,identity:()=>client.identity(),verifyReferences:()=>client.verifyReferences(),reference,object:object as 'Account'|'Contact'|undefined,transport:transport as 'native-reference'|'validated-cache'}),path=`.state/browser-probes/${review.plan.runId}/${report.sessionId}.json`;
+      await saveJson(path,report);await saveJson(path.replace('.json','.trace.json'),report.metrics?.trace);
+      await saveJson('.state/browser-probe-latest.json',{capturedAt:new Date().toISOString(),status:'observed',policyHash:browserPlanHash(review.plan),path,recordsCreated:0,verifiedLearning:false});
+      console.log(JSON.stringify({status:'observed',validation:report.validation,mode:report.mode,pages:report.pages,referenceUnchanged:report.referenceUnchanged,cacheHits:report.metrics?.cacheHits,cacheMisses:report.metrics?.cacheMisses,blocked:report.metrics?.blocked,referenceComparison:report.referenceComparison,recordsCreated:0,recordsDeleted:0,verifiedLearning:false,report:path}));
+    }catch(error){const reason=error instanceof DedicatedSessionError?error.code:'browser-policy-or-proof-gate';await saveJson('.state/browser-probe-latest.json',{capturedAt:new Date().toISOString(),status:'blocked',reason,recordsCreated:0,verifiedLearning:false});console.log(JSON.stringify({status:'blocked',reason,privateDetailsWithheld:true,recordsCreated:0}));process.exitCode=1;}finally{history.close();}return;
+  }
   if(mode==='dedicated-read-review'){
     const position=process.argv.indexOf('--diagnostic-approval');if(position<0)throw Error('Provide the source --diagnostic-approval file');const approval=DiagnosticReviewSchema.parse(await loadJson(process.argv[position+1])),input=diagnosticExecutionSource(await loadJson(file),approval),root=`artifacts/dedicated-runs/${input.data.plan.runId}`,review=prepareReadContractReview(await loadJson(`${root}/read-contract-observations.json`),await loadJson(`${root}/dependencies.json`),approval);await saveJson('.state/dedicated-read-contract-review.json',review);console.log(JSON.stringify({planHash:review.review.hash,candidates:review.plan.candidates.length,executionEnabled:false,businessRpcAuthorized:false,recordWritesAuthorized:false,status:review.review.status}));return;
   }
@@ -142,8 +178,9 @@ async function main() {
         console.log(JSON.stringify(recovery));return;
       }
       let choose;if(input.ui.plan.exploration?.useExternalModel){const chat=configuredChat();if(!chat)throw Error('Approved exploration model is not configured');choose=geminiExplorationChooser(chat);}else if(input.ui.plan.exploration)choose=async(state:{availableActionIds:string[]})=>state.availableActionIds[0];
-      const staticReview=await access('.state/dedicated-static-approval.json').then(()=>loadJson('.state/dedicated-static-approval.json'),()=>undefined);
-      const report=await runDedicatedWorkflow(input,{history,knowledge:new KnowledgeIndex(history),data,root:'artifacts/dedicated-runs',apiOrigin:client.apiOrigin,identity:()=>client.identity(),policy:()=>loadJson(path),discover:()=>discoverOrg(client,['Account','Contact']),choose,staticReview,validation:'live-salesforce'});console.log(JSON.stringify({mode:report.mode,status:report.status,created:report.created,cleaned:report.cleaned,learning:report.learning,reportPath:report.reportPath}));if(report.status!=='passed')process.exitCode=1;
+      const browserPosition=process.argv.indexOf('--browser-policy'),browserReview=browserPosition>=0?BrowserReviewSchema.parse(await loadJson(process.argv[browserPosition+1])):undefined;
+      const staticReview=browserReview?undefined:await access('.state/dedicated-static-approval.json').then(()=>loadJson('.state/dedicated-static-approval.json'),()=>undefined);
+      const report=await runDedicatedWorkflow(input,{history,knowledge:new KnowledgeIndex(history),data,root:'artifacts/dedicated-runs',apiOrigin:client.apiOrigin,identity:()=>client.identity(),policy:()=>loadJson(path),discover:()=>discoverOrg(client,['Account','Contact']),choose,staticReview,browserReview,ownershipJournal:'.state/dedicated-qa.sqlite',validation:'live-salesforce'});console.log(JSON.stringify({mode:report.mode,status:report.status,created:report.created,cleaned:report.cleaned,learning:report.learning,reportPath:report.reportPath}));if(report.status!=='passed')process.exitCode=1;
     }finally{history.close();}return;
   }
   if(mode==='component-graph'){const graph=buildComponentGraph(IntelligenceSchema.parse(await loadJson(file||'.state/org-intelligence-latest.json')));await saveJson('.state/component-graph.json',graph);console.log(JSON.stringify({nodes:graph.nodes.length,edges:graph.edges.length,unknowns:graph.unknowns.length,networkCalls:0}));return;}

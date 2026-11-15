@@ -18,6 +18,11 @@ import { htmlReport } from '../agents/evaluation.js';
 import { investigateFailure } from '../agents/intelligence.js';
 import { observeDedicatedSelectors,reviewObservedSelectors,diagnoseDedicatedSelectors } from './dedicated-selectors.js';
 import { authorizeStaticReview } from './dedicated-static.js';
+import { BrowserReviewSchema,authorizeBrowserSession,browserPlanHash,resolveBrowserRecords,reserveBrowserSession } from './browser-policy.js';
+import { preflightReviewedBrowser,proveReviewedBrowserBuild } from './browser-guard.js';
+import { verifyActualContext,installReviewedBrowserBoundary } from './browser-runtime.js';
+import { SalesforceClient } from '../salesforce/client.js';
+import { randomUUID } from 'node:crypto';
 export const DedicatedExecutionSchema=z.object({spec:SpecSchema,org:OrgSnapshotSchema,permission:z.string().min(1),data:DedicatedRunSchema,ui:DedicatedUiReviewSchema}).strict();
 export type DedicatedExecution=z.infer<typeof DedicatedExecutionSchema>;
 export interface DedicatedExecutionServices {
@@ -27,11 +32,18 @@ export interface DedicatedExecutionServices {
   runTests?:typeof executeGenerated;guardModule?:string;validation?:'live-salesforce'|'offline-mocked-salesforce';choose?:(state:OpaqueExplorationState)=>Promise<string>;
   observe?:typeof observeDedicatedSelectors;
   staticReview?:unknown;
+  browserReview?:unknown;ownershipJournal?:string;
+  browserPreflight?:typeof preflightReviewedBrowser;
+  browserBoundary?:NonNullable<Parameters<typeof observeDedicatedSelectors>[0]['installBoundary']>;
 }
 export async function runDedicatedWorkflow(raw:unknown,s:DedicatedExecutionServices) {
+  if(s.validation==='live-salesforce'&&(s.browserBoundary||s.browserPreflight))throw Error('Mock browser adapters cannot claim live Salesforce validation');
   const input=DedicatedExecutionSchema.parse(raw),run=input.data,root=join(s.root,run.plan.runId),scope={org:input.org.orgIdentityHash??input.org.orgAlias,permission:input.permission};
   const policy=EnvironmentPolicySchema.parse(await s.policy()),identity=await s.identity(),ui=reviewDedicatedUi(input.ui,policy,identity);
   const staticReview=s.staticReview?authorizeStaticReview(s.staticReview,policy,identity,input.spec.version):undefined;
+  const browserReview=s.browserReview?BrowserReviewSchema.parse(s.browserReview):undefined;
+  if(browserReview&&ui.plan.workflows.some(workflow=>workflow.apiAssertions.length))throw Error('Reviewed browser workflows use independent scoped SOQL, not unguarded API requests');
+  if(browserReview||ui.plan.browserSessionPolicyHash){if(!browserReview||browserPlanHash(browserReview.plan)!==ui.plan.browserSessionPolicyHash||browserReview.plan.ownedDataPlanHash!==dedicatedPlanHash(run.plan)||browserReview.plan.runId!==run.plan.runId||browserReview.plan.sourceVersion!==input.spec.version||browserReview.plan.budgets.maxMs<ui.plan.maxMs)throw Error('Browser execution policy is not part of the exact reviewed lifecycle');authorizeBrowserSession(browserReview,policy,identity,browserReview.plan);if(ui.plan.exploration)throw Error('Reviewed browser exploration requires a separate action-broker adapter');}
   if(ui.plan.runId!==run.plan.runId||ui.plan.dataPlanHash!==dedicatedPlanHash(run.plan)||ui.plan.policyHash!==run.plan.policyHash||ui.plan.sourceVersion!==input.spec.version||ui.plan.orgId!==run.plan.orgId||ui.plan.userId!==run.plan.userId)throw Error('Dedicated specification/data/UI approvals do not bind the same run');
   if(input.org.orgIdentityHash!==createHash('sha256').update(identity.Id).digest('hex')||input.org.source!=='salesforce-api'||ui.plan.workflows.length!==input.spec.acceptanceCriteria.length||new Set(ui.plan.workflows.map(w=>w.criterion)).size!==input.spec.acceptanceCriteria.length||new Set(ui.plan.workflows.map(w=>w.id)).size!==ui.plan.workflows.length)throw Error('Dedicated workflow requires exact org-bound discovery and all reviewed criteria');
   for(const w of ui.plan.workflows){const ac=input.spec.acceptanceCriteria.find(a=>a.id===w.criterion);if(!ac||ac.expectedText!==w.assertion.text||w.reviewer!==ui.approval.operator)throw Error('Dedicated workflow outcome differs from reviewed source');}
@@ -44,6 +56,7 @@ export async function runDedicatedWorkflow(raw:unknown,s:DedicatedExecutionServi
   try {
     await s.data.check(run,'dedicated-ui');
     const session=await (s.session??checkedDedicatedSession)(ui.plan.sessionReceipt,policy,identity,s.apiOrigin);stages.push('fresh-org-user-and-browser-session-verified');
+    if(browserReview){if(!s.browserPreflight){const api=await SalesforceClient.connectReviewedBrowser(policy,browserReview,s.history);await api.preflight();}await(s.browserPreflight??preflightReviewedBrowser)(browserReview,policy,identity,session.statePath,s.apiOrigin);stages.push('reviewed-lightning-build-and-app-preflight-complete');}
     await s.data.open(run,input.org);opened=true;stages.push('approved-deterministic-data-plan-reserved');
     await s.data.setup(run);created=s.data.owned(run).length;stages.push('account-contact-created-and-soql-verified');
     await s.data.check(run,'dedicated-ui');await (s.session??checkedDedicatedSession)(ui.plan.sessionReceipt,policy,await s.identity(),s.apiOrigin);
@@ -52,14 +65,16 @@ export async function runDedicatedWorkflow(raw:unknown,s:DedicatedExecutionServi
     const workflows=ui.plan.workflows.map(raw=>{const w=structuredClone(raw);w.path=replace(w.path);w.assertion.text=replace(w.assertion.text);if(w.assertion.locator.name)w.assertion.locator.name=replace(w.assertion.locator.name);for(const step of w.steps){if(step.locator.name)step.locator.name=replace(step.locator.name);}if(/\{\{/.test(JSON.stringify(w)))throw Error('Unknown dedicated workflow placeholder');
       const target=new URL(w.path,w.origin),record=owned.find(r=>target.pathname===`/lightning/r/${r.object}/${r.id}/view`);if(!record||target.search||target.hash)throw Error('Dedicated workflow document is not an exact run-owned record page');return w;});
     const guard:DedicatedGuard={policy,identity,origins:[...new Set(workflows.map(w=>w.origin))],documents:workflows.map(w=>new URL(w.path,w.origin).href),owned:owned.map(r=>({object:r.object as 'Account'|'Contact',id:r.id,display:r.object==='Account'?run.plan.creates.Account.Name:run.plan.creates.Contact.LastName})),expiresAt:new Date(Math.min(Date.parse(policy.approval.expiresAt),Date.parse(run.approval.expiresAt),Date.parse(ui.approval.expiresAt))).toISOString(),staticReview};
-    const config=resolve(root,'guard.json');await saveJson(config,guard);
+    const config=resolve(root,'guard.json');await saveJson(config,browserReview?{review:browserReview,parent:policy,statePath:session.statePath,ownershipJournal:s.ownershipJournal??'.state/dedicated-qa.sqlite'}:guard);
     const binding={runId:run.plan.runId,planHash:dedicatedPlanHash(run.plan),policyHash:run.plan.policyHash,sourceVersion:input.spec.version};
-    selectors=await(s.observe??observeDedicatedSelectors)({guard,workflows,statePath:session.statePath,maxMs:ui.plan.maxMs,binding});await saveJson(join(root,'selector-evidence.json'),selectors);
+    const installBoundary=browserReview?(s.browserBoundary??(async(context,onBlocked)=>{const current=await s.identity();await verifyActualContext(context,session.statePath,browserReview,policy,current,s.apiOrigin);const build=await proveReviewedBrowserBuild(context,browserReview,policy,current);reserveBrowserSession(browserReview,s.history,randomUUID());await installReviewedBrowserBoundary(context,{review:browserReview,parent:policy,identity:current,build,history:s.history,records:resolveBrowserRecords(browserReview.plan,s.history),onBlocked});})):undefined;
+    selectors=await(s.observe??observeDedicatedSelectors)({guard,workflows,statePath:session.statePath,maxMs:ui.plan.maxMs,binding,...(installBoundary?{installBoundary}:{})});await saveJson(join(root,'selector-evidence.json'),selectors);
     selectorReview=reviewObservedSelectors(selectors,binding,workflows,guard.documents);stages.push('approved-selectors-observed-and-source-reviewed');
     if(ui.plan.exploration){if(!s.choose)throw Error('Approved exploration chooser unavailable');exploration=await exploreDedicatedOwned({guard,workflows,statePath:session.statePath,maxSteps:ui.plan.exploration.maxSteps,maxMs:ui.plan.maxMs,maxActions:ui.plan.maxActions,choose:s.choose,verify:(object,id)=>s.data.verifyOwned(run,object,id)});if(exploration.status!=='passed')throw Error('Dedicated exploration failed');stages.push('bounded-approved-ai-exploration-complete');}
     const renderOrigins=[...new Set([...guard.origins,...(staticReview?.plan.assets.map(a=>new URL(a.url).origin)??[])])];
-    const files=workflows.map(w=>({id:w.id,code:generateTest(w,renderOrigins,{module:s.guardModule??resolve('src/execution/dedicated-browser.ts').replaceAll('\\','/'),config})}));
-    execution=await (s.runTests??executeGenerated)(resolve(root,'execution'),run.plan.runId,files,ui.plan.maxMs,{storageState:session.statePath,trace:'off',validation:s.validation});
+    const files=workflows.map(w=>({id:w.id,code:generateTest(w,renderOrigins,{module:s.guardModule??resolve(browserReview?'src/execution/browser-guard.ts':'src/execution/dedicated-browser.ts').replaceAll('\\','/'),config,...(browserReview?{ownsNetworkBoundary:true as const}:{})})}));
+    const testTimeout=browserReview?Math.min(180000,browserReview.plan.budgets.maxMs+60000):undefined;
+    execution=await (s.runTests??executeGenerated)(resolve(root,'execution'),run.plan.runId,files,browserReview?testTimeout!*files.length+10000:ui.plan.maxMs,{storageState:session.statePath,trace:'off',validation:s.validation,...(testTimeout?{testTimeoutMs:testTimeout}:{})});
     for(const result of execution.results)s.history.record(result);stages.push('headless-reviewed-owned-record-workflows-executed');
     for(const record of owned)await s.data.verifyOwned(run,record.object,record.id);stages.push('post-browser-independent-soql-verification-complete');
     passed=execution.exitCode===0&&execution.results.length===workflows.length&&execution.results.every(r=>r.status==='passed');
