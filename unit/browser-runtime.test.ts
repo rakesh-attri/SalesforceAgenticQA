@@ -1,3 +1,4 @@
+import {localLaunchOptions} from '../src/execution/local-browser.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, writeFile, rm } from 'node:fs/promises';
@@ -66,7 +67,7 @@ test('HAR comparison retains no credentials or values, distinguishes HTTP 200 Au
 });
 
 test('native public-resource credential denial is explicit while cached transport never forwards browser credentials',{timeout:20000},async()=>{
- const b=browserFixture(),browser=await chromium.launch({headless:true});b.plan.transports=['native-reference','validated-cache'];let publicEffects=0;
+ const b=browserFixture(),browser=await chromium.launch(localLaunchOptions());b.plan.transports=['native-reference','validated-cache'];let publicEffects=0;
  try{const review=b.approve();
   for(const transport of ['native-reference','validated-cache'] as const){
    const context=await browser.newContext({serviceWorkers:'block'});await context.addCookies([{name:'sid',value:'PRIVATE_CDN_COOKIE',url:'https://b.static.lightning.force.com',secure:true,sameSite:'Lax'}]);

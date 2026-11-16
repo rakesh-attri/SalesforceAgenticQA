@@ -1,3 +1,4 @@
+import {launchLocalBrowser} from './local-browser.js';
 import type { BrowserContext, Page, TestInfo } from '@playwright/test';
 import { chromium } from '@playwright/test';
 import { readFile, realpath } from 'node:fs/promises';
@@ -16,7 +17,7 @@ import { proveReviewedBrowserBuild } from './browser-build.js';
 import {attachBrowserDebug,type DebugReason} from './browser-debug.js';
 export { proveReviewedBrowserBuild } from './browser-build.js';
 export async function preflightReviewedBrowser(raw: unknown, parent: unknown, identity: EnvironmentIdentity, statePath: string, apiOrigin: string) {
-  const review = BrowserReviewSchema.parse(raw), authority = authorizeBrowserSession(review, parent, identity, review.plan), browser = await chromium.launch({ headless: true });
+  const review = BrowserReviewSchema.parse(raw), authority = authorizeBrowserSession(review, parent, identity, review.plan), browser = await launchLocalBrowser();
   try { const source = await readPrivateSessionState(statePath); if (source.hash !== review.plan.sessionStateHash) throw Error('Reviewed state changed');
     const context = await browser.newContext({ storageState: source.statePath, javaScriptEnabled: false, serviceWorkers: 'block', acceptDownloads: false });
     await verifyActualContext(context, statePath, review, authority.policy, identity, apiOrigin); return await proveReviewedBrowserBuild(context, review, parent, identity);

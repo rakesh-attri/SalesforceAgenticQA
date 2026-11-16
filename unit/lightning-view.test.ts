@@ -1,3 +1,4 @@
+import {localLaunchOptions} from '../src/execution/local-browser.js';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {chromium} from '@playwright/test';
@@ -9,7 +10,7 @@ import {generateTest} from '../src/agents/workflows.js';
 import {LocatorSchema,resolveLocator} from '../src/core/locators.js';
 
 test('reviewed view fails for a loading shell, an error, a name-only alias or changed outcomes; exact distinct stable content passes',{timeout:20000},async()=>{
-  const b=browserFixture(),browser=await chromium.launch({headless:true});b.plan.budgets.maxMs=1000;
+  const b=browserFixture(),browser=await chromium.launch(localLaunchOptions());b.plan.budgets.maxMs=1000;
   try{
     const page=await browser.newPage(),name='PRIVATE_REVIEWED_NAME',view=LightningViewSchema.parse({version:1,object:'Account',sourceVersion:b.plan.sourceVersion,buildHash:b.plan.buildHash,appHash:b.plan.appHash,reviewer:b.f.policy.approval.operator,evidenceHash:digest('fixture-source'),recordName:{by:'text',value:'{{record-name}}'},content:[{by:'testId',value:'details'}],busy:[{by:'testId',value:'busy'}],faults:[{by:'testId',value:'fault'}],stableMs:100});
     const observe=async(raw= view)=>{b.plan.renderContractHash=lightningViewHash(raw);const review=b.approve();return observeLightningView(page,{review,view:raw,object:'Account',name,nativeDocumentVerified:true,budget:new BrowserBudget(review)});};

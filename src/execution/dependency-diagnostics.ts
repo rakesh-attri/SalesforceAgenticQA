@@ -1,3 +1,4 @@
+import {launchLocalBrowser} from './local-browser.js';
 import { chromium,type BrowserContext } from '@playwright/test';
 import { DedicatedGuardSchema,installDedicatedBoundary,type DedicatedGuard } from './dedicated-browser.js';
 import { summarizeDeniedRequest,type BoundaryDenialReason } from './browser-diagnostics.js';
@@ -19,7 +20,7 @@ export async function diagnoseUiDependencies(input:{guard:DedicatedGuard;statePa
   const scope=input.initialization?InitializationScopeSchema.parse(input.initialization.scope):undefined,sources=scope?collectInitializationSources(scope):undefined,requestShapes:NonNullable<ReturnType<typeof inspectCurrentAppRequest>>[]=[],selectorSamples:Array<{documentHash:string;locatorHash:string;count:number|null;context:'known-deleted';assertionExecuted:false}>=[];
   const clientErrors:ReturnType<typeof classifyInitializationError>[]=[];
   if(input.initialization&&(input.initialization.selectors.length>2||input.initialization.selectors.some(selector=>!guard.owned.some(row=>row.object===selector.object)||!WorkflowSchema.shape.assertion.shape.locator.safeParse(selector.locator).success)))throw Error('Initialization selector metadata must use the reviewed owned object locators');
-  const browser=await chromium.launch({headless:true}),denied:ReturnType<typeof summarizeDeniedRequest>[]=[],keys=new Set<string>();let blocked=0;
+  const browser=await launchLocalBrowser(),denied:ReturnType<typeof summarizeDeniedRequest>[]=[],keys=new Set<string>();let blocked=0;
   let collect:ReturnType<typeof collectLightningEvidence>|undefined;
   const candidateKeys=new Set<string>();
   const record=(request?:import('@playwright/test').Request,reason?:BoundaryDenialReason)=>{blocked++;collect?.denied(request,reason);if(!request||denied.length>=40)return;const metadata={url:request.url(),method:request.method(),type:request.resourceType(),body:request.postData(),reason};if(scope&&reason==='metadata-only-rpc-denied'&&requestShapes.length<10){const shape=inspectCurrentAppRequest(metadata,guard.origins);if(shape)requestShapes.push(shape);}if(reason==='metadata-only-rpc-denied'&&candidateKeys.size<40)for(const candidate of readContractCandidates(metadata,guard.origins,guard.owned.map(row=>row.id))){const key=JSON.stringify(candidate);if(!candidateKeys.has(key)&&candidateKeys.size<40){candidateKeys.add(key);input.onReadContractCandidate?.(candidate);}}const summary=summarizeDeniedRequest(metadata),key=JSON.stringify(summary);if(!keys.has(key)){keys.add(key);denied.push(summary);}};

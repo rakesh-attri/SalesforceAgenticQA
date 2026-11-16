@@ -1,3 +1,4 @@
+import {launchLocalBrowser} from '../execution/local-browser.js';
 import { createHash } from 'node:crypto';
 import { readFile,writeFile,chmod,realpath } from 'node:fs/promises';
 import { resolve,relative,dirname,isAbsolute } from 'node:path';
@@ -42,7 +43,7 @@ export async function probeSession(statePath:string,origin:string,allowedOrigins
   if(!allowedOrigins.includes(origin)||allowedOrigins.some(o=>{const u=new URL(o);return u.protocol!=='https:'||u.origin!==o;}))throw Error('HTTPS session probe origins required');
   if(!verifySandbox||(await verifySandbox()).IsSandbox!==true)throw Error('General session probes require a verified sandbox; production callbacks are forbidden');
   await readPrivateSessionState(statePath);
-  const browser=await chromium.launch({headless:true});
+  const browser=await launchLocalBrowser();
   try {const context=await browser.newContext({storageState:await privatePath(statePath),serviceWorkers:'block'});
     await context.route('**/*',route=>allowedOrigins.includes(new URL(route.request().url()).origin)?route.continue():route.abort());
     const page=await context.newPage();await page.goto(origin);

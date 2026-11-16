@@ -1,3 +1,4 @@
+import {localLaunchOptions} from '../src/execution/local-browser.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
@@ -23,7 +24,7 @@ test('static asset grants bind exact named org/user/policy/spec/URL and never en
 });
 
 test('real headless static grant composes with other routes, strips authorization/referrer and blocks unknown CDN actions',async()=>{
-  const h=new History(':memory:'),f=dedicatedFixture(h),browser=await chromium.launch({headless:true}),id='001000000000001',document=`${f.browserOrigin}/lightning/r/Account/${id}/view`;let assetRequests=0,blocked=0;
+  const h=new History(':memory:'),f=dedicatedFixture(h),browser=await chromium.launch(localLaunchOptions()),id='001000000000001',document=`${f.browserOrigin}/lightning/r/Account/${id}/view`;let assetRequests=0,blocked=0;
   try {const context=await browser.newContext({serviceWorkers:'block',extraHTTPHeaders:{Authorization:'Bearer private-header'}});await context.route('**/*',async route=>{
       if(route.request().url()===document)return route.fulfill({contentType:'text/html',body:`<h1>Owned fixture</h1><script src="${asset}"></script><script src="${asset.replace('safe.js','unapproved.js')}"></script>`});
       throw Error('Unexpected request escaped guard');
@@ -35,7 +36,7 @@ test('real headless static grant composes with other routes, strips authorizatio
 });
 
 test('browser cookies cannot reach a separately approved static origin or receive its Set-Cookie',async()=>{
-  const h=new History(':memory:'),f=dedicatedFixture(h),browser=await chromium.launch({headless:true}),id='001000000000001',document=`${f.browserOrigin}/lightning/r/Account/${id}/view`;let staticRequests=0;
+  const h=new History(':memory:'),f=dedicatedFixture(h),browser=await chromium.launch(localLaunchOptions()),id='001000000000001',document=`${f.browserOrigin}/lightning/r/Account/${id}/view`;let staticRequests=0;
   try {const context=await browser.newContext({serviceWorkers:'block'});await context.addCookies([{name:'unexpected-session',value:'private-cookie',domain:'b.static.lightning.force.com',path:'/',secure:true}]);
     await context.route('**/*',route=>{if(route.request().url()===document)return route.fulfill({contentType:'text/html',body:`<h1>Owned fixture</h1><script src="${asset}"></script>`});staticRequests++;return route.abort();});
     await installDedicatedBoundary(context,{policy:f.policy,identity:f.identity,origins:[f.browserOrigin],documents:[document],owned:[{object:'Account',id}],expiresAt:f.policy.approval.expiresAt,staticReview:approved(f)},undefined,async(r,p,i,s,q)=>fetchReviewedStatic(r,p,i,s,q,async options=>{assert.deepEqual(options.storageState,{cookies:[],origins:[]});return {get:async(_url:string,options:GetOptions)=>{assert.ok(!options?.headers);return {status:()=>200,headers:()=>({'content-type':'text/javascript','set-cookie':'new-private=value'}),body:async()=>Buffer.from('document.body.dataset.staticLoaded="yes";')};},dispose:async()=>{}} as unknown as Awaited<ReturnType<StaticContextFactory>>;}));const page=await context.newPage();await page.goto(document);assert.equal(staticRequests,0);assert.equal(await page.locator('body').getAttribute('data-static-loaded'),'yes');assert.equal((await context.cookies(asset)).some(c=>c.name==='new-private'),false);
@@ -51,7 +52,7 @@ test('isolated static transport denies redirects, HTML, oversized bodies and unk
 });
 
 test('guarded browser evidence distinguishes a failed isolated resource from an unapproved URL without leaking provider details',async()=>{
-  const h=new History(':memory:'),f=dedicatedFixture(h),browser=await chromium.launch({headless:true}),id='001000000000001',document=`${f.browserOrigin}/lightning/r/Account/${id}/view`,reasons:string[]=[];let escaped=0;
+  const h=new History(':memory:'),f=dedicatedFixture(h),browser=await chromium.launch(localLaunchOptions()),id='001000000000001',document=`${f.browserOrigin}/lightning/r/Account/${id}/view`,reasons:string[]=[];let escaped=0;
   try{const context=await browser.newContext({serviceWorkers:'block'});await context.route('**/*',route=>{if(route.request().url()===document)return route.fulfill({contentType:'text/html',body:`<h1>Owned fixture</h1><script src="${asset}"></script><script src="${asset.replace('safe.js','unknown.js')}"></script>`});escaped++;return route.abort();});
     await installDedicatedBoundary(context,{policy:f.policy,identity:f.identity,origins:[f.browserOrigin],documents:[document],owned:[{object:'Account',id}],expiresAt:f.policy.approval.expiresAt,staticReview:approved(f)},(_request,reason)=>reasons.push(reason??'unclassified'),async(r,p,i,s,q)=>fetchReviewedStatic(r,p,i,s,q,async()=>({get:async()=>({status:()=>302,headers:()=>{throw Error('private-provider-location');},body:async()=>{throw Error('private-provider-body');}}),dispose:async()=>{}} as unknown as Awaited<ReturnType<StaticContextFactory>>)));
     const page=await context.newPage();await page.goto(document);assert.equal(escaped,0);assert.ok(reasons.includes('static-redirect'));assert.ok(reasons.includes('policy-denied'));assert.ok(!JSON.stringify(reasons).includes('private-'));

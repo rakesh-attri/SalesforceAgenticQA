@@ -1,3 +1,4 @@
+import {launchLocalBrowser} from './local-browser.js';
 import { createHash } from 'node:crypto';
 import { chromium,type BrowserContext } from '@playwright/test';
 import { z } from 'zod';
@@ -49,7 +50,7 @@ export async function verifyObservationSession(raw:unknown,policy:unknown,identi
   return writePrivateSessionReceipt(plan.sessionReceipt,{...plan.identity,statePath:before.statePath,hash:before.hash,origins:[...new Set(plan.documents.map(d=>new URL(d.url).origin))],reviewer:p.approval.operator,verifiedAt:new Date(now).toISOString(),expiresAt:new Date(Math.min(now+ttlMs,Date.parse(p.approval.expiresAt))).toISOString()});
 }
 async function runObservation(plan:ObservationPlan,p:z.infer<typeof EnvironmentPolicySchema>,identity:EnvironmentIdentity,statePath:string,checkState:()=>Promise<void>) {
-  const browser=await chromium.launch({headless:true});let blockedRequests=0;
+  const browser=await launchLocalBrowser();let blockedRequests=0;
   try {
     const context=await browser.newContext({storageState:statePath,javaScriptEnabled:false,serviceWorkers:'block',acceptDownloads:false});
     await installObservationBoundary(context,plan,()=>blockedRequests++);

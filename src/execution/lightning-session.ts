@@ -1,3 +1,4 @@
+import {launchLocalBrowser} from './local-browser.js';
 import {chromium,type Browser,type Page} from '@playwright/test';
 import {z} from 'zod';
 import {Client} from '@modelcontextprotocol/sdk/client/index.js';
@@ -35,17 +36,19 @@ export class LightningSession{
   private selected?:ReferenceResult['privateDisplays'][number];
   private queue:Promise<unknown>=Promise.resolve();
   private commands=0;
+  private consoleCategories:Record<string,number>={};
   private closed=false;
   private lastView?:{status:string;object:'Account'|'Contact';measuredAt:string;nativeDocumentVerified:boolean};
   private timer:ReturnType<typeof setTimeout>;
   private constructor(private browser:Browser,private input:LightningSessionInput,private references:ReferenceResult,private attached:Attachment){
     this.timer=setTimeout(()=>{void this.close().catch(()=>{});},attached.boundary.budget.remaining());this.timer.unref();
+    attached.context.on('page',page=>{page.on('console',message=>{if(message.type()!=='error')return;const text=message.text(),category=/blocked|ERR_BLOCKED/i.test(text)?'blocked':/network|fetch|connection|ERR_/i.test(text)?'network':/CSP|Content Security/i.test(text)?'csp':'other';this.consoleCategories[category]=Math.min(1000,(this.consoleCategories[category]??0)+1);});page.on('pageerror',()=>{this.consoleCategories['page-error']=Math.min(1000,(this.consoleCategories['page-error']??0)+1);});});
   }
   static async open(input:LightningSessionInput){
     verifyLightningEngine(input.review.plan.engineProfileHash);
     const identity=await input.identity(),references=await input.verifyReferences();authorizeBrowserSession(input.review,input.parent,identity,input.review.plan);
     const source=await readPrivateSessionState(input.statePath);if(source.hash!==input.review.plan.sessionStateHash)throw Error('Approved state changed');
-    const browser=await chromium.launch({headless:true});
+    const browser=await launchLocalBrowser();
     try{
       const context=await browser.newContext({storageState:source.statePath,serviceWorkers:'block',acceptDownloads:false});
       const attached=await attachReviewedBrowserContext(context,{...input,identity,records:references.references});
@@ -83,9 +86,10 @@ export class LightningSession{
   captureDebug(){return this.run(()=>this.capture('operator'));}
   // Bounded loading observation, useful when no real selector contract exists.
   // Classification is diagnostic only; it cannot create a rendering receipt.
-  observeLoading(){return this.run(async()=>{
+  observeLoading(settleMs=0){return this.run(async()=>{
+    if(!Number.isInteger(settleMs)||settleMs<0||settleMs>20000)throw Error('Bounded settling interval required');
     if(!this.page||!this.currentRecordProven())throw Error('Approved record navigation required');
-    const times=this.input.review.plan.visualDebug?.milestonesMs??[],until=Math.min(this.attached.boundary.budget.started+(times.at(-1)??0)+300,Date.now()+Math.max(0,this.attached.boundary.budget.remaining()-this.attached.visual.reserveMs));
+    const times=this.input.review.plan.visualDebug?.milestonesMs??[],until=Math.min(Math.max(this.attached.boundary.budget.started+(times.at(-1)??0)+300,Date.now()+settleMs),Date.now()+Math.max(0,this.attached.boundary.budget.remaining()-this.attached.visual.reserveMs));
     if(until>Date.now())await delay(until-Date.now());return{visualEntries:this.attached.visual.entries.length,renderingEstablished:false};
   });}
   navigate(object:'Account'|'Contact',via:'playwright'|'mcp'='playwright'){
@@ -141,13 +145,13 @@ export class LightningSession{
       let referenceUnchanged:boolean|'unavailable'='unavailable';try{const after=await this.input.verifyReferences(),schema=z.object({referenceVersions:z.array(z.string().regex(/^[a-f0-9]{64}$/)).length(this.references.references.length).min(1)}),before=schema.safeParse(this.references.proof),next=schema.safeParse(after.proof);if(before.success&&next.success)referenceUnchanged=fingerprint(before.data.referenceVersions)===fingerprint(next.data.referenceVersions);}catch{/* Do not turn an unavailable independent check into a pass. */}
       this.input.history.db.prepare("UPDATE browser_execution_sessions SET status='observed' WHERE policy=? AND nonce=?").run(browserPlanHash(this.input.review.plan),this.attached.sessionId);
       let readinessProof:unknown={status:'not-established'};
-      if(this.lastView?.status==='rendered-reviewed-view'&&referenceUnchanged===true&&!this.input.review.plan.ownedDataPlanHash)try{readinessProof=recordLightningReadiness(this.input.history,this.input.review,{...this.lastView,independentReferenceUnchanged:true,validation:this.attached.validation,visualEvidenceHash:visual.status==='local-debug-evidence'&&this.attached.visual.entries.some(e=>e.status==='captured'&&e.reason==='reviewed-view')?visual.manifestHash:undefined});}catch{/* Expired or incomplete evidence never becomes a proof. */}
-      return{...this.status(),metrics,visual,referenceUnchanged,readinessProof,recordWrites:0,generatedLiveTests:0,learningPublished:false};
+      if(!this.input.normalNetworkingReceipt&&this.lastView?.status==='rendered-reviewed-view'&&referenceUnchanged===true&&!this.input.review.plan.ownedDataPlanHash)try{readinessProof=recordLightningReadiness(this.input.history,this.input.review,{...this.lastView,independentReferenceUnchanged:true,validation:this.attached.validation,visualEvidenceHash:visual.status==='local-debug-evidence'&&this.attached.visual.entries.some(e=>e.status==='captured'&&e.reason==='reviewed-view')?visual.manifestHash:undefined});}catch{/* Expired or incomplete evidence never becomes a proof. */}
+      return{...this.status(),browserVersion:this.browser.version(),consoleCategories:this.consoleCategories,networkMode:this.input.normalNetworkingReceipt?'explicit-normal-comparison':'guarded',metrics,visual,referenceUnchanged,readinessProof,recordWrites:0,generatedLiveTests:0,learningPublished:false};
     })();
   }
 }
 
-export async function openLiveLightningSession(input:{review:unknown;parent:unknown;history:History;statePath:string;view?:unknown}){
+export async function openLiveLightningSession(input:{review:unknown;parent:unknown;history:History;statePath:string;view?:unknown;normalNetworkingReceipt?:unknown}){
   const review=BrowserReviewSchema.parse(input.review),api=await SalesforceClient.connectReviewedBrowser(input.parent,review,input.history);
   return LightningSession.open({...input,review,apiOrigin:api.apiOrigin,identity:()=>api.identity(),verifyReferences:()=>api.verifyReferences()});
 }

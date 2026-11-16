@@ -1,3 +1,4 @@
+import {localLaunchOptions} from '../src/execution/local-browser.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -58,7 +59,7 @@ test('real headless boundary disables scripts and blocks form POST and unknown G
   let writes=0,unknown=0,blocked=0;
   const server=createServer((req,res)=>{if(req.method==='POST')writes++;if(req.url!=='/observations')unknown++;res.setHeader('content-type','text/html');res.end('<div data-testid="status">Ready</div><script>document.querySelector("div").textContent="Changed";fetch("/mutation",{method:"POST"})</script><form method="POST" action="/observations"><button>Submit</button></form><a href="/unknown">Unknown</a>');});
   await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));const address=server.address();assert.ok(address&&typeof address==='object');
-  const url=`http://127.0.0.1:${address.port}/observations`,p={...plan(),documents:[{url,nonMutatingReviewed:true as const,source:'synthetic:local'}]},browser=await chromium.launch({headless:true});
+  const url=`http://127.0.0.1:${address.port}/observations`,p={...plan(),documents:[{url,nonMutatingReviewed:true as const,source:'synthetic:local'}]},browser=await chromium.launch(localLaunchOptions());
   try {const context=await browser.newContext({javaScriptEnabled:false,serviceWorkers:'block',acceptDownloads:false});await installObservationBoundary(context,p,()=>blocked++);const page=await context.newPage();await page.goto(url);assert.equal(await page.getByTestId('status').textContent(),'Ready');
     const postDenied=page.waitForEvent('requestfailed',{predicate:r=>r.method()==='POST'});await page.getByRole('button').click().catch(()=>{});await postDenied;await page.close();
     const other=await context.newPage();await other.goto(url);const getDenied=other.waitForEvent('requestfailed',{predicate:r=>r.url().endsWith('/unknown')});await other.getByRole('link').click().catch(()=>{});await getDenied;

@@ -1,3 +1,4 @@
+import {launchLocalBrowser} from '../execution/local-browser.js';
 import { chromium, type Page } from '@playwright/test';
 import { mkdir, chmod,realpath } from 'node:fs/promises';
 import { resolve, relative,isAbsolute } from 'node:path';
@@ -7,7 +8,7 @@ export async function createBrowserSession(input:{origin:string;allowedOrigins:s
   const root=resolve(input.root??'.auth'),file=resolve(root,`${input.persona}.json`);
   const intended=relative(resolve('.auth'),file);if(intended.startsWith('..')||isAbsolute(intended)) throw Error('Sessions must remain inside ignored .auth');
   if(!input.verifySandbox||(await input.verifySandbox()).IsSandbox!==true)throw Error('General browser authentication requires a freshly verified sandbox; production permits restricted observation only');
-  const browser=await chromium.launch({headless:true});
+  const browser=await launchLocalBrowser();
   try {
     const context=await browser.newContext();
     await context.route('**/*',async route=>{const u=new URL(route.request().url());if(input.allowedOrigins.includes(u.origin)) await route.continue();else await route.abort();});

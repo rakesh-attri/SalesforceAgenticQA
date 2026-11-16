@@ -106,11 +106,13 @@ async function main() {
     try{
       const viaPosition=process.argv.indexOf('--via'),via=viaPosition>=0?process.argv[viaPosition+1]:'playwright';if(!['playwright','mcp','compare'].includes(via))throw Error('Unknown observation transport');
       const viewPosition=process.argv.indexOf('--view'),view=viewPosition>=0?await loadJson(process.argv[viewPosition+1]):undefined;
-      session=await openLiveLightningSession({review:await loadJson(file),parent:await loadJson('.state/dedicated-qa-policy.json'),history,statePath:arg,view});
+      const normalPosition=process.argv.indexOf('--normal-receipt');if(normalPosition>=0&&mode!=='lightning-observe')throw Error('Normal comparison has no MCP server or action access');
+      session=await openLiveLightningSession({review:await loadJson(file),parent:await loadJson('.state/dedicated-qa-policy.json'),history,statePath:arg,view,normalNetworkingReceipt:normalPosition>=0?await loadJson(process.argv[normalPosition+1]):undefined});
       if(mode==='lightning-mcp'){
         const server=createLightningMcp(session);await server.connect(new StdioServerTransport());const active=session;process.once('SIGINT',()=>{void active.close().finally(()=>history.close());});return;
       }
-      const transport=via==='mcp'?'mcp':'playwright',navigation=await session.navigate('Account',transport);await session.observeLoading();
+      const settlePosition=process.argv.indexOf('--settle-ms'),settleMs=settlePosition>=0?Number(process.argv[settlePosition+1]):0;
+      const transport=via==='mcp'?'mcp':'playwright',navigation=await session.navigate('Account',transport);await session.observeLoading(settleMs);
       const discovery=navigation.nativeDocumentVerified&&navigation.approvedDocument?await session.discover(transport):{status:'native-document-not-proven'},comparison=via==='compare'&&navigation.nativeDocumentVerified?{sameContext:true,mcp:await session.discover('mcp'),normalReference:'not-provided',rootCause:'unresolved'}:undefined,readiness=await session.observe(transport),report=await session.close();await saveJson('.state/lightning-session-latest.json',{navigation,discovery,comparison,readiness,report});
       console.log(JSON.stringify({navigation,discovery,readiness,report:'.state/lightning-session-latest.json',recordWrites:0,learningPublished:false}));
     }catch(error){if(mode==='lightning-mcp')console.error('Managed Lightning session gate failed; private details withheld.');else console.log(JSON.stringify({status:'lightning-session-gate',category:error instanceof DedicatedSessionError?error.code:'identity-build-approval-budget-or-rendering',privateDetailsWithheld:true,recordWrites:0}));process.exitCode=1;}

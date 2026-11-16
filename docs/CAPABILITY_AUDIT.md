@@ -1,5 +1,7 @@
 # Capability audit and agent ownership
 
+Installed-browser continuation: Execution Coordinator selects installed Chrome/Edge and pins executable identity; Explorer executed separately approved normal/guarded comparisons with shared private MCP contexts. Investigator retains eighteen matching denied-request keys and cannot infer safe semantics or a single causal request. Reviewer owns the exact normal-network risk receipt and prevents its promotion to lifecycle readiness. Data and Learning acquired no authority or new lessons. All 15 owners/P0/P1/P2 remain; see LOCAL_BROWSER_COMPARISON.md for live versus offline boundaries and 200-unit/3-headless validation.
+
 ## Visual debugging ownership - 2026-11-16 IST
 
 All 15 owners and P0/P1/P2 remain. Execution Coordinator/Application Explorer share native-document proof and bounded local visual evidence across direct Playwright and actual MCP. Reviewer owns explicit signed capture/masking scope and independent content selectors. Generator retains assertions and adds supported guarded test attachments; Investigator receives finite readiness/error/denial categories, not raw secrets or an assumed root cause. Knowledge/RAG receive no screenshot upload; Data receives no additional authority. Learning publishes no Salesforce lesson from fixture PNGs or incomplete observations. Other owners and their partial breadth remain unchanged.

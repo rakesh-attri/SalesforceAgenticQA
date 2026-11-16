@@ -1,3 +1,4 @@
+import {launchLocalBrowser} from '../execution/local-browser.js';
 import { chromium } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
@@ -9,7 +10,7 @@ export async function exploreFixture(raw:unknown) {
   if(!['http:','https:'].includes(origin.protocol)||!['127.0.0.1','localhost','[::1]'].includes(origin.hostname)||origin.origin!==input.origin)throw Error('Dynamic exploration is restricted to explicitly synthetic loopback fixtures');
   for(const path of [...input.paths,...input.actions.map(a=>a.path)])if(new URL(path,input.origin).origin!==origin.origin||path.includes('..'))throw Error('Fixture exploration path escaped origin');
   if(input.actions.some(a=>!input.paths.includes(a.path)||(a.action==='fill'&&a.value===undefined)))throw Error('Fixture action lacks a reviewed page/value');
-  const browser=await chromium.launch({headless:true}),deadline=Date.now()+input.maxMs;let actions=0,blockedRequests=0;
+  const browser=await launchLocalBrowser(),deadline=Date.now()+input.maxMs;let actions=0,blockedRequests=0;
   const observations:Array<{path:string;state:string;elements:Array<{testId:string;text:string|null}>}>=[],transitions:Array<{path:string;before:string;after:string;action:number}>=[];
   try {const context=await browser.newContext({serviceWorkers:'block',acceptDownloads:false});await context.routeWebSocket('**/*',socket=>{blockedRequests++;socket.close();});await context.route('**/*',route=>{if(new URL(route.request().url()).origin===origin.origin)return route.continue();blockedRequests++;return route.abort();});
     for(const path of input.paths){if(Date.now()>=deadline)break;const page=await context.newPage();

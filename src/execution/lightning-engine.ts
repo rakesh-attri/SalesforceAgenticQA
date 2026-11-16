@@ -1,9 +1,10 @@
 import {createRequire} from 'node:module';
 import {createHash} from 'node:crypto';
 const require=createRequire(import.meta.url);
+import {installedBrowser} from './local-browser.js';
 export function lightningEngineProfile(){
   const driver=require('@playwright/test/package.json') as {version:string},mcp=require('@playwright/mcp/package.json') as {version:string;dependencies:{playwright:string}};
-  return{version:1,driverVersion:driver.version,mcpVersion:mcp.version,mcpDriverVersion:mcp.dependencies.playwright,browser:'chromium',headless:true,serviceWorkers:'block',context:'non-persistent',agentTransport:'restricted-gateway'} as const;
+  const local=installedBrowser();return{version:2,driverVersion:driver.version,mcpVersion:mcp.version,mcpDriverVersion:mcp.dependencies.playwright,browser:local.channel,executableHash:local.sha256,headless:true,serviceWorkers:'block',context:'non-persistent',agentTransport:'restricted-gateway'} as const;
 }
 export function lightningEngineHash(){return createHash('sha256').update(JSON.stringify(lightningEngineProfile())).digest('hex');}
 export function verifyLightningEngine(expected:string|undefined){

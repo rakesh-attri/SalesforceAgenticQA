@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import {localLaunchOptions} from './src/execution/local-browser.js';
 import reportingLabs from './reporting-labs.config.js';
 if (process.argv.some(arg => ['--headed', '--ui', '--debug'].includes(arg)) || (process.env.PWDEBUG && process.env.PWDEBUG !== '0')) {
   throw new Error('This framework runs headless only');
@@ -11,6 +12,7 @@ export default defineConfig({
   use: {
     ...devices['Desktop Chrome'],
     headless: true,
+    launchOptions:localLaunchOptions(),
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     storageState: process.env.SFQA_BROWSER_STATE || undefined,

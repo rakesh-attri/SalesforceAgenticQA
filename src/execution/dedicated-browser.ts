@@ -1,3 +1,4 @@
+import {launchLocalBrowser} from './local-browser.js';
 import { chromium,type BrowserContext,type Browser,type Request as BrowserRequest } from '@playwright/test';
 import { z } from 'zod';
 import { createHash } from 'node:crypto';
@@ -110,7 +111,7 @@ export async function verifyDedicatedSession(statePath:string,policy:unknown,ide
   const p=EnvironmentPolicySchema.parse(policy);if(p.mode!=='DEDICATED_QA_ORG')throw Error('Dedicated browser session mode required');authorizeEnvironment(p,identity,'dedicated-ui',apiOrigin);
   let browser:Browser|undefined;
   try {const before=await readPrivateSessionState(statePath);validateDedicatedState(JSON.parse(await readFile(before.statePath,'utf8')),p);
-    browser=await (deps?.launch()??chromium.launch({headless:true}));
+    browser=await (deps?.launch()??launchLocalBrowser());
     const context=await browser.newContext({storageState:before.statePath,javaScriptEnabled:false,serviceWorkers:'block',acceptDownloads:false}),sessions:Array<{origin:string;session:string}>=[];
     for(const origin of p.allowedOrigins){const cookies=await context.cookies(origin),sid=cookies.filter(c=>c.name==='sid');if(sid.length!==1||!sid[0].secure)throw new DedicatedSessionError('session-cookie');sessions.push({origin,session:sid[0].value});}
     // Prove every approved origin's actual browser session, never the API JWT. An empty
@@ -154,7 +155,7 @@ export async function createDedicatedSession(input:{policy:unknown;identity:Envi
   await mkdir('.auth',{recursive:true});const file=resolve(input.statePath),rel=relative(await realpath('.auth'),file),parent=relative(await realpath('.auth'),await realpath(dirname(file)));
   if(!rel||rel.startsWith('..')||isAbsolute(rel)||parent.startsWith('..')||isAbsolute(parent))throw Error('Dedicated session must stay inside ignored .auth');
   const url=await input.bridge(),target=new URL(url);if(!policy.allowedOrigins.includes(target.origin)||target.protocol!=='https:'||target.pathname!=='/secur/frontdoor.jsp')throw Error('Approved one-time browser bridge required');
-  const browser=await chromium.launch({headless:true});
+  const browser=await launchLocalBrowser();
   const diagnostic:DedicatedBootstrapDiagnostic={phase:'navigation',pageClass:'not-loaded',authHints:[],blocked:{origin:0,method:0,unknown:0,websocket:0}},unapprovedOrigins=new Map<string,DedicatedOriginReview['observations'][number]>();let currentPage:import('@playwright/test').Page|undefined;
   try {const context=await browser.newContext({serviceWorkers:'block',acceptDownloads:false});
     await context.routeWebSocket('**/*',socket=>{diagnostic.blocked.websocket++;socket.close();});
@@ -177,7 +178,7 @@ export function geminiExplorationChooser(chat:StructuredChat) {return async(stat
 export async function exploreDedicatedOwned(input:{guard:DedicatedGuard;workflows:z.infer<typeof WorkflowSchema>[];statePath:string;maxSteps:number;maxMs:number;maxActions:number;choose:(state:OpaqueExplorationState)=>Promise<string>;verify:(object:string,id:string)=>Promise<unknown>;prepareContext?:(context:BrowserContext)=>Promise<void>}) {
   const g=DedicatedGuardSchema.parse(input.guard);if(!g.policy.dedicatedQa?.actions.includes('explore-read-owned'))throw Error('Dedicated exploratory actions are not approved');for(const origin of g.origins)authorizeEnvironment(g.policy,g.identity,'dedicated-explore',origin);
   if(!Number.isInteger(input.maxSteps)||input.maxSteps<1||input.maxSteps>2||input.maxMs<1||input.maxMs>60000||input.workflows.some(w=>!g.documents.includes(new URL(w.path,w.origin).href)))throw Error('Dedicated exploration catalog/budgets denied');
-  const browser=await chromium.launch({headless:true}),visited:string[]=[],observations:Array<{actionId:string;assertionPassed:boolean}>=[],deadline=Date.now()+input.maxMs;let actions=0,blockedRequests=0;
+  const browser=await launchLocalBrowser(),visited:string[]=[],observations:Array<{actionId:string;assertionPassed:boolean}>=[],deadline=Date.now()+input.maxMs;let actions=0,blockedRequests=0;
   try {const context=await browser.newContext({storageState:input.statePath,serviceWorkers:'block',acceptDownloads:false});await input.prepareContext?.(context);await installDedicatedBoundary(context,g,()=>blockedRequests++);const page=await context.newPage();
     for(let i=0;i<input.maxSteps&&Date.now()<deadline;i++){
       const available=input.workflows.map((_w,n)=>`action-${n}`).filter(id=>!visited.includes(id));if(!available.length)break;
