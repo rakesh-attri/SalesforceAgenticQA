@@ -5,6 +5,7 @@ import {LightningViewSchema,lightningViewHash} from './lightning-view.js';
 import {BrowserDebugPolicySchema,type BrowserDebugPolicy} from './browser-debug-policy.js';
 
 export const LightningReviewInputSchema=z.object({sourceReview:z.string().min(1),statePath:z.string().min(1),runId:z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),viewPath:z.string().optional(),visualDebug:BrowserDebugPolicySchema.optional()}).strict();
+export function selectLightningObservationObject(raw:unknown,requested?:unknown){const review=BrowserReviewSchema.parse(raw),object=z.enum(['Account','Contact']).parse(requested??(review.plan.objects.length===1?review.plan.objects[0]:'Account'));if(!review.plan.objects.includes(object))throw Error('Observation object is outside the exact browser approval');return object;}
 export function prepareLightningArchitecture(raw:unknown,input:{runId:string;stateHash:string;view?:unknown;visualDebug?:BrowserDebugPolicy}){
   const source=BrowserReviewSchema.parse(raw);
   if(source.approval.hash!==browserPlanHash(source.plan)||source.plan.ownedDataPlanHash||source.plan.runId===input.runId)throw Error('New observation review must preserve a valid source and use a fresh run ID');

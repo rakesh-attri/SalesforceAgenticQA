@@ -1,5 +1,9 @@
 # Architecture
 
+## Stable readiness and source-backed multi-object evidence
+
+[LIGHTNING_STABLE_READINESS.md](LIGHTNING_STABLE_READINESS.md) extends the current view evaluator and workflow services. Legacy contracts stay global; an optional signed region strategy adds bounded composed-DOM diagnostics, explicit provenance-bound background review, error/overlay/conflict rejection and content stability. It adds no network permission or automatic busy/locator repair. Receipt objects distinguish Account from Contact, and source acquisition imports exact observed locator definitions only from a matching host journal/view. Generic evaluator support does not broaden live object allowlists. The multi-object assembler preserves metadata relationships/permission uncertainty, requires journal-backed live pages and independently reviewed transitions/prerequisites/outcomes, and uses the existing planner/RAG/generator. Actual busy-element identity and live readiness remain gated until a fresh authorized observation executes.
+
 ## Dedicated native profile and workflow intelligence
 
 [DEDICATED_CHROME_WORKFLOW_INTELLIGENCE.md](DEDICATED_CHROME_WORKFLOW_INTELLIGENCE.md) defines the new explicitly authorized `DEDICATED_QA_NORMAL_CHROME` transport. It reuses the session owner, installed-engine selection, native identity/build/app checks, lineage and budgets. Normal initialization has no route interception; it requires exact operator acceptance of unreviewed/irreversible native effects and Salesforce user-access review. The local preference affects only new inactive, scope/hash-bound grants. Old guarded grants and all normal Production modes remain unchanged. Agent steps still require the owned one-use broker; factories/UI runs/cleanup remain separately authorized. Native effects are not claimed to be prevented or enumerated.

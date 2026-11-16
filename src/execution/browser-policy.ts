@@ -38,6 +38,7 @@ export const BrowserPlanSchema = z.object({
   contracts: z.array(InitializationContractSchema).max(20),
   agentWorkflowHashes: z.array(Hash).max(20).default([]), renderContractHash:Hash.optional(),engineProfileHash:Hash.optional(),liveReadinessProofHash:Hash.optional(),visualDebug:BrowserDebugPolicySchema.optional(),
   executionProfile:z.literal('DEDICATED_QA_NORMAL_CHROME').optional(),profileHash:Hash.optional(),
+  referenceDisplayFields:z.object({Contact:z.literal('Name')}).strict().optional(),
   transports: z.array(z.enum(['validated-cache', 'native-reference'])).min(1).max(2).default(['validated-cache']), recordReadProfile: z.enum(['documented-ui-api-only', 'existing-scoped-reads-v1']).default('documented-ui-api-only'),
   budgets: z.object({ maxMs: z.number().int().min(1000).max(60000), requests: z.number().int().min(1).max(250), resourceBytes: z.number().int().min(1).max(67108864), maxResourceBytes: z.number().int().min(1).max(8388608), actions: z.number().int().min(0).max(20), sessions: z.number().int().min(1).max(5) }).strict(),
   browserWrites: z.literal(false), formSubmissions: z.literal(false), financial: z.literal(false), administrativeChanges: z.literal(false),

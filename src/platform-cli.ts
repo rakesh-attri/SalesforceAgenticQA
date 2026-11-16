@@ -3,7 +3,7 @@ import {runCompatibilityReview} from './execution/compatibility-cli.js';
 import {prepareDedicatedChromeReview} from './execution/dedicated-chrome-review.js';
 import {preferChromeForNewReview} from './execution/dedicated-chrome-profile.js';
 import {demonstrateWorkflowIntelligence} from './demos/workflow-intelligence.js';
-import {runWorkflowReview} from './agents/workflow-cli.js';
+import {runWorkflowReview,runWorkflowEvidenceReview} from './agents/workflow-cli.js';
 import type { z } from 'zod';
 import { Command } from '@langchain/langgraph';
 import { loadJson,saveJson } from './core/io.js';
@@ -67,7 +67,7 @@ import {reviewCachedBrowserSources} from './execution/browser-source-review.js';
 import {openLiveLightningSession} from './execution/lightning-session.js';
 import {createLightningMcp} from './integrations/lightning-mcp.js';
 import {StdioServerTransport} from '@modelcontextprotocol/sdk/server/stdio.js';
-import {LightningReviewInputSchema,prepareLightningArchitecture} from './execution/lightning-review.js';
+import {LightningReviewInputSchema,prepareLightningArchitecture,selectLightningObservationObject} from './execution/lightning-review.js';
 import {prepareNormalBaseline,importNormalBaseline,compareNormalBaseline} from './execution/lightning-baseline.js';
 import { readPrivateSessionState } from './integrations/session-gate.js';
 import { probeReviewedBrowser } from './execution/browser-runtime.js';
@@ -90,6 +90,7 @@ async function reviewedKnowledge(history:History,remoteApproved=false) {
   return new KnowledgeIndex(history,embed,remote,embeddingSpace);
 }
 async function main() {
+  if(mode==='workflow-evidence'){try{console.log(JSON.stringify(await runWorkflowEvidenceReview(file)));}catch{console.log(JSON.stringify({status:'workflow-evidence-source-gate',privateDetailsWithheld:true,externalRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode==='workflow-plan'){try{console.log(JSON.stringify(await runWorkflowReview(file)));}catch{console.log(JSON.stringify({status:'workflow-source-review-gate',privateDetailsWithheld:true,externalRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode==='demo-workflow-intelligence'){console.log(JSON.stringify(await demonstrateWorkflowIntelligence()));return;}
   if(mode==='dedicated-chrome-review'){
@@ -118,12 +119,13 @@ async function main() {
       const viaPosition=process.argv.indexOf('--via'),via=viaPosition>=0?process.argv[viaPosition+1]:'playwright';if(!['playwright','mcp','compare'].includes(via))throw Error('Unknown observation transport');
       const viewPosition=process.argv.indexOf('--view'),view=viewPosition>=0?await loadJson(process.argv[viewPosition+1]):undefined;
       const normalPosition=process.argv.indexOf('--normal-receipt');if(normalPosition>=0&&mode!=='lightning-observe')throw Error('Normal comparison has no MCP server or action access');
-      session=await openLiveLightningSession({review:await loadJson(file),parent:await loadJson('.state/dedicated-qa-policy.json'),history,statePath:arg,view,normalNetworkingReceipt:normalPosition>=0?await loadJson(process.argv[normalPosition+1]):undefined});
+      const review=BrowserReviewSchema.parse(await loadJson(file)),objectPosition=process.argv.indexOf('--object'),object=selectLightningObservationObject(review,objectPosition>=0?process.argv[objectPosition+1]:undefined);
+      session=await openLiveLightningSession({review,parent:await loadJson('.state/dedicated-qa-policy.json'),history,statePath:arg,view,normalNetworkingReceipt:normalPosition>=0?await loadJson(process.argv[normalPosition+1]):undefined});
       if(mode==='lightning-mcp'){
         const server=createLightningMcp(session);await server.connect(new StdioServerTransport());const active=session;process.once('SIGINT',()=>{void active.close().finally(()=>history.close());});return;
       }
       const settlePosition=process.argv.indexOf('--settle-ms'),settleMs=settlePosition>=0?Number(process.argv[settlePosition+1]):0;
-      const transport=via==='mcp'?'mcp':'playwright',navigation=await session.navigate('Account',transport);await session.observeLoading(settleMs);
+      const transport=via==='mcp'?'mcp':'playwright',navigation=await session.navigate(object,transport);await session.observeLoading(settleMs);
       const discovery=navigation.nativeDocumentVerified&&navigation.approvedDocument?await session.discover(transport):{status:'native-document-not-proven'},comparison=via==='compare'&&navigation.nativeDocumentVerified?{sameContext:true,mcp:await session.discover('mcp'),normalReference:'not-provided',rootCause:'unresolved'}:undefined,readiness=await session.observe(transport),report=await session.close();await saveJson('.state/lightning-session-latest.json',{navigation,discovery,comparison,readiness,report});
       console.log(JSON.stringify({navigation,discovery,readiness,report:'.state/lightning-session-latest.json',recordWrites:0,learningPublished:false}));
     }catch(error){if(mode==='lightning-mcp')console.error('Managed Lightning session gate failed; private details withheld.');else console.log(JSON.stringify({status:'lightning-session-gate',category:error instanceof DedicatedSessionError?error.code:'identity-build-approval-budget-or-rendering',privateDetailsWithheld:true,recordWrites:0}));process.exitCode=1;}

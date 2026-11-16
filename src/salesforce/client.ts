@@ -38,7 +38,7 @@ export class SalesforceClient {
         const active=z.object({records:z.array(z.object({Id:z.string(),IsActive:z.boolean()})).length(1)}).safeParse(await client.get(`/services/data/${client.version}/query?q=${encodeURIComponent(`SELECT Id,IsActive FROM User WHERE Id='${identity.userId}' LIMIT 1`)}`));
         if(!active.success||!active.data.records[0].IsActive||active.data.records[0].Id!==identity.userId)throw Error('Reviewed browser requires the active exact QA user');
         const references=resolveBrowserRecords(review.plan,history),privateDisplays:Array<{object:'Account'|'Contact';id:string;display:string}>=[],referenceVersions:string[]=[];
-        for(const reference of references){authorizeBrowserSession(review,parent,identity,build);const field=reference.object==='Account'?'Name':'LastName';
+        for(const reference of references){authorizeBrowserSession(review,parent,identity,build);const field=reference.object==='Account'?'Name':review.plan.referenceDisplayFields?.Contact??'LastName';
           let rawRecord:unknown;try{rawRecord=await client.readRequest(`/services/data/${client.version}/query?q=${encodeURIComponent(`SELECT Id,${field},LastModifiedDate FROM ${reference.object} WHERE Id='${reference.id}' LIMIT 1`)}`,undefined,true);}catch{throw Error('Approved browser reference read unavailable; provider details withheld');}
           const record=z.object({records:z.array(z.object({Id:z.string(),Name:z.string().optional(),LastName:z.string().optional(),LastModifiedDate:z.string().min(1)})).length(1)}).safeParse(rawRecord);
           if(!record.success||!sameSalesforceIdentity(record.data.records[0].Id,reference.id)||!record.data.records[0][field])throw Error('Approved browser reference is missing or unreadable');
