@@ -47,6 +47,12 @@ test('loading/error/blank screenshots and bounded milestones distinguish evidenc
   }finally{await browser.close();b.history.close();await removeRoot(rootFor(b.plan.runId));}
 });
 
+test('Salesforce-style connection retry without alert role is classified from bounded visible text without retaining it',{timeout:15000},async()=>{
+  const b=browserFixture(),browser=await chromium.launch({headless:true});b.plan.runId=`debug-${randomUUID()}`;b.plan.visualDebug=config();const review=b.approve(),visual=new BrowserVisualDebug(review,new BrowserBudget(review),randomUUID(),'offline-mocked-salesforce',()=>({requests:1,denied:1,reasons:{'request-contract':1}})),page=await browser.newPage();
+  try{await page.route('**/*',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><main><nav>Accounts</nav><section>Check your Internet connection and try again. <button>Try Again</button></section></main>'}));await page.goto(`${b.f.browserOrigin}/lightning/r/Account/${b.recordId}/view`);const capture=await visual.capture(page,{nativeDocumentVerified:true,records:b.plan.records,privateValues:[]},'rendering-failure');assert.equal(capture.status,'captured');assert.equal('diagnostics'in capture&&capture.diagnostics?.classification,'application-error');assert.deepEqual('diagnostics'in capture&&capture.diagnostics?.errorCategories,['connectivity']);assert.ok(!JSON.stringify(capture).includes('Check your Internet'));}
+  finally{await browser.close();b.history.close();await removeRoot(rootFor(b.plan.runId));}
+});
+
 test('screenshot permission, time, count and byte quotas cannot be widened by calls or an old signed plan',{timeout:20000},async()=>{
   const b=browserFixture(),browser=await chromium.launch({headless:true});b.plan.runId=`debug-${randomUUID()}`;const page=await browser.newPage(),proof={nativeDocumentVerified:true,records:b.plan.records,privateValues:[]},summary=()=>({requests:0,denied:0,reasons:{}});await page.route('**/*',route=>route.fulfill({contentType:'text/html',body:'<h1>Fixture content</h1>'}));await page.goto(`${b.f.browserOrigin}/lightning/r/Account/${b.recordId}/view`);
   try{

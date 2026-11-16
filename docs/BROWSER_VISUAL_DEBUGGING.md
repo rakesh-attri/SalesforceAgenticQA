@@ -1,5 +1,7 @@
 # Local browser visual debugging
 
+**Actual November 16 follow-up:** Fresh user-approved browser state passed native identity and consumed the one approved no-create observation. The local [live preview](../artifacts/browser-debug/SFQA-LIGHTNING-VISUAL-20261116-001/index.html) has six masked screenshots. It shows a Lightning navigation shell with Salesforce's visible connection retry state, zero exact Account-name matches in both direct Playwright and MCP, and unchanged pre/post record checks. It does **not** show a complete Account record. The original manifest's `blank` category missed the retry message; the classifier is now fixed for future captures and a local regression passes. Causality remains unresolved. No data lifecycle ran. The earlier pending-refresh paragraph below is historical.
+
 The shared `LightningSession` now uses policy-bound screenshots for direct Playwright and the private Playwright MCP transport. This is diagnostic evidence, not visual regression approval or a rendered-page claim. Unknown Salesforce contracts remain blocked. No screenshot is sent to Gemini, RAG, hosted reporting or another external destination automatically.
 
 ## Permission and capture boundary
