@@ -1,5 +1,24 @@
 # Current capability matrix
 
+## Approved viewport observations 007/008 - latest evidence
+
+This entry supersedes earlier pending-readiness statements below while preserving every cumulative P0/P1/P2 requirement and all 15 responsibilities. Existing implementations are retained.
+
+| Capability | Verification | Evidence / limit |
+|---|---|---|
+| Account visible-view readiness | **Live Salesforce verified** | Approved 007: installed headless Chrome 157, fresh API/native org/user/build/app, shared direct Playwright/MCP; exact heading/name, Related/Details and one-second stability passed. 197 requests, zero framework denials, four local masked images; scoped pre/post hashes equal. |
+| Contact visible-view readiness | **Live Salesforce verified** | Approved 008: actual unique text-name locator, Related/Details, complete inspection and one-second stability passed; 199 requests, zero denials, four images, fresh identity and unchanged checks. No Contact deferral rule. |
+| Busy-state interpretation | **Live verified for declared visible scope** | Account still reports three aria-busy progressive related-list containers, classified deferred only off viewport/outside required regions. 444/444 Account and 346/346 Contact roots inspected within the approved 512 bound. No blocking busy/fault signal. Deferred list completion/backend quiescence remain unknown. |
+| Journal receipts and locator evidence | **Live verified; historical evidence now** | Separate host-journal Account/Contact receipts and exact locator claims imported locally. Original 6:21 p.m. IST expiries and consumed slots retained; expired receipts cannot authorize setup. No automatic review/publication or learning. |
+| Text-locator synthetic binding | **Offline verified** | Existing dedicated pipeline now binds locator.value as well as name/text/path. Actual generated headless tests against mocked Salesforce verify exact Contact synthetic text, SOQL, two owned deletions and reporting. Assertions and approval checks retained. |
+| Account/Contact workflow proposals | **Partial** | Real page evidence plus metadata yields five references, two incomplete permission facts and 12 review questions. No observed cross-object UI transition, reviewed generalized model or effective-sharing proof is inferred. Two guarded TypeScript proposals and a dependency-aware factory/SOQL/cleanup review are private and inactive. |
+| Fresh complete Salesforce lifecycle | **Approval/freshness blocked; not executed** | `.state/account-contact-lifecycle-009/README.review.json` and separate policy/data/UI/browser/profile drafts are all inactive. Fresh runtime proof/session and explicit nonfinancial automation/run approval required; unchanged quotas/ownership/cascade gates apply. Local journal: zero active records/uncertain effects; daily count 0 of existing cap 3 at preparation. |
+| Gemini / embeddings / RAG / Chroma / enterprise breadth | **Prior evidence retained; remaining breadth partial** | No new external model, embedding or Chroma call. Gemini chat and gemini-embedding-001 unchanged. Remaining exploration, coverage, connectors and analytics requirements below remain in scope. |
+
+Verification after the binding fix: **228/228 unit/integration, 3/3 headless, typecheck and all four demos passed**. Headless/demo results are offline fixtures; live evidence is only the explicitly identified observations above. Logs remain private under `.state/viewport-final-*`.
+
+Next dependency chain: review source-backed synthetic workflow/automation proposal -> fresh exact readiness and session proof -> approve final hash-bound factory/UI/profile/browser/run package -> generated Playwright + independent SOQL + owned cleanup + reportingLabs -> eligible evidence-backed execution learning. Richer autonomous exploration and intelligent coverage follow this lifecycle. No observation approval enables writes, no quota was increased and no normal Production policy changed.
+
 ## Stable readiness + multi-object workflow evidence continuation
 
 Continues `22328ba` while preserving descendant `0de25c5`, all original P0/P1/P2 entries and all 15 responsibilities. [LIGHTNING_STABLE_READINESS.md](LIGHTNING_STABLE_READINESS.md) defines the implemented scope and boundaries.

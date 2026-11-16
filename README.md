@@ -1,6 +1,6 @@
 # SalesforceAgenticQA
 
-The [dedicated native Chrome profile and workflow intelligence](docs/DEDICATED_CHROME_WORKFLOW_INTELLIGENCE.md) extend existing services. Native networking requires exact operator risk/access authorization; normal Production remains guarded. A fresh live Chrome/MCP observation verified the Account name and Related/Details elements with unchanged scoped pre/post hashes, but a persistent busy signal prevented stability readiness. Source-linked multi-object workflow models generate guarded TypeScript and coverage proposals through existing planning/RAG/history. No business lifecycle or verified learning is inferred.
+The latest separately approved headless Chrome/MCP observations passed **Account and Contact visible-view readiness**, including exact identity, name, Related/Details, one-second stability and unchanged scoped pre/post checks. [Stable readiness evidence](docs/LIGHTNING_STABLE_READINESS.md) explains the three off-viewport Account busy nodes and the reviewed scope. Native networking requires exact operator risk/access authorization; normal Production remains guarded. The fresh Account/Contact lifecycle is prepared for separate review and has not executed.
 
 Salesforce-specialized QA framework: **Specs In → Tests Out → Failure Intelligence → Verified Learning**. Windows, TypeScript and headless Playwright; all 15 responsibilities and the complete P0/P1/P2 roadmap remain in scope.
 
@@ -10,7 +10,7 @@ The [shared Lightning session architecture](docs/LIGHTNING_SESSION_ARCHITECTURE.
 
 [Lightning compatibility intelligence](docs/LIGHTNING_COMPATIBILITY.md) compares saved browser evidence, maintains versioned platform-contract reviews and generates inactive policy recommendations plus a local compatibility report. It grants no browser or data permissions.
 
-**Live milestone is incomplete:** the separately authorized installed-Chrome normal-network comparison displayed real Account content and a unique verified name. The same Chrome with framework guards failed to render visible record controls. See [local browser comparison](docs/LOCAL_BROWSER_COMPARISON.md) for actual A/B evidence, local previews and remaining contract/stability review. Both one-session grants are consumed; no passing guarded Account/Contact lifecycle is claimed.
+**Full live lifecycle remains incomplete.** Native-profile observations now have historical readiness receipts; the guarded-network compatibility gap remains. Both observation slots are consumed and their original approvals/receipts expired. New execution needs fresh readiness and separate exact factory/UI/profile/session/run approvals. No passing generated Salesforce lifecycle or business learning is claimed.
 
 Use the [cumulative feature matrix](docs/FEATURE_MATRIX.md), [implementation report](docs/IMPLEMENTATION_REPORT.md) and [agent audit](docs/CAPABILITY_AUDIT.md) for exact validation and remaining gaps. Earlier README progress notes are preserved in [historical notes](docs/HISTORICAL_README_NOTES.md).
 

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir,mkdtemp,rm,readFile,writeFile } from 'node:fs/promises';
-import { resolve,join } from 'node:path';
+import { resolve,join,relative,isAbsolute } from 'node:path';
 import { dedicatedFixture } from './support/dedicated.js';
 import { History } from '../src/core/history.js';
 import { KnowledgeIndex } from '../src/knowledge/index.js';
@@ -26,4 +26,10 @@ test('dedicated session denial occurs before any data write and cannot create ve
   try {const report=await runDedicatedWorkflow(f.input,{history:h,knowledge:index,data:f.data,root,apiOrigin:f.origin,identity:async()=>f.identity,policy:async()=>f.policy,discover:async()=>f.org,session:async()=>{throw Error('No reviewed browser state');},validation:'offline-mocked-salesforce'});assert.equal(report.status,'failed');assert.equal(f.writes.length,0);assert.equal(h.results().length,0);assert.equal(report.learning.status,'blocked');assert.equal(index.all({org:f.org.orgIdentityHash!,permission:f.input.permission}).filter(d=>d.kind==='lesson').length,0);
     const duplicate=structuredClone(f.input);duplicate.ui.plan.workflows[1].criterion=duplicate.ui.plan.workflows[0].criterion;duplicate.ui.approval.hash=dedicatedUiHash(duplicate.ui.plan);await assert.rejects(runDedicatedWorkflow(duplicate,{history:h,knowledge:index,data:f.data,root,apiOrigin:f.origin,identity:async()=>f.identity,policy:async()=>f.policy,discover:async()=>f.org}),/all reviewed criteria/);
   }finally{h.close();await rm(root,{recursive:true,force:true,maxRetries:8,retryDelay:100});}
+});
+
+test('reviewed text-name templates bind run-owned synthetic values through actual generated tests, verification and cleanup',{timeout:90000},async()=>{
+ await mkdir('.state',{recursive:true});await mkdir('.auth',{recursive:true});const root=await mkdtemp(resolve('.state/text-contact-e2e-')),auth=await mkdtemp(resolve('.auth/text-contact-e2e-')),state=join(auth,'state.json'),h=new History(join(root,'history.sqlite')),f=dedicatedFixture(h,'text-contact-e2e');await writeFile(state,JSON.stringify({cookies:[],origins:[]}));f.input.ui.plan.workflows[1].assertion.locator={by:'text',value:'{{synthetic:Contact.LastName}}'};f.input.ui.approval.hash=dedicatedUiHash(f.input.ui.plan);
+ try{const report=await runDedicatedWorkflow(f.input,{history:h,knowledge:new KnowledgeIndex(h),data:f.data,root,apiOrigin:f.origin,identity:async()=>f.identity,policy:async()=>f.policy,discover:async()=>f.org,session:async()=>({statePath:state}),observe:input=>observeDedicatedSelectors({...input,prepareContext:context=>installFixtureResponses(context,input.guard)}),guardModule:resolve('unit/support/dedicated-guard-fixture.ts').replaceAll('\\','/'),validation:'offline-mocked-salesforce'});assert.equal(report.status,'passed');assert.equal(report.created,2);assert.equal(report.cleaned,2);assert.equal(h.results().filter(r=>r.status==='passed').length,2);assert.equal(f.records.size,0);assert.equal(f.writes.length,4);const persisted=JSON.parse(await readFile(report.reportPath,'utf8'));assert.ok(persisted.execution.results.every((r:{status:string})=>r.status==='passed'));}
+ finally{h.close();for(const [parent,path] of [[resolve('.state'),root],[resolve('.auth'),auth]]){const rel=relative(parent,path);assert.ok(rel&&!rel.startsWith('..')&&!isAbsolute(rel));await rm(path,{recursive:true,force:true,maxRetries:8,retryDelay:100});}}
 });
