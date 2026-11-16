@@ -19,7 +19,7 @@ export function reviewedLocator(page:Page,selector:z.infer<typeof Selector>,name
   return resolveLocator(page,{...selector,value,name:label});
 }
 
-export async function observeLightningView(page:Page,input:{review:BrowserReview;view?:unknown;object:'Account'|'Contact';name:string;nativeDocumentVerified:boolean;budget:BrowserBudget}){
+export async function observeLightningView(page:Page,input:{review:BrowserReview;view?:unknown;object:'Account'|'Contact';name:string;nativeDocumentVerified:boolean;budget:BrowserBudget;reserveMs?:number}){
   const {review,budget}=input;
   if(!input.view||!review.plan.renderContractHash)return{status:'review-required' as const,reason:'source-bound-render-contract-required',assertionsChanged:false};
   const view=LightningViewSchema.parse(input.view),hash=lightningViewHash(view);
@@ -31,7 +31,7 @@ export async function observeLightningView(page:Page,input:{review:BrowserReview
   };
   const absent=async(selector:z.infer<typeof Selector>)=>{const locator=reviewedLocator(page,selector,input.name);for(let i=0;i<await locator.count();i++)if(await locator.nth(i).isVisible())return false;return true;};
   let stableSince:number|undefined,last={name:false,content:0,busyClear:false,faultsClear:false};
-  while(budget.remaining()>100){
+  while(budget.remaining()>Math.max(100,input.reserveMs??0)){
     budget.check();
     const name=await unique(view.recordName,true),nameElement=name?await reviewedLocator(page,view.recordName,input.name).elementHandle({timeout:Math.min(250,budget.remaining())}):null;
     let content:boolean[]=[];

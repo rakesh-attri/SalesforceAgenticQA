@@ -11,6 +11,9 @@ import {lightningViewHash,LightningViewSchema} from '../src/execution/lightning-
 import {digest} from '../src/execution/browser-policy.js';
 import {createLightningMcp} from '../src/integrations/lightning-mcp.js';
 import {lightningEngineHash,verifyLightningEngine} from '../src/execution/lightning-engine.js';
+import {readFile} from 'node:fs/promises';
+import {BrowserDebugPolicySchema} from '../src/execution/browser-debug-policy.js';
+import {relative,isAbsolute} from 'node:path';
 
 test('real Playwright MCP and direct observations share one verified guarded context, readiness and quota; raw tools and actions stay denied',{timeout:60000},async()=>{
   await mkdir('.auth',{recursive:true});const root=await mkdtemp(resolve('.auth/managed-lightning-')),state=join(root,'state.json'),b=browserFixture();await writeFile(state,JSON.stringify({cookies:[],origins:[]}));
@@ -24,7 +27,7 @@ test('real Playwright MCP and direct observations share one verified guarded con
   await server.connect(a);await client.connect(c);
   const previousOrigins=process.env.PLAYWRIGHT_MCP_ALLOWED_ORIGINS;process.env.PLAYWRIGHT_MCP_ALLOWED_ORIGINS=b.f.browserOrigin;
   try{
-    assert.equal((await client.listTools()).tools.length,5);
+    assert.equal((await client.listTools()).tools.length,6);
     for(const name of ['browser_evaluate','browser_run_code','browser_navigate','browser_click','create_record'])assert.equal((await client.callTool({name,arguments:{url:'https://unapproved.example',code:'PRIVATE_CODE'}})).isError,true);
     const navigation=await client.callTool({name:'sfqa_browser_observe_record',arguments:{object:'Account'}});assert.ok(!navigation.isError,JSON.stringify(navigation));assert.equal(JSON.parse((navigation.content as Array<{text:string}>)[0].text).nativeDocumentVerified,true);assert.ok(!JSON.stringify(navigation).includes('PRIVATE_'));
     const readiness=await client.callTool({name:'sfqa_browser_reviewed_view',arguments:{}});assert.ok(!readiness.isError,JSON.stringify(readiness));assert.ok(JSON.stringify(readiness).includes('rendered-reviewed-view'));assert.ok(!JSON.stringify(readiness).includes('PRIVATE_'));
@@ -51,4 +54,15 @@ test('render contract requires separate content evidence and version/operator bi
     const name={by:'role',value:'heading',name:'{{record-name}}'},view={version:1,object:'Account',sourceVersion:b.plan.sourceVersion,buildHash:b.plan.buildHash,appHash:b.plan.appHash,reviewer:b.f.policy.approval.operator,evidenceHash:digest('source'),recordName:name,content:[name],busy:[],faults:[],stableMs:100};
     assert.throws(()=>lightningViewHash(view),/Record name alone/);assert.throws(()=>LightningViewSchema.parse({...view,content:[] }));assert.throws(()=>verifyLightningEngine(undefined));assert.throws(()=>verifyLightningEngine(digest('other-engine')));assert.equal(verifyLightningEngine(lightningEngineHash()).mcpVersion,'0.0.84');
   }finally{b.history.close();}
+});
+
+test('actual shared MCP observation can trigger approved local masked capture and automatically capture missing selectors',{timeout:30000},async()=>{
+  await mkdir('.auth',{recursive:true});const root=await mkdtemp(resolve('.auth/visual-managed-')),state=join(root,'state.json'),b=browserFixture();await writeFile(state,JSON.stringify({cookies:[],origins:[]}));b.plan.runId=`visual-managed-${Date.now()}`;b.plan.engineProfileHash=lightningEngineHash();b.plan.budgets.maxMs=12000;b.plan.visualDebug=BrowserDebugPolicySchema.parse({permission:'approved-masked-local-only',maxCaptures:6,maxTotalBytes:2097152,maxCaptureMs:1200,milestonesMs:[0,250],maskLocators:[],residualSensitiveContentAcknowledged:true});
+  const session=await LightningSession.open({review:b.approve(),parent:b.f.policy,history:b.history,statePath:state,apiOrigin:b.f.origin,identity:async()=>b.f.identity,verifyReferences:async()=>({references:b.plan.records,privateDisplays:[{object:'Account',id:b.recordId,display:'PRIVATE_VISUAL_NAME'}],proof:{referenceVersions:[digest('unchanged')]}}),verifyContext:async()=>{},nativeBuild:async()=>parseBrowserBuild(b.native),prepareContext:async context=>{await context.route('**/*',route=>route.fulfill({contentType:'text/html',body:`<!doctype html>${b.native}<div role="progressbar">Loading Account…</div><iframe src="/unsupported-subframe"></iframe>`}));}}),server=createLightningMcp(session),client=new Client({name:'visual-local-client',version:'1'}),[a,c]=InMemoryTransport.createLinkedPair();await server.connect(a);await client.connect(c);
+  try{
+    const navigation=await client.callTool({name:'sfqa_browser_observe_record',arguments:{object:'Account'}});assert.ok(!navigation.isError);await session.observeLoading();
+    const captured=await client.callTool({name:'sfqa_browser_debug_capture',arguments:{}});assert.ok(!captured.isError);assert.ok(JSON.stringify(captured).includes('captured'));assert.ok(!JSON.stringify(captured).includes('PRIVATE_'));assert.ok(!JSON.stringify(captured).includes('image/png'));
+    assert.equal((await client.callTool({name:'sfqa_browser_debug_capture',arguments:{path:'.auth/qa-user.json'}})).isError,true);await session.discover('playwright');await session.observe('mcp');
+    const report=await session.close() as {visual:{manifest:string;captures:number};referenceUnchanged:boolean;readinessProof:{status:string}};assert.equal(report.referenceUnchanged,true);assert.ok(report.visual.captures>=3);assert.equal(report.readinessProof.status,'not-established');const manifest=JSON.parse(await readFile(resolve(report.visual.manifest),'utf8'));assert.ok(manifest.entries.some((e:{reason:string})=>e.reason==='selector-missing'));assert.ok(manifest.entries.every((e:{diagnostics?:{classification:string}})=>!e.diagnostics||e.diagnostics.classification==='loading'));
+  }finally{await client.close();await server.close();await session.close();b.history.close();await rm(root,{recursive:true,force:true,maxRetries:8,retryDelay:100});const output=resolve('artifacts/browser-debug',b.plan.runId),rel=relative(resolve('artifacts/browser-debug'),output);assert.ok(rel&&!rel.startsWith('..')&&!isAbsolute(rel));await rm(output,{recursive:true,force:true,maxRetries:8,retryDelay:100});}
 });

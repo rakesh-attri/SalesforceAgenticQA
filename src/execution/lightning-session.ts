@@ -16,6 +16,9 @@ import {verifyLightningEngine} from './lightning-engine.js';
 import {mkdir} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {recordLightningReadiness} from './lightning-proof.js';
+import type {DebugReason} from './browser-debug.js';
+import {setTimeout as delay} from 'node:timers/promises';
+import {DedicatedSessionError} from './dedicated-browser.js';
 
 type Attachment=Awaited<ReturnType<typeof attachReviewedBrowserContext>>;
 type ReferenceResult={references:BrowserRecord[];privateDisplays:Array<{object:'Account'|'Contact';id:string;display:string}>;proof:unknown};
@@ -30,8 +33,6 @@ export class LightningSession{
   private nativeServer?:Awaited<ReturnType<typeof createConnection>>;
   private page?:Page;
   private selected?:ReferenceResult['privateDisplays'][number];
-  private documentProof=new WeakMap<Page,boolean>();
-  private pending=new Set<Promise<void>>();
   private queue:Promise<unknown>=Promise.resolve();
   private commands=0;
   private closed=false;
@@ -39,15 +40,6 @@ export class LightningSession{
   private timer:ReturnType<typeof setTimeout>;
   private constructor(private browser:Browser,private input:LightningSessionInput,private references:ReferenceResult,private attached:Attachment){
     this.timer=setTimeout(()=>{void this.close().catch(()=>{});},attached.boundary.budget.remaining());this.timer.unref();
-    attached.context.on('response',response=>{
-      const work=(async()=>{
-        const request=response.request();if(request.resourceType()!=='document'||!browserDocument(input.review.plan,response.url(),references.references))return;
-        const page=request.frame().page();this.documentProof.set(page,false);
-        if(response.status()!==200)return;
-        const actual=parseBrowserBuild(await response.text());
-        this.documentProof.set(page,sameSalesforceIdentity(actual.orgId,input.review.plan.orgId)&&sameSalesforceIdentity(actual.userId,input.review.plan.userId)&&actual.buildHash===input.review.plan.buildHash&&actual.appHash===input.review.plan.appHash);
-      })().catch(()=>{});this.pending.add(work);void work.finally(()=>this.pending.delete(work));
-    });
   }
   static async open(input:LightningSessionInput){
     verifyLightningEngine(input.review.plan.engineProfileHash);
@@ -58,7 +50,7 @@ export class LightningSession{
       const context=await browser.newContext({storageState:source.statePath,serviceWorkers:'block',acceptDownloads:false});
       const attached=await attachReviewedBrowserContext(context,{...input,identity,records:references.references});
       return new LightningSession(browser,input,references,attached);
-    }catch{await browser.close();throw Error('Lightning session identity/build/approval/quota gate failed');}
+    }catch(error){await browser.close();if(error instanceof DedicatedSessionError)throw error;throw Error('Lightning session identity/build/approval/quota gate failed');}
   }
   private run<T>(action:()=>Promise<T>):Promise<T>{
     const result=this.queue.then(async()=>{if(this.closed)throw Error('Lightning session is closed');this.attached.boundary.budget.check();if(++this.commands>this.input.review.plan.budgets.requests)throw Error('Observation command budget exhausted');return action();});
@@ -86,35 +78,50 @@ export class LightningSession{
     const reference=this.references.references.find(record=>record.object===this.selected!.object&&record.id===this.selected!.id);
     return!!reference&&browserDocument(this.input.review.plan,this.page.url(),[reference]);
   }
+  private async debugProof(){await this.attached.finishDocumentProofs();return{nativeDocumentVerified:!!this.page&&this.attached.recordDocumentVerified(this.page),records:this.references.references,privateValues:this.references.privateDisplays.map(record=>record.display)};}
+  private async capture(reason:DebugReason){if(!this.page)return{status:'no-page' as const};return this.attached.visual.capture(this.page,await this.debugProof(),reason);}
+  captureDebug(){return this.run(()=>this.capture('operator'));}
+  // Bounded loading observation, useful when no real selector contract exists.
+  // Classification is diagnostic only; it cannot create a rendering receipt.
+  observeLoading(){return this.run(async()=>{
+    if(!this.page||!this.currentRecordProven())throw Error('Approved record navigation required');
+    const times=this.input.review.plan.visualDebug?.milestonesMs??[],until=Math.min(this.attached.boundary.budget.started+(times.at(-1)??0)+300,Date.now()+Math.max(0,this.attached.boundary.budget.remaining()-this.attached.visual.reserveMs));
+    if(until>Date.now())await delay(until-Date.now());return{visualEntries:this.attached.visual.entries.length,renderingEstablished:false};
+  });}
   navigate(object:'Account'|'Contact',via:'playwright'|'mcp'='playwright'){
     return this.run(async()=>{
       if(!['Account','Contact'].includes(object)||!['playwright','mcp'].includes(via))throw Error('Observation command denied');
       const record=this.references.privateDisplays.find(record=>record.object===object);if(!record)throw Error('Record is outside approved observation scope');
       const origin=this.input.review.plan.origins.find(origin=>new URL(origin).hostname.endsWith('.lightning.force.com'))!,url=`${origin}/lightning/r/${object}/${record.id}/view`;
       if(!browserDocument(this.input.review.plan,url,this.references.references))throw Error('Exact record document required');
-      this.page??=await this.attached.context.newPage();this.documentProof.set(this.page,false);this.selected=record;this.lastView=undefined;
-      if(via==='mcp')await this.mcp('browser_navigate',url);else await this.page.goto(url,{waitUntil:'domcontentloaded',timeout:Math.min(30000,this.attached.boundary.budget.remaining())});
-      await Promise.allSettled([...this.pending]);
-      return{...this.status(),via,object,recordHash:digest(record.id),approvedDocument:this.currentRecordProven(),nativeDocumentVerified:this.documentProof.get(this.page)===true};
+      this.page??=await this.attached.context.newPage();this.selected=record;this.lastView=undefined;
+      try{if(via==='mcp')await this.mcp('browser_navigate',url);else await this.page.goto(url,{waitUntil:'domcontentloaded',timeout:Math.max(1,Math.min(30000,this.attached.boundary.budget.remaining()-this.attached.visual.reserveMs))});}
+      catch(error){await this.capture('loading-timeout');throw error;}
+      await this.attached.finishDocumentProofs();
+      this.attached.visual.watch(this.page,()=>this.debugProof());
+      return{...this.status(),via,object,recordHash:digest(record.id),approvedDocument:this.currentRecordProven(),nativeDocumentVerified:this.attached.recordDocumentVerified(this.page)};
     });
   }
   observe(via:'playwright'|'mcp'='playwright'){
     return this.run(async()=>{
       if(!this.page||!this.selected||!this.currentRecordProven())throw Error('Approved record navigation required');
       if(via==='mcp')await this.mcp('browser_snapshot');else if(via!=='playwright')throw Error('Observation transport denied');
-      const nativeDocumentVerified=this.documentProof.get(this.page)===true,result=await observeLightningView(this.page,{review:this.input.review,view:this.input.view,object:this.selected.object,name:this.selected.display,nativeDocumentVerified,budget:this.attached.boundary.budget});
-      this.lastView={status:result.status,object:this.selected.object,measuredAt:new Date().toISOString(),nativeDocumentVerified};return result;
+      const nativeDocumentVerified=this.attached.recordDocumentVerified(this.page);
+      try{const result=await observeLightningView(this.page,{review:this.input.review,view:this.input.view,object:this.selected.object,name:this.selected.display,nativeDocumentVerified,budget:this.attached.boundary.budget,reserveMs:this.attached.visual.reserveMs});
+        await this.capture(result.status==='rendered-reviewed-view'?'reviewed-view':result.status==='not-rendered'?'rendering-failure':'selector-missing');this.lastView={status:result.status,object:this.selected.object,measuredAt:new Date().toISOString(),nativeDocumentVerified};return result;
+      }catch(error){await this.capture('rendering-failure');throw error;}
     });
   }
   discover(via:'playwright'|'mcp'='playwright'){
     return this.run(async()=>{
-      if(!this.page||!this.selected||!this.currentRecordProven()||this.documentProof.get(this.page)!==true)throw Error('Native exact record document required for workflow discovery');
+      if(!this.page||!this.selected||!this.currentRecordProven()||!this.attached.recordDocumentVerified(this.page))throw Error('Native exact record document required for workflow discovery');
       if(via==='mcp')await this.mcp('browser_snapshot');else if(via!=='playwright')throw Error('Observation transport denied');
       const text=this.page.getByText(this.selected.display,{exact:true}),heading=this.page.getByRole('heading',{name:this.selected.display,exact:true}),textCount=await text.count(),headingCount=await heading.count();
       const candidates=[];
       if(headingCount===1&&await heading.isVisible())candidates.push({by:'role',value:'heading',name:'{{record-name}}'});
       if(textCount===1&&await text.isVisible())candidates.push({by:'text',value:'{{record-name}}'});
       const roles={headings:await this.page.getByRole('heading').count(),tabs:await this.page.getByRole('tab').count(),buttons:await this.page.getByRole('button').count(),progressbars:await this.page.getByRole('progressbar').count()};
+      if(!candidates.length)await this.capture('selector-missing');
       const evidence={policyHash:browserPlanHash(this.input.review.plan),sourceVersion:this.input.review.plan.sourceVersion,recordHash:digest(this.selected.id),capturedAt:new Date().toISOString(),nameMatches:{text:textCount,heading:headingCount},roles,recordNameCandidates:candidates};
       return{...evidence,evidenceHash:fingerprint(evidence),reviewRequired:true,fullRenderingEstablished:false,workflowActionsInvented:0};
     });
@@ -122,20 +129,20 @@ export class LightningSession{
   execute(workflow:unknown,step:number){
     return this.run(async()=>{
       const approved=WorkflowSchema.parse(workflow);if(!this.page||!this.selected||!browserDocument(this.input.review.plan,this.page.url(),this.references.references)||new URL(approved.path,approved.origin).href!==this.page.url())throw Error('Reviewed action must target the current exact owned record');
-      return this.attached.actions.execute(approved,step,async()=>{this.lastView=undefined;const item=approved.steps[step],locator=reviewedLocator(this.page!,item.locator,this.selected!.display);if(item.action==='click')await locator.click({timeout:this.attached.boundary.budget.remaining()});else await locator.fill(item.value!,{timeout:this.attached.boundary.budget.remaining()});return{status:'reviewed-step-executed',step};});
+      try{return await this.attached.actions.execute(approved,step,async()=>{this.lastView=undefined;const item=approved.steps[step],locator=reviewedLocator(this.page!,item.locator,this.selected!.display);if(item.action==='click')await locator.click({timeout:Math.max(1,this.attached.boundary.budget.remaining()-this.attached.visual.reserveMs)});else await locator.fill(item.value!,{timeout:Math.max(1,this.attached.boundary.budget.remaining()-this.attached.visual.reserveMs)});return{status:'reviewed-step-executed',step};});}catch(error){await this.capture('test-failure');throw error;}
     });
   }
   status(){return{sessionId:this.attached.sessionId,policyHash:browserPlanHash(this.input.review.plan),validation:this.attached.validation,closed:this.closed,commands:this.commands,planes:{platform:'existing-reviewed-network-policy',observation:'exact-record-read-only',interactions:'separate-owned-workflow-broker',mutations:'separate-factory-service-only'},nativeMcpConnected:!!this.nativeClient};}
   private closing?:Promise<unknown>;
   close():Promise<unknown>{
     return this.closing??=(async()=>{
-      this.closed=true;clearTimeout(this.timer);const metrics=await this.attached.boundary.finish();
+      this.closed=true;clearTimeout(this.timer);const visual=await this.attached.visual.report(),metrics=await this.attached.boundary.finish();
       await this.nativeClient?.close().catch(()=>{});await this.nativeServer?.close().catch(()=>{});await this.browser.close();
       let referenceUnchanged:boolean|'unavailable'='unavailable';try{const after=await this.input.verifyReferences(),schema=z.object({referenceVersions:z.array(z.string().regex(/^[a-f0-9]{64}$/)).length(this.references.references.length).min(1)}),before=schema.safeParse(this.references.proof),next=schema.safeParse(after.proof);if(before.success&&next.success)referenceUnchanged=fingerprint(before.data.referenceVersions)===fingerprint(next.data.referenceVersions);}catch{/* Do not turn an unavailable independent check into a pass. */}
       this.input.history.db.prepare("UPDATE browser_execution_sessions SET status='observed' WHERE policy=? AND nonce=?").run(browserPlanHash(this.input.review.plan),this.attached.sessionId);
       let readinessProof:unknown={status:'not-established'};
-      if(this.lastView?.status==='rendered-reviewed-view'&&referenceUnchanged===true&&!this.input.review.plan.ownedDataPlanHash)try{readinessProof=recordLightningReadiness(this.input.history,this.input.review,{...this.lastView,independentReferenceUnchanged:true,validation:this.attached.validation});}catch{/* Expired or incomplete evidence never becomes a proof. */}
-      return{...this.status(),metrics,referenceUnchanged,readinessProof,recordWrites:0,generatedLiveTests:0,learningPublished:false};
+      if(this.lastView?.status==='rendered-reviewed-view'&&referenceUnchanged===true&&!this.input.review.plan.ownedDataPlanHash)try{readinessProof=recordLightningReadiness(this.input.history,this.input.review,{...this.lastView,independentReferenceUnchanged:true,validation:this.attached.validation,visualEvidenceHash:visual.status==='local-debug-evidence'&&this.attached.visual.entries.some(e=>e.status==='captured'&&e.reason==='reviewed-view')?visual.manifestHash:undefined});}catch{/* Expired or incomplete evidence never becomes a proof. */}
+      return{...this.status(),metrics,visual,referenceUnchanged,readinessProof,recordWrites:0,generatedLiveTests:0,learningPublished:false};
     })();
   }
 }

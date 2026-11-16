@@ -1,5 +1,11 @@
 # Capability audit and agent ownership
 
+## Visual debugging ownership - 2026-11-16 IST
+
+All 15 owners and P0/P1/P2 remain. Execution Coordinator/Application Explorer share native-document proof and bounded local visual evidence across direct Playwright and actual MCP. Reviewer owns explicit signed capture/masking scope and independent content selectors. Generator retains assertions and adds supported guarded test attachments; Investigator receives finite readiness/error/denial categories, not raw secrets or an assumed root cause. Knowledge/RAG receive no screenshot upload; Data receives no additional authority. Learning publishes no Salesforce lesson from fixture PNGs or incomplete observations. Other owners and their partial breadth remain unchanged.
+
+Evidence: 196 unit/integration tests, 3 headless tests, typecheck and all existing demos passed; actual local MCP, PNG pixel privacy, HTML preview and reportingLabs attachment tests. Actual Salesforce API org/user/app/reference checks passed under the fresh named no-create review, but browser identity-http failed before reservation; real render/selectors/E2E remain blocked pending fresh state and subsequent verified evidence. No unknown contract, factory renewal, quota reset, normal Production change or automatic external image transfer. See BROWSER_VISUAL_DEBUGGING.md.
+
 ## Shared session integration audit - 2026-11-15 IST
 
 All 15 owners and cumulative P0/P1/P2 requirements are retained. Orchestrator/Execution Coordinator reuse one context attachment and require a fresh live readiness receipt before managed data setup. Application Explorer observes actual selector matches through direct Playwright or the real MCP SDK; autonomous actions still require separately approved broker steps. Reviewer owns source/build-bound view acceptance and native-risk review; Knowledge retains source versions. Generator uses the shared typed role/label/testId/text locator resolver without changing assertions. Data retains deterministic ownership/cleanup and receives no authority from an observation reference. Investigator compares sanitized traces without asserting causality. Learning publishes no business lesson from a rendering fixture. Analyst/Planner/Risk/Self-Healing and remaining responsibilities retain their existing implementations and partial breadth below.

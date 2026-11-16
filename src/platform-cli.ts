@@ -69,6 +69,8 @@ import { probeReviewedBrowser } from './execution/browser-runtime.js';
 import { sanitizeBrowserHar,BrowserTraceSchema,compareBrowserTraces } from './execution/browser-trace.js';
 import { stat,readFile,realpath } from 'node:fs/promises';
 import { relative,resolve,isAbsolute } from 'node:path';
+import {previewBrowserDebug} from './execution/browser-debug.js';
+import {demonstrateVisualDebug} from './demos/visual-debug.js';
 const [mode,file,arg]=process.argv.slice(2);
 async function planningKnowledge(history:History) {
   // Legacy entry points stay local until their exact external payload has been reviewed.
@@ -83,8 +85,12 @@ async function reviewedKnowledge(history:History,remoteApproved=false) {
   return new KnowledgeIndex(history,embed,remote,embeddingSpace);
 }
 async function main() {
+  if(mode==='demo-browser-debug'){console.log(JSON.stringify(await demonstrateVisualDebug(file)));return;}
+  if(mode==='browser-debug-preview'){
+    try{console.log(JSON.stringify(await previewBrowserDebug(file)));}catch{console.log(JSON.stringify({status:'local-debug-preview-gate',privateDetailsWithheld:true}));process.exitCode=1;}return;
+  }
   if(mode==='lightning-review'){
-    try{const input=LightningReviewInputSchema.parse(await loadJson(file)),source=await readPrivateSessionState(input.statePath),prepared=prepareLightningArchitecture(await loadJson(input.sourceReview),{runId:input.runId,stateHash:source.hash,view:input.viewPath?await loadJson(input.viewPath):undefined});await saveJson('.state/lightning-architecture.review.json',prepared.review);await saveJson('.state/lightning-architecture-summary.json',prepared.summary);console.log(JSON.stringify(prepared.summary));}catch{console.log(JSON.stringify({status:'architecture-source-gate',privateDetailsWithheld:true,approvalActivated:false,recordWrites:0}));process.exitCode=1;}return;
+    try{const input=LightningReviewInputSchema.parse(await loadJson(file)),source=await readPrivateSessionState(input.statePath),prepared=prepareLightningArchitecture(await loadJson(input.sourceReview),{runId:input.runId,stateHash:source.hash,view:input.viewPath?await loadJson(input.viewPath):undefined,visualDebug:input.visualDebug});await saveJson('.state/lightning-architecture.review.json',prepared.review);await saveJson('.state/lightning-architecture-summary.json',prepared.summary);console.log(JSON.stringify(prepared.summary));}catch{console.log(JSON.stringify({status:'architecture-source-gate',privateDetailsWithheld:true,approvalActivated:false,recordWrites:0}));process.exitCode=1;}return;
   }
   if(mode==='lightning-baseline-review'||mode==='lightning-baseline-import'||mode==='lightning-baseline-compare'){
     try{
@@ -98,16 +104,17 @@ async function main() {
   if(mode==='lightning-observe'||mode==='lightning-mcp'){
     const history=new History('.state/dedicated-qa.sqlite');let session:Awaited<ReturnType<typeof openLiveLightningSession>>|undefined;
     try{
+      const viaPosition=process.argv.indexOf('--via'),via=viaPosition>=0?process.argv[viaPosition+1]:'playwright';if(!['playwright','mcp','compare'].includes(via))throw Error('Unknown observation transport');
       const viewPosition=process.argv.indexOf('--view'),view=viewPosition>=0?await loadJson(process.argv[viewPosition+1]):undefined;
       session=await openLiveLightningSession({review:await loadJson(file),parent:await loadJson('.state/dedicated-qa-policy.json'),history,statePath:arg,view});
       if(mode==='lightning-mcp'){
         const server=createLightningMcp(session);await server.connect(new StdioServerTransport());const active=session;process.once('SIGINT',()=>{void active.close().finally(()=>history.close());});return;
       }
-      const viaPosition=process.argv.indexOf('--via'),via=viaPosition>=0?process.argv[viaPosition+1]:'playwright';if(via!=='playwright'&&via!=='mcp')throw Error('Unknown observation transport');
-      const navigation=await session.navigate('Account',via),discovery=navigation.nativeDocumentVerified&&navigation.approvedDocument?await session.discover(via):{status:'native-document-not-proven'},readiness=await session.observe(via),report=await session.close();await saveJson('.state/lightning-session-latest.json',{navigation,discovery,readiness,report});
+      const transport=via==='mcp'?'mcp':'playwright',navigation=await session.navigate('Account',transport);await session.observeLoading();
+      const discovery=navigation.nativeDocumentVerified&&navigation.approvedDocument?await session.discover(transport):{status:'native-document-not-proven'},comparison=via==='compare'&&navigation.nativeDocumentVerified?{sameContext:true,mcp:await session.discover('mcp'),normalReference:'not-provided',rootCause:'unresolved'}:undefined,readiness=await session.observe(transport),report=await session.close();await saveJson('.state/lightning-session-latest.json',{navigation,discovery,comparison,readiness,report});
       console.log(JSON.stringify({navigation,discovery,readiness,report:'.state/lightning-session-latest.json',recordWrites:0,learningPublished:false}));
-    }catch{if(mode==='lightning-mcp')console.error('Managed Lightning session gate failed; private details withheld.');else console.log(JSON.stringify({status:'lightning-session-gate',privateDetailsWithheld:true,recordWrites:0}));process.exitCode=1;}
-    finally{if(mode!=='lightning-mcp'||!session){await session?.close();history.close();}}return;
+    }catch(error){if(mode==='lightning-mcp')console.error('Managed Lightning session gate failed; private details withheld.');else console.log(JSON.stringify({status:'lightning-session-gate',category:error instanceof DedicatedSessionError?error.code:'identity-build-approval-budget-or-rendering',privateDetailsWithheld:true,recordWrites:0}));process.exitCode=1;}
+    finally{if(mode!=='lightning-mcp'||!session){try{if(session)await saveJson('.state/lightning-session-final.json',await session.close());}finally{history.close();}}}return;
   }
   if(mode==='browser-source-review'){
     const history=new History('.state/dedicated-qa.sqlite');

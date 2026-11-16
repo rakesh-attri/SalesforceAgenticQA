@@ -4,6 +4,8 @@ Salesforce-specialized QA framework: **Specs In → Tests Out → Failure Intell
 
 The [shared Lightning session architecture](docs/LIGHTNING_SESSION_ARCHITECTURE.md) separates platform initialization, read-only observation/discovery, approved agent interactions and business mutations. Direct Playwright, generated tests and the restricted Playwright MCP gateway share existing verification and network guards. Engine versions and reviewed rendering contracts are hash-bound. Unknown Aura operations stay blocked.
 
+[Visual browser debugging](docs/BROWSER_VISUAL_DEBUGGING.md) adds approved, bounded local masked screenshots, finite readiness/error diagnostics, generated-test attachments and a local HTML preview. The synthetic demo needs no Salesforce credentials. Real visual observation remains gated by fresh native session identity and exact approval.
+
 **Live milestone is incomplete:** the last approved Salesforce proof reached a verified Account document and successful exact OneController response, but record-name observation timed out. No normal-session capture is available, and the prior two observation slots are exhausted. This increment does not claim a fully rendered Salesforce Account page or a passing live Account/Contact lifecycle.
 
 Use the [cumulative feature matrix](docs/FEATURE_MATRIX.md), [implementation report](docs/IMPLEMENTATION_REPORT.md) and [agent audit](docs/CAPABILITY_AUDIT.md) for exact validation and remaining gaps. Earlier README progress notes are preserved in [historical notes](docs/HISTORICAL_README_NOTES.md).

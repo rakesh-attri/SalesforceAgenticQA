@@ -1,5 +1,7 @@
 # Shared Salesforce Lightning session architecture
 
+November 16 visual-debugging continuation: [BROWSER_VISUAL_DEBUGGING.md](BROWSER_VISUAL_DEBUGGING.md) documents policy-bound local captures, common native-document proof, milestone/failure/operator triggers, the sixth restricted MCP tool, generated-test attachments and screenshot-bound readiness. No new Aura/resource permission is added. The initial separately approved live visual attempt stopped at native `identity-http` before reserving its one slot; it produced no Salesforce screenshot. API identity/app/reference reads succeeded. Earlier no-live statements below describe the November 15 architecture increment; use the implementation report for follow-up results.
+
 This increment continues `0849671` on `feature/verified-discovery`. It implements a reusable session owner over the existing policies and services. No individual Salesforce static URL or Aura operation was newly allowed. The real fully rendered Account milestone is **not complete**: no normal-session capture is available, the previous grant is expired/exhausted, and the prior trace still contains unreviewed platform contracts. No fresh Salesforce session, data run or model request was executed in this increment.
 
 ## Four planes, one context
@@ -53,6 +55,7 @@ External clients receive only:
 - `sfqa_browser_reviewed_view`: check a locally reviewed source/build-bound rendering contract.
 - `sfqa_browser_reviewed_step`: choose a configured reviewed owned-workflow ID/step; observation grants cannot use it.
 - `sfqa_browser_status`: read safe status and capability-plane descriptions.
+- `sfqa_browser_debug_capture`: capture local masked diagnostic evidence only under the exact optional visual policy; no tool arguments or returned image bytes.
 
 Native evaluate/run-code/navigation/click/upload/network tools, cookies, file paths, credentials and approval-writing methods are not exposed. Workflow execution remains the existing action broker; it cannot gain writes through platform initialization.
 

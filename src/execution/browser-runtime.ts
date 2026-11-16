@@ -1,4 +1,4 @@
-import { chromium, type BrowserContext, type Request } from '@playwright/test';
+import { chromium, type BrowserContext, type Request, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { z } from 'zod';
@@ -10,6 +10,7 @@ import { authorizeBrowserSession, browserDocument, browserPlanHash, digest, fing
 import type { BoundaryDenialReason } from './browser-diagnostics.js';
 import { parseBrowserBuild,proveReviewedBrowserBuild } from './browser-build.js';
 import { BrowserActionBroker } from './browser-actions.js';
+import {BrowserVisualDebug} from './browser-debug.js';
 import {verifyLightningEngine} from './lightning-engine.js';
 import { BrowserBudget, BrowserResourceBroker, validResourceContentType } from './browser-resources.js';
 import { sameSalesforceIdentity } from './lightning-identity.js';
@@ -71,7 +72,7 @@ export async function installReviewedBrowserBoundary(context: BrowserContext, in
       return route.fallback();
     } catch { blocked++; input.onBlocked?.(request, 'policy-denied'); decisions.set(request, { allow: false, kind: 'denied', contracts: [], reason: phase }); trace(request, 0); return route.abort('blockedbyclient').catch(() => {}); }
   });
-  return { budget, broker, async finish() { await Promise.race([Promise.allSettled([...pending]), new Promise(resolve => setTimeout(resolve, 1000))]); return { transport,blocked, serverErrors, resourceValidationFailures,responseInspectionFailures,publicCredentialRequests,pendingResponseBodies: pending.size, requests: budget.requests, resourceBytes: budget.bytes, cacheHits: broker.hits, cacheMisses: broker.misses, networkResourceBytes: broker.networkBytes, trace: BrowserTraceSchema.parse({ version: 1, scope: browserTraceScope(review.plan, records), provenance: transport==='native-reference'?'framework-native-reference':'framework-controlled', sourceHash: fingerprint(entries), identityVerified: true, entries, truncated: entries.length >= 250 || pending.size > 0, rawValuesRetained: false }) }; } };
+  return { budget, broker, summary(){return{requests:budget.requests,denied:blocked,reasons:Object.fromEntries([...new Set(entries.filter(e=>e.decision==='blocked').map(e=>e.reason))].map(reason=>[reason,entries.filter(e=>e.decision==='blocked'&&e.reason===reason).length]))};}, async finish() { await Promise.race([Promise.allSettled([...pending]), new Promise(resolve => setTimeout(resolve, 1000))]); return { transport,blocked, serverErrors, resourceValidationFailures,responseInspectionFailures,publicCredentialRequests,pendingResponseBodies: pending.size, requests: budget.requests, resourceBytes: budget.bytes, cacheHits: broker.hits, cacheMisses: broker.misses, networkResourceBytes: broker.networkBytes, trace: BrowserTraceSchema.parse({ version: 1, scope: browserTraceScope(review.plan, records), provenance: transport==='native-reference'?'framework-native-reference':'framework-controlled', sourceHash: fingerprint(entries), identityVerified: true, entries, truncated: entries.length >= 250 || pending.size > 0, rawValuesRetained: false }) }; } };
 }
 
 export function browserLocationClass(review:BrowserReview,url:string){
@@ -90,7 +91,15 @@ async function attachContext(context:BrowserContext,input:ContextAttachmentInput
   authorizeBrowserSession(input.review,input.parent,input.identity,build);
   const sessionId=randomUUID();reserveBrowserSession(input.review,input.history,sessionId);
   const boundary=await installReviewedBrowserBoundary(context,{...input,build});
-  return{context,boundary,build,sessionId,actions:new BrowserActionBroker(input.history,input.review,input.parent,input.identity,build,boundary.budget),validation:input.verifyContext||input.nativeBuild||input.resourceFetch||input.prepareContext?'offline-mocked-salesforce' as const:'live-salesforce' as const};
+  const validation=input.verifyContext||input.nativeBuild||input.resourceFetch||input.prepareContext?'offline-mocked-salesforce' as const:'live-salesforce' as const;
+  const documents=new WeakMap<Page,boolean>(),pendingDocuments=new Set<Promise<void>>();
+  context.on('request',request=>{if(request.resourceType()==='document')try{const page=request.frame().page();if(request.frame()===page.mainFrame())documents.set(page,false);}catch{}});
+  context.on('response',response=>{
+    if(response.request().resourceType()!=='document'||!browserDocument(input.review.plan,response.url(),input.records))return;
+    const work=(async()=>{const page=response.request().frame().page();if(response.request().frame()!==page.mainFrame()||response.status()!==200)return;const text=await response.text();if(Buffer.byteLength(text)>2000000)return;const actual=parseBrowserBuild(text);documents.set(page,sameSalesforceIdentity(actual.orgId,input.identity.Id)&&sameSalesforceIdentity(actual.userId,input.identity.userId)&&actual.buildHash===build.buildHash&&actual.appHash===build.appHash);})().catch(()=>{});
+    pendingDocuments.add(work);void work.finally(()=>pendingDocuments.delete(work));
+  });
+  return{context,boundary,build,sessionId,actions:new BrowserActionBroker(input.history,input.review,input.parent,input.identity,build,boundary.budget),validation,visual:new BrowserVisualDebug(input.review,boundary.budget,sessionId,validation,()=>boundary.summary()),recordDocumentVerified:(page:Page)=>documents.get(page)===true,async finishDocumentProofs(){await Promise.allSettled([...pendingDocuments]);}};
 }
 export async function attachReviewedBrowserContext(context:BrowserContext,input:ContextAttachmentInput){
   const hash=fingerprint([browserPlanHash(input.review.plan),input.transport??'validated-cache',input.identity,input.statePath]),prior=attachedContexts.get(context);

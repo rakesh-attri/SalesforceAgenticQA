@@ -4,6 +4,7 @@ import { EnvironmentPolicySchema, environmentHash, authorizeEnvironment, type En
 import type { History } from '../core/history.js';
 import { sameSalesforceIdentity } from './lightning-identity.js';
 import { currentAppAction } from './browser-native-contracts.js';
+import {BrowserDebugPolicySchema} from './browser-debug-policy.js';
 
 export const fingerprint = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export const digest = (value: string | Uint8Array) => createHash('sha256').update(value).digest('hex');
@@ -35,7 +36,7 @@ export const BrowserPlanSchema = z.object({
   origins: z.array(Origin).min(1).max(2), runId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
   objects: z.array(z.enum(['Account', 'Contact'])).min(1).max(2), records: z.array(BrowserRecordSchema).max(2), ownedDataPlanHash: Hash.optional(), resources: z.array(ResourceRuleSchema).min(1).max(80),
   contracts: z.array(InitializationContractSchema).max(20),
-  agentWorkflowHashes: z.array(Hash).max(20).default([]), renderContractHash:Hash.optional(),engineProfileHash:Hash.optional(),liveReadinessProofHash:Hash.optional(),
+  agentWorkflowHashes: z.array(Hash).max(20).default([]), renderContractHash:Hash.optional(),engineProfileHash:Hash.optional(),liveReadinessProofHash:Hash.optional(),visualDebug:BrowserDebugPolicySchema.optional(),
   transports: z.array(z.enum(['validated-cache', 'native-reference'])).min(1).max(2).default(['validated-cache']), recordReadProfile: z.enum(['documented-ui-api-only', 'existing-scoped-reads-v1']).default('documented-ui-api-only'),
   budgets: z.object({ maxMs: z.number().int().min(1000).max(60000), requests: z.number().int().min(1).max(250), resourceBytes: z.number().int().min(1).max(67108864), maxResourceBytes: z.number().int().min(1).max(8388608), actions: z.number().int().min(0).max(20), sessions: z.number().int().min(1).max(5) }).strict(),
   browserWrites: z.literal(false), formSubmissions: z.literal(false), financial: z.literal(false), administrativeChanges: z.literal(false),
