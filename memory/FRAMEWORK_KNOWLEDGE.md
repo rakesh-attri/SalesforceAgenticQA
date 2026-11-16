@@ -1,5 +1,9 @@
 # Framework Knowledge Base
 
+## Native busy diagnostic follow-up - 2026-11-16 IST
+
+Package 004's real headless Chrome/MCP observation passed exact identity/build/app and name/Related/Details checks, with 198 requests/zero framework denials, four local images and scoped pre/post hashes equal. The gate failed specifically on three native aria-busy elements while reviewed busy selectors, native spinner/progressbar/fault checks were clear. This establishes a framework readiness rejection condition, not a root cause of Salesforce loading or a complete rendered-page pass. No locator/assertion/policy repair was made. The three elements' regions/ancestor visibility/lifecycle were not captured; do not invent them or promote a defect/lesson. One slot consumed, zero factories, no observation reference adopted; expired 003 stayed inactive. Source: docs/NATIVE_BUSY_DIAGNOSTIC.md and ignored policy-bound run artifacts. Further live inspection requires a fresh exact grant, not replay. All cumulative agent/P0/P1/P2 scope remains.
+
 ## Dedicated native Chrome / source-grounded journeys - 2026-11-16 IST
 
 - Native initialization is a separate accepted risk, not an inferred safe Aura contract. Require exact named dedicated-org/user/profile/app/build/engine scope and least-privilege access review. The actual fixture intentionally permits a background POST while restricted MCP and the one-use owned-action broker deny unapproved agent steps. This documents the enforcement limit instead of claiming native requests cannot mutate anything.

@@ -1,5 +1,7 @@
 # Current capability matrix
 
+Package-004 live follow-up (2026-11-16 IST, code `22328ba`): exact authorized headless Chrome/MCP identity/build/app checks passed; unique Account name and Related/Details passed; 198 requests/zero framework denials, four local masked images and equal scoped pre/post hashes. Finite counters identify **three native aria-busy elements**, with reviewed busy selectors clear and zero native spinners/progressbars/faults. This establishes the readiness gate's blocking condition, not the underlying application cause or full stability. No readiness/trusted workflow/learning promotion, factory reservation or observation-record cleanup adoption. One slot consumed; expired 003 remained inactive. Fresh typecheck, 220/220 unit/integration, 3/3 headless and all four demos passed. [NATIVE_BUSY_DIAGNOSTIC.md](NATIVE_BUSY_DIAGNOSTIC.md) records evidence and next review; assertions and all cumulative requirements below are preserved.
+
 ## Dedicated native Chrome and workflow intelligence continuation
 
 All original P0/P1/P2 requirements and 15 responsibilities below remain cumulative. This extension starts from `1e49c3e` on `feature/verified-discovery`. Earlier results are historical evidence, not fresh health checks. See [DEDICATED_CHROME_WORKFLOW_INTELLIGENCE.md](DEDICATED_CHROME_WORKFLOW_INTELLIGENCE.md).
