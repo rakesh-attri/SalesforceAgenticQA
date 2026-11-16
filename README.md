@@ -6,6 +6,8 @@ The [shared Lightning session architecture](docs/LIGHTNING_SESSION_ARCHITECTURE.
 
 [Visual browser debugging](docs/BROWSER_VISUAL_DEBUGGING.md) adds approved, bounded local masked screenshots, finite readiness/error diagnostics, generated-test attachments and a local HTML preview. The synthetic demo needs no Salesforce credentials. Real visual observation remains gated by fresh native session identity and exact approval.
 
+[Lightning compatibility intelligence](docs/LIGHTNING_COMPATIBILITY.md) compares saved browser evidence, maintains versioned platform-contract reviews and generates inactive policy recommendations plus a local compatibility report. It grants no browser or data permissions.
+
 **Live milestone is incomplete:** the separately authorized installed-Chrome normal-network comparison displayed real Account content and a unique verified name. The same Chrome with framework guards failed to render visible record controls. See [local browser comparison](docs/LOCAL_BROWSER_COMPARISON.md) for actual A/B evidence, local previews and remaining contract/stability review. Both one-session grants are consumed; no passing guarded Account/Contact lifecycle is claimed.
 
 Use the [cumulative feature matrix](docs/FEATURE_MATRIX.md), [implementation report](docs/IMPLEMENTATION_REPORT.md) and [agent audit](docs/CAPABILITY_AUDIT.md) for exact validation and remaining gaps. Earlier README progress notes are preserved in [historical notes](docs/HISTORICAL_README_NOTES.md).

@@ -17,7 +17,7 @@ import {verifyLightningEngine} from './lightning-engine.js';
 import { BrowserBudget, BrowserResourceBroker, validResourceContentType } from './browser-resources.js';
 import { sameSalesforceIdentity } from './lightning-identity.js';
 import { browserNetworkDecision, type NetworkDecision } from './browser-network.js';
-import { browserTraceScope, BrowserTraceSchema, summarizeBrowserExchange, compareBrowserTraces, type BrowserTrace } from './browser-trace.js';
+import { RequestTraceClock, browserTraceScope, BrowserTraceSchema, summarizeBrowserExchange, compareBrowserTraces, type BrowserTrace } from './browser-trace.js';
 
 export async function verifyActualContext(context: BrowserContext, statePath: string, review: BrowserReview, policy: unknown, identity: EnvironmentIdentity, apiOrigin: string) {
   const source = await readPrivateSessionState(statePath);
@@ -35,8 +35,9 @@ export async function installReviewedBrowserBoundary(context: BrowserContext, in
   const transport=input.transport??'validated-cache';if(!review.plan.transports.includes(transport)||transport==='native-reference'&&(review.plan.ownedDataPlanHash||review.plan.budgets.actions))throw Error('Reference transport has no workflow or agent authority');
   if (fingerprint(records) !== fingerprint(resolveBrowserRecords(review.plan, history))) throw Error('Browser records differ from the approved observation/factory scope');
   const budget = new BrowserBudget(review), broker = new BrowserResourceBroker(history, review, parent, identity, build, budget, input.resourceFetch), calls = new Map<string, number>();
+  const clock=new RequestTraceClock();context.on('request',request=>clock.start(request));
   const decisions = new WeakMap<Request, NetworkDecision>(), entries: BrowserTrace['entries'] = [], pending = new Set<Promise<void>>(); let blocked = 0, serverErrors = 0, resourceValidationFailures=0,responseInspectionFailures=0,publicCredentialRequests=0;
-  const trace = (request: Request, status: number, response?: unknown) => { if (entries.length < 250) entries.push(summarizeBrowserExchange({ url: request.url(), method: request.method(), type: request.resourceType(), body: request.postData() }, status, response, decisions.get(request))); };
+  const trace = (request: Request, status: number, response?: unknown) => { if (entries.length < 250) entries.push({...summarizeBrowserExchange({ url: request.url(), method: request.method(), type: request.resourceType(), body: request.postData() }, status, response, decisions.get(request)),...clock.stamp(request)}); };
   context.on('response', response => {
     const work = (async () => { const request = response.request(), decision = decisions.get(request); if (!decision?.allow) return;if(['script','stylesheet','image','font'].includes(request.resourceType())){if(transport==='native-reference'){const bytes=await response.body(),mime=response.headers()['content-type']??'';if(response.status()>=400)serverErrors++;if(response.status()!==200||bytes.length>review.plan.budgets.maxResourceBytes||!validResourceContentType(request.resourceType(),mime))resourceValidationFailures++;budget.consume(bytes.length);trace(request,response.status());}return;}
       let body: unknown; if (request.url().includes('/aura') && response.status() === 200) try { const bytes = await response.body(); if (bytes.length <= 262144) body = JSON.parse(bytes.toString('utf8').replace(/^(?:while\(1\);|for\(;;\);)/, '')); } catch { /* Finite response status survives; raw provider text never does. */ }

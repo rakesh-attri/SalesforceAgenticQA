@@ -3,12 +3,18 @@ import { digest, fingerprint, type BrowserPlan, type BrowserRecord } from './bro
 import type { BrowserRequestInput, NetworkDecision } from './browser-network.js';
 import { currentAppAction } from './lightning-initialization.js';
 
+export class RequestTraceClock{
+  private sequence=0;private started=Date.now();private requests=new WeakMap<object,{requestSequence:number;elapsedMs:number}>();
+  start(request:object){if(!this.requests.has(request))this.requests.set(request,{requestSequence:this.sequence++,elapsedMs:Math.max(0,Date.now()-this.started)});}
+  stamp(request:object){return{...this.requests.get(request),responseElapsedMs:Math.max(0,Date.now()-this.started)};}
+}
+
 const Hash = z.string().regex(/^[a-f0-9]{64}$/);
-const ScopeSchema = z.object({ org: Hash, user: Hash, build: Hash, app: Hash, records: z.array(Hash).max(2) }).strict();
-const EntrySchema = z.object({ key: Hash, urlHash: Hash, route: z.enum(['document', 'static', 'ui-api', 'aura', 'other']), method: z.enum(['GET', 'POST', 'HEAD', 'PATCH', 'PUT', 'DELETE', 'other']), status: z.number().int().min(0).max(599), descriptors: z.array(Hash).max(10), knownAction: z.enum(['OneController.getCurrentApp', 'unclassified']), parameterHashes: z.record(z.string(), Hash), responseStates: z.array(z.enum(['SUCCESS', 'ERROR', 'other'])).max(10), responseShape: z.array(z.string()).max(80), decision: z.enum(['reference', 'allowed', 'blocked']), reason: z.string().regex(/^[a-z0-9-]{1,80}$/) }).strict();
+const ScopeSchema = z.object({ engine:Hash.optional(),permission:Hash.optional(),org: Hash, user: Hash, build: Hash, app: Hash, records: z.array(Hash).max(2) }).strict();
+const EntrySchema = z.object({ requestSequence:z.number().int().nonnegative().optional(),elapsedMs:z.number().int().nonnegative().optional(),responseElapsedMs:z.number().int().nonnegative().optional(),requestShapeHash:Hash.optional(),resourceClassHash:Hash.optional(),operationRisk:z.enum(['unknown','possible-mutation','high-risk']).optional(),key: Hash, urlHash: Hash, route: z.enum(['document', 'static', 'ui-api', 'aura', 'other']), method: z.enum(['GET', 'POST', 'HEAD', 'PATCH', 'PUT', 'DELETE', 'other']), status: z.number().int().min(0).max(599), descriptors: z.array(Hash).max(10), knownAction: z.enum(['OneController.getCurrentApp', 'unclassified']), parameterHashes: z.record(z.string(), Hash), responseStates: z.array(z.enum(['SUCCESS', 'ERROR', 'other'])).max(10), responseShape: z.array(z.string()).max(80), decision: z.enum(['reference', 'allowed', 'blocked']), reason: z.string().regex(/^[a-z0-9-]{1,80}$/) }).strict();
 export const BrowserTraceSchema = z.object({ version: z.literal(1), scope: ScopeSchema, provenance: z.enum(['operator-live-normal-observation','operator-normal-session-import', 'framework-native-reference', 'framework-controlled']), sourceHash: Hash, identityVerified: z.boolean(), entries: z.array(EntrySchema).max(250), truncated: z.boolean(), rawValuesRetained: z.literal(false) }).strict();
 export type BrowserTrace = z.infer<typeof BrowserTraceSchema>;
-export function browserTraceScope(plan: BrowserPlan, records: BrowserRecord[]) { return { org: digest(plan.orgId), user: digest(plan.userId), build: plan.buildHash, app: plan.appHash, records: records.map(record => digest(record.id)).sort() }; }
+export function browserTraceScope(plan: BrowserPlan, records: BrowserRecord[]) { return { ...(plan.engineProfileHash?{engine:plan.engineProfileHash,permission:digest(plan.persona)}:{}),org: digest(plan.orgId), user: digest(plan.userId), build: plan.buildHash, app: plan.appHash, records: records.map(record => digest(record.id)).sort() }; }
 const safeKeys = new Set(['actions', 'state', 'returnValue', 'errors', 'context', 'appId', 'developerName', 'navItems', 'records', 'fields', 'Id', 'Name', 'LastName', 'displayValue', 'value', 'label', 'url', 'apiName', 'recordId', 'recordIds', 'objectApiName', 'appContextIdOrName']);
 function responseShape(raw: unknown) {
   const shapes: string[] = [];
@@ -20,11 +26,11 @@ function responseShape(raw: unknown) {
 }
 export function summarizeBrowserExchange(input: BrowserRequestInput, status: number, response?: unknown, decision?: NetworkDecision) {
   const url = new URL(input.url), route = url.pathname === '/aura' ? 'aura' : url.pathname.includes('/ui-api/') ? 'ui-api' : input.type === 'document' ? 'document' : ['script', 'stylesheet', 'image', 'font'].includes(input.type) ? 'static' : 'other';
-  const descriptors: string[] = [], parameterHashes: Record<string, string> = {}; let knownAction: 'OneController.getCurrentApp' | 'unclassified' = 'unclassified';
+  let operationRisk:'unknown'|'possible-mutation'|'high-risk'=['PATCH','PUT','DELETE'].includes(input.method)?'possible-mutation':'unknown'; const descriptors: string[] = [], parameterHashes: Record<string, string> = {}; let knownAction: 'OneController.getCurrentApp' | 'unclassified' = 'unclassified';
   if (route === 'aura' && input.body && input.body.length <= 262144) try {
     const message = JSON.parse(new URLSearchParams(input.body).get('message') ?? 'null');
     for (const action of Array.isArray(message?.actions) ? message.actions.slice(0, 10) : []) {
-      if (typeof action?.descriptor !== 'string') continue; const hash = digest(action.descriptor); descriptors.push(hash); if (action.descriptor === currentAppAction) knownAction = 'OneController.getCurrentApp';
+      if (typeof action?.descriptor !== 'string') continue; if(/Apex|Permission|Admin|Payment|Refund|Transfer/i.test(action.descriptor))operationRisk='high-risk';else if(/ACTION\$(?:create|update|save|delete|insert|execute)/i.test(action.descriptor)&&operationRisk!=='high-risk')operationRisk='possible-mutation'; const hash = digest(action.descriptor); descriptors.push(hash); if (action.descriptor === currentAppAction) knownAction = 'OneController.getCurrentApp';
       if (action.params && typeof action.params === 'object' && !Array.isArray(action.params)) for (const [key, value] of Object.entries(action.params).slice(0, 20)) parameterHashes[(safeKeys.has(key) ? key : 'key-' + digest(key).slice(0, 12)) + '-' + hash.slice(0, 8)] = fingerprint(value);
     }
   } catch { /* Raw bodies, context/token fields and values never leave memory. */ }
@@ -33,7 +39,7 @@ export function summarizeBrowserExchange(input: BrowserRequestInput, status: num
   // Semantic matching removes nonce/style URL differences only for comparison,
   // never for permission decisions or resource cache keys.
   const key = fingerprint([route, input.method, url.origin, url.pathname, route === 'static' ? url.searchParams.get('_def') ?? '' : route === 'aura' ? [descriptors, parameterHashes] : digest(url.search)]);
-  return EntrySchema.parse({ key, urlHash: digest(input.url), route, method: ['GET', 'POST', 'HEAD', 'PATCH', 'PUT', 'DELETE'].includes(input.method) ? input.method : 'other', status, descriptors, knownAction, parameterHashes, responseStates: states, responseShape: responseShape(response), decision: decision ? decision.allow ? 'allowed' : 'blocked' : 'reference', reason: decision?.reason ?? 'operator-reference' });
+  return EntrySchema.parse({ operationRisk,requestShapeHash:fingerprint([route,input.method,[...url.searchParams.keys()].map(digest).sort(),Object.keys(parameterHashes).sort()]),resourceClassHash:route==='static'?fingerprint([digest(url.origin),input.type,url.searchParams.get('_def')?digest(url.searchParams.get('_def')!):digest(url.pathname)]):undefined,key, urlHash: digest(input.url), route, method: ['GET', 'POST', 'HEAD', 'PATCH', 'PUT', 'DELETE'].includes(input.method) ? input.method : 'other', status, descriptors, knownAction, parameterHashes, responseStates: states, responseShape: responseShape(response), decision: decision ? decision.allow ? 'allowed' : 'blocked' : 'reference', reason: decision?.reason ?? 'operator-reference' });
 }
 export function sanitizeBrowserHar(raw: unknown, plan: BrowserPlan, records: BrowserRecord[]) {
   const har = z.object({ log: z.object({ entries: z.array(z.object({ request: z.object({ url: z.string().url(), method: z.string(), postData: z.object({ text: z.string().optional() }).optional() }), response: z.object({ status: z.number().int(), content: z.object({ mimeType: z.string().optional(), text: z.string().optional(), encoding: z.string().optional() }).optional() }), _resourceType: z.string().optional() })) }) }).safeParse(raw);

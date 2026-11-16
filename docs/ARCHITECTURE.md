@@ -1,5 +1,9 @@
 # Architecture
 
+## Lightning compatibility intelligence
+
+[LIGHTNING_COMPATIBILITY.md](LIGHTNING_COMPATIBILITY.md) documents the deterministic analyzer, immutable SQLite platform-contract registry, inactive recommendation sets, visual/network report and existing-agent evidence adapters. The layer consumes saved authenticated, scope-matched traces; it never replays consumed sessions or grants permissions. A registry dry-run composes with the existing environment/browser/source/engine/runtime gates. Unknown semantics, absent response schemas and order evidence remain explicit. New trace metadata adds request-start order, hashed shapes/resource classes and finite risk signals without retaining raw traffic. Facts enter KnowledgeIndex as observed workflow evidence only; existing confirmed-defect/regression promotion remains authoritative. All four permission planes and normal Production isolation remain.
+
 ## Shared session owner and permission planes
 
 [LIGHTNING_SESSION_ARCHITECTURE.md](LIGHTNING_SESSION_ARCHITECTURE.md) is the current browser integration decision. `LightningSession` owns one nonpersistent headless context; direct Playwright and a private Playwright MCP SDK client attach through the same identity/build verification, lineage reservation, network boundary and action broker. Agents receive five constrained Salesforce MCP tools, never the native arbitrary navigation/script/file tools. Platform initialization does not authorize agent actions; reviewed workflow steps do not authorize factories or high-risk operations. Strict normal Production modes are unchanged.

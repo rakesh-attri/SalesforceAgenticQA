@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import {runCompatibilityReview} from './execution/compatibility-cli.js';
 import type { z } from 'zod';
 import { Command } from '@langchain/langgraph';
 import { loadJson,saveJson } from './core/io.js';
@@ -85,6 +86,7 @@ async function reviewedKnowledge(history:History,remoteApproved=false) {
   return new KnowledgeIndex(history,embed,remote,embeddingSpace);
 }
 async function main() {
+  if(mode==='compatibility-review'){try{console.log(JSON.stringify(await runCompatibilityReview(file)));}catch{console.log(JSON.stringify({status:'compatibility-evidence-or-scope-gate',privateDetailsWithheld:true,permissionsGranted:0}));process.exitCode=1;}return;}
   if(mode==='demo-browser-debug'){console.log(JSON.stringify(await demonstrateVisualDebug(file)));return;}
   if(mode==='browser-debug-preview'){
     try{console.log(JSON.stringify(await previewBrowserDebug(file)));}catch{console.log(JSON.stringify({status:'local-debug-preview-gate',privateDetailsWithheld:true}));process.exitCode=1;}return;
