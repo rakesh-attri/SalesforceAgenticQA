@@ -23,6 +23,7 @@ import { preflightReviewedBrowser } from './browser-guard.js';
 import { attachReviewedBrowserContext } from './browser-runtime.js';
 import { SalesforceClient } from '../salesforce/client.js';
 import {requireLightningReadiness} from './lightning-proof.js';
+import {loadPreferredChromeProfile,authorizeDedicatedChromeProfile} from './dedicated-chrome-profile.js';
 export const DedicatedExecutionSchema=z.object({spec:SpecSchema,org:OrgSnapshotSchema,permission:z.string().min(1),data:DedicatedRunSchema,ui:DedicatedUiReviewSchema}).strict();
 export type DedicatedExecution=z.infer<typeof DedicatedExecutionSchema>;
 export interface DedicatedExecutionServices {
@@ -42,6 +43,8 @@ export async function runDedicatedWorkflow(raw:unknown,s:DedicatedExecutionServi
   const policy=EnvironmentPolicySchema.parse(await s.policy()),identity=await s.identity(),ui=reviewDedicatedUi(input.ui,policy,identity);
   const staticReview=s.staticReview?authorizeStaticReview(s.staticReview,policy,identity,input.spec.version):undefined;
   const browserReview=s.browserReview?BrowserReviewSchema.parse(s.browserReview):undefined;
+  const nativeProfile=browserReview?await loadPreferredChromeProfile(browserReview):undefined;
+  if(nativeProfile&&browserReview)authorizeDedicatedChromeProfile(nativeProfile,browserReview,policy,identity);
   if(browserReview&&ui.plan.workflows.some(workflow=>workflow.apiAssertions.length))throw Error('Reviewed browser workflows use independent scoped SOQL, not unguarded API requests');
   if(browserReview?.plan.engineProfileHash)requireLightningReadiness(s.history,browserReview,s.validation??'unclassified');
   if(browserReview||ui.plan.browserSessionPolicyHash){if(!browserReview||browserPlanHash(browserReview.plan)!==ui.plan.browserSessionPolicyHash||browserReview.plan.ownedDataPlanHash!==dedicatedPlanHash(run.plan)||browserReview.plan.runId!==run.plan.runId||browserReview.plan.sourceVersion!==input.spec.version||browserReview.plan.budgets.maxMs<ui.plan.maxMs)throw Error('Browser execution policy is not part of the exact reviewed lifecycle');authorizeBrowserSession(browserReview,policy,identity,browserReview.plan);if(ui.plan.exploration)throw Error('Reviewed browser exploration requires a separate action-broker adapter');}
@@ -69,7 +72,7 @@ export async function runDedicatedWorkflow(raw:unknown,s:DedicatedExecutionServi
     const guard:DedicatedGuard={policy,identity,origins:[...new Set(workflows.map(w=>w.origin))],documents:workflows.map(w=>new URL(w.path,w.origin).href),owned:owned.map(r=>({object:r.object as 'Account'|'Contact',id:r.id,display:r.object==='Account'?run.plan.creates.Account.Name:run.plan.creates.Contact.LastName})),expiresAt:new Date(Math.min(Date.parse(policy.approval.expiresAt),Date.parse(run.approval.expiresAt),Date.parse(ui.approval.expiresAt))).toISOString(),staticReview};
     const config=resolve(root,'guard.json');await saveJson(config,browserReview?{review:browserReview,parent:policy,statePath:session.statePath,ownershipJournal:s.ownershipJournal??'.state/dedicated-qa.sqlite'}:guard);
     const binding={runId:run.plan.runId,planHash:dedicatedPlanHash(run.plan),policyHash:run.plan.policyHash,sourceVersion:input.spec.version};
-    const installBoundary=browserReview?(s.browserBoundary??(async(context,onBlocked)=>{const current=await s.identity();await attachReviewedBrowserContext(context,{review:browserReview,parent:policy,identity:current,history:s.history,statePath:session.statePath,apiOrigin:s.apiOrigin,records:resolveBrowserRecords(browserReview.plan,s.history),onBlocked});})):undefined;
+    const installBoundary=browserReview?(s.browserBoundary??(async(context,onBlocked)=>{const current=await s.identity();await attachReviewedBrowserContext(context,{review:browserReview,parent:policy,identity:current,history:s.history,statePath:session.statePath,apiOrigin:s.apiOrigin,records:resolveBrowserRecords(browserReview.plan,s.history),onBlocked,dedicatedChromeProfile:nativeProfile});})):undefined;
     selectors=await(s.observe??observeDedicatedSelectors)({guard,workflows,statePath:session.statePath,maxMs:ui.plan.maxMs,binding,...(installBoundary?{installBoundary}:{})});await saveJson(join(root,'selector-evidence.json'),selectors);
     selectorReview=reviewObservedSelectors(selectors,binding,workflows,guard.documents);stages.push('approved-selectors-observed-and-source-reviewed');
     if(ui.plan.exploration){if(!s.choose)throw Error('Approved exploration chooser unavailable');exploration=await exploreDedicatedOwned({guard,workflows,statePath:session.statePath,maxSteps:ui.plan.exploration.maxSteps,maxMs:ui.plan.maxMs,maxActions:ui.plan.maxActions,choose:s.choose,verify:(object,id)=>s.data.verifyOwned(run,object,id)});if(exploration.status!=='passed')throw Error('Dedicated exploration failed');stages.push('bounded-approved-ai-exploration-complete');}

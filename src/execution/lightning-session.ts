@@ -20,6 +20,7 @@ import {recordLightningReadiness} from './lightning-proof.js';
 import type {DebugReason} from './browser-debug.js';
 import {setTimeout as delay} from 'node:timers/promises';
 import {DedicatedSessionError} from './dedicated-browser.js';
+import {loadPreferredChromeProfile} from './dedicated-chrome-profile.js';
 
 type Attachment=Awaited<ReturnType<typeof attachReviewedBrowserContext>>;
 type ReferenceResult={references:BrowserRecord[];privateDisplays:Array<{object:'Account'|'Contact';id:string;display:string}>;proof:unknown};
@@ -136,7 +137,7 @@ export class LightningSession{
       try{return await this.attached.actions.execute(approved,step,async()=>{this.lastView=undefined;const item=approved.steps[step],locator=reviewedLocator(this.page!,item.locator,this.selected!.display);if(item.action==='click')await locator.click({timeout:Math.max(1,this.attached.boundary.budget.remaining()-this.attached.visual.reserveMs)});else await locator.fill(item.value!,{timeout:Math.max(1,this.attached.boundary.budget.remaining()-this.attached.visual.reserveMs)});return{status:'reviewed-step-executed',step};});}catch(error){await this.capture('test-failure');throw error;}
     });
   }
-  status(){return{sessionId:this.attached.sessionId,policyHash:browserPlanHash(this.input.review.plan),validation:this.attached.validation,closed:this.closed,commands:this.commands,planes:{platform:'existing-reviewed-network-policy',observation:'exact-record-read-only',interactions:'separate-owned-workflow-broker',mutations:'separate-factory-service-only'},nativeMcpConnected:!!this.nativeClient};}
+  status(){return{sessionId:this.attached.sessionId,policyHash:browserPlanHash(this.input.review.plan),validation:this.attached.validation,closed:this.closed,commands:this.commands,planes:{platform:this.input.dedicatedChromeProfile?'explicitly-approved-native-platform-risk':this.input.normalNetworkingReceipt?'explicit-normal-comparison':'existing-reviewed-network-policy',observation:'exact-record-read-only',interactions:'separate-owned-workflow-broker',mutations:'separate-factory-service-only'},nativeMcpConnected:!!this.nativeClient};}
   private closing?:Promise<unknown>;
   close():Promise<unknown>{
     return this.closing??=(async()=>{
@@ -145,13 +146,14 @@ export class LightningSession{
       let referenceUnchanged:boolean|'unavailable'='unavailable';try{const after=await this.input.verifyReferences(),schema=z.object({referenceVersions:z.array(z.string().regex(/^[a-f0-9]{64}$/)).length(this.references.references.length).min(1)}),before=schema.safeParse(this.references.proof),next=schema.safeParse(after.proof);if(before.success&&next.success)referenceUnchanged=fingerprint(before.data.referenceVersions)===fingerprint(next.data.referenceVersions);}catch{/* Do not turn an unavailable independent check into a pass. */}
       this.input.history.db.prepare("UPDATE browser_execution_sessions SET status='observed' WHERE policy=? AND nonce=?").run(browserPlanHash(this.input.review.plan),this.attached.sessionId);
       let readinessProof:unknown={status:'not-established'};
-      if(!this.input.normalNetworkingReceipt&&this.lastView?.status==='rendered-reviewed-view'&&referenceUnchanged===true&&!this.input.review.plan.ownedDataPlanHash)try{readinessProof=recordLightningReadiness(this.input.history,this.input.review,{...this.lastView,independentReferenceUnchanged:true,validation:this.attached.validation,visualEvidenceHash:visual.status==='local-debug-evidence'&&this.attached.visual.entries.some(e=>e.status==='captured'&&e.reason==='reviewed-view')?visual.manifestHash:undefined});}catch{/* Expired or incomplete evidence never becomes a proof. */}
-      return{...this.status(),browserVersion:this.browser.version(),consoleCategories:this.consoleCategories,networkMode:this.input.normalNetworkingReceipt?'explicit-normal-comparison':'guarded',metrics,visual,referenceUnchanged,readinessProof,recordWrites:0,generatedLiveTests:0,learningPublished:false};
+      if(!this.input.normalNetworkingReceipt&&this.lastView?.status==='rendered-reviewed-view'&&referenceUnchanged===true&&!this.input.review.plan.ownedDataPlanHash)try{readinessProof=recordLightningReadiness(this.input.history,this.input.review,{...this.lastView,independentReferenceUnchanged:true,profileVerified:!!this.input.dedicatedChromeProfile,validation:this.attached.validation,visualEvidenceHash:visual.status==='local-debug-evidence'&&this.attached.visual.entries.some(e=>e.status==='captured'&&e.reason==='reviewed-view')?visual.manifestHash:undefined});}catch{/* Expired or incomplete evidence never becomes a proof. */}
+      return{...this.status(),browserVersion:this.browser.version(),consoleCategories:this.consoleCategories,networkMode:this.input.dedicatedChromeProfile?'DEDICATED_QA_NORMAL_CHROME':this.input.normalNetworkingReceipt?'explicit-normal-comparison':'guarded',metrics,visual,referenceUnchanged,readinessProof,recordWrites:0,explicitFrameworkRecordWrites:0,nativeBackgroundEffects:this.input.dedicatedChromeProfile||this.input.normalNetworkingReceipt?'not-enumerated':'contract-restricted',generatedLiveTests:0,learningPublished:false};
     })();
   }
 }
 
-export async function openLiveLightningSession(input:{review:unknown;parent:unknown;history:History;statePath:string;view?:unknown;normalNetworkingReceipt?:unknown}){
+export async function openLiveLightningSession(input:{review:unknown;parent:unknown;history:History;statePath:string;view?:unknown;normalNetworkingReceipt?:unknown;dedicatedChromeProfile?:unknown}){
   const review=BrowserReviewSchema.parse(input.review),api=await SalesforceClient.connectReviewedBrowser(input.parent,review,input.history);
-  return LightningSession.open({...input,review,apiOrigin:api.apiOrigin,identity:()=>api.identity(),verifyReferences:()=>api.verifyReferences()});
+  const profile=input.dedicatedChromeProfile??await loadPreferredChromeProfile(review);
+  return LightningSession.open({...input,dedicatedChromeProfile:profile,review,apiOrigin:api.apiOrigin,identity:()=>api.identity(),verifyReferences:()=>api.verifyReferences()});
 }

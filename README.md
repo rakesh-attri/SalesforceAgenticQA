@@ -1,5 +1,7 @@
 # SalesforceAgenticQA
 
+The [dedicated native Chrome profile and workflow intelligence](docs/DEDICATED_CHROME_WORKFLOW_INTELLIGENCE.md) extend existing services. Native networking requires exact operator risk/access authorization; normal Production remains guarded. A fresh live Chrome/MCP observation verified the Account name and Related/Details elements with unchanged scoped pre/post hashes, but a persistent busy signal prevented stability readiness. Source-linked multi-object workflow models generate guarded TypeScript and coverage proposals through existing planning/RAG/history. No business lifecycle or verified learning is inferred.
+
 Salesforce-specialized QA framework: **Specs In → Tests Out → Failure Intelligence → Verified Learning**. Windows, TypeScript and headless Playwright; all 15 responsibilities and the complete P0/P1/P2 roadmap remain in scope.
 
 The [shared Lightning session architecture](docs/LIGHTNING_SESSION_ARCHITECTURE.md) separates platform initialization, read-only observation/discovery, approved agent interactions and business mutations. Direct Playwright, generated tests and the restricted Playwright MCP gateway share existing verification and network guards. Engine versions and reviewed rendering contracts are hash-bound. Unknown Aura operations stay blocked.

@@ -15,6 +15,7 @@ import { verifyActualContext, attachReviewedBrowserContext } from './browser-run
 
 import { proveReviewedBrowserBuild } from './browser-build.js';
 import {attachBrowserDebug,type DebugReason} from './browser-debug.js';
+import {loadPreferredChromeProfile} from './dedicated-chrome-profile.js';
 export { proveReviewedBrowserBuild } from './browser-build.js';
 export async function preflightReviewedBrowser(raw: unknown, parent: unknown, identity: EnvironmentIdentity, statePath: string, apiOrigin: string) {
   const review = BrowserReviewSchema.parse(raw), authority = authorizeBrowserSession(review, parent, identity, review.plan), browser = await launchLocalBrowser();
@@ -53,7 +54,7 @@ export async function installDedicatedGuardFile(context: BrowserContext, path: s
     const client = await SalesforceClient.connectReviewedBrowser(parent, review, history), identity = await client.identity(), references = await client.verifyReferences();
     // Factory ownership is checked again in each actual generated-test context.
     if (JSON.stringify(resolveBrowserRecords(review.plan, history)) !== JSON.stringify(references.references)) throw Error('Generated browser ownership changed');
-    const attached=await attachReviewedBrowserContext(context,{review,parent,identity,history,records:references.references,statePath:config.statePath,apiOrigin:client.apiOrigin});
+    const attached=await attachReviewedBrowserContext(context,{review,parent,identity,history,records:references.references,statePath:config.statePath,apiOrigin:client.apiOrigin,dedicatedChromeProfile:await loadPreferredChromeProfile(review)});
     installReviewedDebugHooks(context,attached,references,review.plan.runId);
     actionBrokers.set(context,attached.actions); context.once('close', () => { actionBrokers.delete(context);history.close(); });
   } catch { history.close(); throw Error('Reviewed generated browser context failed its identity, build, ownership or budget gates'); }

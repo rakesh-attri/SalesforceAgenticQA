@@ -30,7 +30,7 @@ export async function observeLightningView(page:Page,input:{review:BrowserReview
     return count===1&&await locator.isVisible()&&(!exactName||await locator.textContent()===input.name);
   };
   const absent=async(selector:z.infer<typeof Selector>)=>{const locator=reviewedLocator(page,selector,input.name);for(let i=0;i<await locator.count();i++)if(await locator.nth(i).isVisible())return false;return true;};
-  let stableSince:number|undefined,last={name:false,content:0,busyClear:false,faultsClear:false};
+  let stableSince:number|undefined,last={name:false,content:0,busyClear:false,faultsClear:false},busyEvidence={reviewedBusyClear:false,nativeProgressbars:0,nativeAriaBusy:0,nativeSpinners:0,nativeFaults:0,inspectionBound:1000};
   while(budget.remaining()>Math.max(100,input.reserveMs??0)){
     budget.check();
     const name=await unique(view.recordName,true),nameElement=name?await reviewedLocator(page,view.recordName,input.name).elementHandle({timeout:Math.min(250,budget.remaining())}):null;
@@ -38,9 +38,13 @@ export async function observeLightningView(page:Page,input:{review:BrowserReview
     try{content=await Promise.all(view.content.map(async selector=>await unique(selector)&&!!nameElement&&await reviewedLocator(page,selector,input.name).evaluate((node,recordName)=>node!==recordName&&!node.contains(recordName)&&!recordName.contains(node),nameElement)));}
     finally{await nameElement?.dispose();}
     last={name,content:content.filter(Boolean).length,busyClear:(await Promise.all(view.busy.map(absent))).every(Boolean),faultsClear:(await Promise.all(view.faults.map(absent))).every(Boolean)};
+    // Native Lightning also uses spinners/alerts without the reviewed role DSL.
+    const signals=await page.locator('[role="progressbar"],[aria-busy="true"],.slds-spinner,[role="alert"],.forcePageError').evaluateAll(elements=>elements.slice(0,1000).filter(e=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e);return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden';}).map(e=>({progressbar:e.matches('[role="progressbar"]'),ariaBusy:e.matches('[aria-busy="true"]'),spinner:e.matches('.slds-spinner'),busy:e.matches('[role="progressbar"],[aria-busy="true"],.slds-spinner'),fault:e.matches('[role="alert"],.forcePageError')})));
+    busyEvidence={reviewedBusyClear:last.busyClear,nativeProgressbars:signals.filter(s=>s.progressbar).length,nativeAriaBusy:signals.filter(s=>s.ariaBusy).length,nativeSpinners:signals.filter(s=>s.spinner).length,nativeFaults:signals.filter(s=>s.fault).length,inspectionBound:1000};
+    last.busyClear=last.busyClear&&!signals.some(s=>s.busy);last.faultsClear=last.faultsClear&&!signals.some(s=>s.fault);
     const ready=last.name&&last.content===view.content.length&&last.busyClear&&last.faultsClear;
-    if(ready){stableSince??=Date.now();if(Date.now()-stableSince>=view.stableMs)return{status:'rendered-reviewed-view' as const,viewHash:hash,checks:last,stableMs:view.stableMs,assertionsChanged:false};}else stableSince=undefined;
+    if(ready){stableSince??=Date.now();if(Date.now()-stableSince>=view.stableMs)return{status:'rendered-reviewed-view' as const,viewHash:hash,checks:last,busyEvidence,stableMs:view.stableMs,assertionsChanged:false};}else stableSince=undefined;
     await new Promise(resolve=>setTimeout(resolve,Math.min(100,budget.remaining())));
   }
-  return{status:'not-rendered' as const,reason:'reviewed-content-or-stability-not-observed',viewHash:hash,checks:last,assertionsChanged:false};
+  return{status:'not-rendered' as const,reason:'reviewed-content-or-stability-not-observed',viewHash:hash,checks:last,busyEvidence,assertionsChanged:false};
 }
