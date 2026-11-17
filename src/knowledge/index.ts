@@ -12,6 +12,7 @@ export function chunks(text:string,max=1200) {
 }
 const tokens=(s:string)=>new Set(s.toLowerCase().match(/[a-z0-9_]+/g)??[]);
 export class KnowledgeIndex {
+  assertLocalOnly(){if(this.embed||this.remote)throw Error('This knowledge path is local-only; external destinations require a separate reviewed ingestion flow');}
   constructor(private history:History,private embed?:Embed,private remote?:SemanticKnowledge,private embeddingSpace='legacy-injected') {
     history.db.exec('CREATE TABLE IF NOT EXISTS knowledge(org TEXT,permission TEXT,id TEXT,version TEXT,payload TEXT NOT NULL,vector TEXT,PRIMARY KEY(org,permission,id,version)); CREATE TABLE IF NOT EXISTS knowledge_schema(org TEXT,permission TEXT,version TEXT,PRIMARY KEY(org,permission))');
     history.db.exec('CREATE TABLE IF NOT EXISTS knowledge_vector_spaces(org TEXT,permission TEXT,id TEXT,version TEXT,space TEXT,PRIMARY KEY(org,permission,id,version))');

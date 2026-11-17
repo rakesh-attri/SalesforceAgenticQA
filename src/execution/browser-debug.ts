@@ -110,3 +110,15 @@ export async function attachBrowserDebug(info:Pick<TestInfo,'attach'>,entry:Awai
   const root=await debugRoot(runId),path=join(root,entry.file);if((await lstat(path)).isSymbolicLink()||digest(await readFile(path))!==entry.sha256)throw Error('Debug attachment integrity failed');
   await info.attach('sfqa-masked-browser-debug',{path,contentType:'image/png'});
 }
+
+// Synthetic loopback applications cannot mint native Salesforce proof. Reuse
+// the existing masked manifest/store/preview format with fixed offline labeling.
+export async function captureFixtureApplicationDebug(page:Page,input:{runId:string;sessionId:string;policyHash:string;sequence:number;remainingMs:number;remainingBytes:number;entries:unknown[]}){
+ const url=new URL(page.url());if(!['127.0.0.1','localhost','[::1]'].includes(url.hostname)||!['http:','https:'].includes(url.protocol)||input.sequence>4||input.remainingMs<100||input.remainingBytes<1)throw Error('Bounded synthetic loopback capture required');
+ const credentials=[...environmentSecrets(),...(await page.context().cookies()).filter(c=>/sid|token|session|auth/i.test(c.name)).map(c=>c.value)].filter(s=>s.length>=6);if(credentials.length>100)throw Error('Fixture masking budget exceeded');
+ const mask=[page.locator('input,textarea,[contenteditable],iframe,canvas,video,img,[data-sfqa-sensitive],[data-private]'),page.getByText(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|Bearer\s+\S+|-----BEGIN|(?:token|password|secret)\s*[:=]\s*\S+/i),...credentials.map(value=>page.getByText(value,{exact:false}))],buffer=await page.screenshot({type:'png',fullPage:false,timeout:Math.min(1500,input.remainingMs),mask,maskColor:'#000000',caret:'hide',animations:'allow',scale:'css'});
+ if(buffer.length>input.remainingBytes)throw Error('Fixture screenshot byte budget exceeded');
+ const root=await debugRoot(input.runId),file=`${input.sessionId}-${String(input.sequence).padStart(2,'0')}.png`,entry=DebugEntrySchema.parse({sequence:input.sequence,reason:'operator',status:'captured',category:'none',elapsedMs:0,file,sha256:digest(buffer),bytes:buffer.length,blocked:{requests:0,denied:0,reasons:{}},masking:'best-effort-known-elements',warning});
+ await writeFile(join(root,file),buffer,{flag:'wx',mode:0o600});const manifest=DebugManifestSchema.parse({version:1,runId:input.runId,sessionId:input.sessionId,policyHash:input.policyHash,validation:'offline-mocked-salesforce',entries:[...input.entries,entry],localOnly:true,automaticallyUploaded:false,warning});await writeFile(join(root,`${input.sessionId}.json`),JSON.stringify(manifest,null,2),{mode:0o600});
+ return{entry,manifest:relative(resolve('.'),join(root,`${input.sessionId}.json`)).replaceAll('\\','/'),localOnly:true};
+}

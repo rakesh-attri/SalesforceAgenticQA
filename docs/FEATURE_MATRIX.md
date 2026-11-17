@@ -1,5 +1,24 @@
 # Current capability matrix
 
+## Application discovery and workflow understanding - current increment
+
+Continues `dbe3845` on `feature/verified-discovery`. This adds to the cumulative P0/P1/P2 registry and all 15 responsibilities below. [APPLICATION_INTELLIGENCE.md](APPLICATION_INTELLIGENCE.md) documents commands, contracts and remaining autonomy. Package 012 remains declined/inactive; no replacement live data package or live session was prepared.
+
+| Capability | Verification class / implementation | Remaining boundary |
+|---|---|---|
+| Source-backed application studies | Offline verified: immutable scoped studies reuse metadata/graph fingerprints and host-journal page receipts; component, Flow, Apex/LWC, validation and access evidence stays source-linked | Metadata is not runtime behavior, business success or effective sharing |
+| Page layouts | Mock verified: bounded public Full/View UI API adapter, exact API identity, layout-only field graph edges, denied/malformed/foreign/budget handling | New adapter not executed live; dynamic visibility/custom layouts unknown |
+| Candidate / observed multi-object journeys | Offline browser verified: actual Account → Contact fixture navigation; reverse remains suggested; unsupported relationships and missing outcomes stay questions | Cached Salesforce pages show no cross-object navigation; four metadata candidates are unconfirmed |
+| Bounded application exploration | Real installed headless Chrome plus same-context Playwright MCP on synthetic fixtures; exact reviewed navigation, current-page action references, unique open-shadow locators, tabs/actions/related-list structures and state/error/loading facts | No new live exploration grant or arbitrary MCP action; closed components and inspection truncation stay unknown |
+| Masked local application evidence | Real fixture screenshots reuse existing debug manifest/store/preview; four viewport captures, bounded time/bytes and local-only handling | Best-effort masking, no AI/image upload or live readiness minted |
+| Intelligent operator review | Offline verified: prioritized/grouped questions, immutable source-scoped study, append-only named accept/reject/correct answers with exact supersession | Operator text is a reviewed requirement, not an executed fact or permission grant |
+| Compiled workflow and test integration | Offline verified: exact states/conditions/transitions, supported locators/actions/components/outcomes, contradiction and prerequisite gates; separate exact-model review; two UI and one independent API proposal in the new demo | No Salesforce proposal execution; missing visual/permission/business oracles remain blocked; prior seven-category design preserved |
+| Knowledge classes and invalidation | Offline verified: observed facts / reviewed requirements / proposed hypotheses / verified lessons separated; source changes and answer supersession deprecate dependents, persona/org isolation; external adapters rejected on this local-only path | External Gemini/embeddings/Chroma require existing separate minimized payload review; no new verified lesson |
+| Application Intelligence HTML/JSON | Offline verified: workflow SVG, source versions/review provenance, fields/record types, impact/risk, grouped questions, coverage, proposals and explicit execution readiness | Planning evidence is not test execution coverage |
+| Actual Salesforce/Gemini health this increment | Not executed; cached Salesforce evidence reused locally only | Prior live validation preserved as historical; no fresh authentication/discovery/model or full E2E claim |
+
+Verified checks: **253/253 unit/integration, 3/3 headless, typecheck and seven demos**; final report changes additionally passed 16 focused tests and actual local Chrome rendering inspection. See the current implementation report for logs and artifact paths. The cached report has two historical rendered pages, four suggested relationships, zero observed transitions and 12 grouped review questions; it does not turn earlier 52 test-design questions into answered requirements. Next dependency: goal-directed selection of already approved discovery steps, checkpointed evidence acquisition and reproducible defect investigation, then separately authorized live navigation and evidence-backed recovery. No new live data package is in scope.
+
 ## Autonomous test design and impact intelligence - current increment
 
 Continues `bcbf068`; all 15 owners and every earlier P0/P1/P2 requirement remain cumulative. The operator **declined package 012**. It stays inactive; this increment prepares no replacement live factory/run package and performs no live Salesforce record or browser operation. [TEST_DESIGN_INTELLIGENCE.md](TEST_DESIGN_INTELLIGENCE.md) documents behavior, commands and remaining autonomy gaps.

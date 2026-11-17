@@ -5,6 +5,8 @@ import {preferChromeForNewReview} from './execution/dedicated-chrome-profile.js'
 import {demonstrateWorkflowIntelligence} from './demos/workflow-intelligence.js';
 import {demonstrateTestDesign} from './demos/test-design.js';
 import {runTestDesign} from './agents/workflow-cli.js';
+import {runApplicationIntelligence} from './agents/workflow-cli.js';
+import {demonstrateApplicationIntelligence} from './demos/application-intelligence.js';
 import {runWorkflowReview,runWorkflowEvidenceReview} from './agents/workflow-cli.js';
 import type { z } from 'zod';
 import { Command } from '@langchain/langgraph';
@@ -41,6 +43,7 @@ import { groundedPlanning } from './agents/grounded.js';
 import { createHash } from 'node:crypto';
 import { IngestionQueue,IngestionPolicySchema } from './knowledge/ingestion-queue.js';
 import { discoverDeepIntelligence } from './agents/deep-discovery.js';
+import { discoverApplicationLayouts } from './agents/application-layouts.js';
 import { intelligentSpecPlan } from './agents/spec-intelligence.js';
 import { benchmarkRetrieval } from './knowledge/benchmarks.js';
 import { exploreFixture } from './agents/fixture-explorer.js';
@@ -92,6 +95,8 @@ async function reviewedKnowledge(history:History,remoteApproved=false) {
   return new KnowledgeIndex(history,embed,remote,embeddingSpace);
 }
 async function main() {
+  if(mode==='demo-application-intelligence'){console.log(JSON.stringify(await demonstrateApplicationIntelligence()));return;}
+  if(['application-discover','application-review','application-compile','application-approve-model','application-index'].includes(mode)){try{console.log(JSON.stringify(await runApplicationIntelligence(mode,file)));}catch{console.log(JSON.stringify({status:'application-source-or-review-gate',privateDetailsWithheld:true,externalRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode==='workflow-evidence'){try{console.log(JSON.stringify(await runWorkflowEvidenceReview(file)));}catch{console.log(JSON.stringify({status:'workflow-evidence-source-gate',privateDetailsWithheld:true,externalRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode==='workflow-plan'){try{console.log(JSON.stringify(await runWorkflowReview(file)));}catch{console.log(JSON.stringify({status:'workflow-source-review-gate',privateDetailsWithheld:true,externalRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode==='demo-workflow-intelligence'){console.log(JSON.stringify(await demonstrateWorkflowIntelligence()));return;}
@@ -309,6 +314,7 @@ async function main() {
     const story=StorySchema.parse(await loadJson(file));const client=await SalesforceClient.connect();
     let result=await discoverOrgIntelligence(client,story,undefined,{allowNonSandboxRead:process.argv.includes('--allow-non-sandbox-read')});
     if(process.argv.includes('--deep')){const deep=await discoverDeepIntelligence(client,result);result=deep.intelligence;await saveJson('.state/component-graph.json',deep.graph);console.log(JSON.stringify({dependencyGraph:{nodes:deep.graph.nodes.length,edges:deep.graph.edges.length,unknowns:deep.graph.unknowns.length}}));}
+    if(process.argv.includes('--layouts')){const layouts=await discoverApplicationLayouts(client,result);result=layouts.intelligence;await saveJson('.state/component-graph.json',layouts.graph);}
     const version=intelligenceVersion(result),root=`.state/org-intelligence/${version}`;
     await saveJson(`${root}/intelligence.json`,result);await saveJson('.state/org-intelligence-latest.json',result);
     await new SnapshotStore().save(result.snapshot);await saveJson('.state/org-snapshot.json',result.snapshot);
