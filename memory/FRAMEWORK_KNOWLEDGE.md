@@ -1,5 +1,15 @@
 # Framework Knowledge Base
 
+## Lifecycle execution preparation - November 17
+
+- Reuse verified Lightning readiness instead of reopening loading investigations. Fresh explicitly approved 010/011 checks passed with exact identities, unchanged reviewed views and scoped pre/post equality, 197 requests each. These observation grants do not permit factories or renew consumed sessions.
+- An allowed API origin is not an observed Lightning record-page origin. Old inactive 009 proposals used the former and are preserved as history; new 012 proposals use the actual source-observed Lightning origin. Direct record-ID navigation does not prove a cross-object UI transition.
+- Text-name locators and literal synthetic expected names remain unchanged. Explicit Contact Name=synthetic LastName and same-run AccountId verification rejects unexpected full names/relationships instead of adapting assertions. Foreign records remain outside verification/cleanup ownership. Regression: dedicated-qa.test.ts.
+- Two independently near-200-request pages should not share a single 200-request selector context. New opt-in per-workflow observation needs separately approved session count; it never increases old quotas. Existing generated runner remains the executor. Source-cited Related/Details visibility checks generate actual assertions. Regression: dedicated-pipeline.test.ts and existing browser pipeline.
+- A passing test/cleanup is execution history, not a verified Salesforce lesson. Legacy publishVerifiedExecutionLesson cannot bypass recorded failure, reviewed cause/fix and passing-regression gates. Tests now explicitly reject automatic promotion and preserve confirmed-defect behavior.
+- reportingLabs completes before cleanup. Add a contained local post-cleanup HTML/JSON appendix without manufacturing vendor rows or inventing an API; retain actual statuses, API proof hashes, separate absence checks, unknowns and local masked evidence links. A finalization failure prevents an overall passing lifecycle.
+- Full offline verification: 229 unit/integration, three headless tests, typecheck and all four demos passed. Separate lifecycle authorization did not arrive before the Account receipt expired at 9:55:57 a.m. IST. Package 012 remains inactive; no factory or generated live test ran. Do not apply a late reply, renew receipts or reuse consumed 010/011 slots. Fresh unused readiness and a newly hash-bound final review are required. No verified business lesson or fresh Gemini/embedding/Chroma result is inferred.
+
 ## Verified viewport readiness - 2026-11-16 IST
 
 - Exact operator-approved 007/008 observations both passed live `rendered-reviewed-view` before original expiry. Headless installed Chrome 157 and private MCP shared each isolated context; fresh identity/build/app, name/Related/Details and one-second stability passed. Account 197 requests; Contact 199; zero framework denials; four local images each; scoped pre/post hashes equal. Host journal contains separate object/display-field-bound receipts. No factory, adoption, framework write, generated live test or business learning occurred.

@@ -10,6 +10,6 @@ export async function installDedicatedGuardFile(context:BrowserContext,path:stri
 export async function installFixtureResponses(context:BrowserContext,g:DedicatedGuard) {
   await context.route('**/*',async route=>{const u=new URL(route.request().url()),record=g.owned.find(r=>u.pathname===`/lightning/r/${r.object}/${r.id}/view`);if(!record)return route.abort();
     const text=(record.display??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
-    return route.fulfill({status:200,contentType:'text/html',body:`<!doctype html><h1>${text}</h1><div data-testid="owned-detail">Synthetic owned ${record.object}</div>`});
+    return route.fulfill({status:200,contentType:'text/html',body:`<!doctype html><h1>${text}</h1><div role="tab">Related</div><div role="tab">Details</div><div data-testid="owned-detail">Synthetic owned ${record.object}</div>`});
   });
 }

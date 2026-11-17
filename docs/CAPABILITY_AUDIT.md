@@ -1,5 +1,9 @@
 # Capability audit and agent ownership
 
+## First lifecycle continuation - November 17
+
+All 15 owners and cumulative P0/P1/P2 remain. Explorer/Coordinator completed fresh explicitly approved Account/Contact no-create proofs; Reviewer retained original contracts and kept the separate lifecycle inactive when authorization did not arrive before receipt expiry. Data made no live reservation/write/adoption. Generator adds source-cited unique visible checks; Data verifies synthetic Contact display and exact same-run AccountId; Coordinator records API/absence proof and appends local lifecycle outcomes to actual reportingLabs output after cleanup. Learning no longer publishes a verified lesson from a pass; existing confirmed failure/cause/fix/regression gates are preserved. Analyst/Planner/Risk/RAG/Investigator/Healer/Autonomous/MCP and enterprise breadth remain as previously implemented. Offline: 229 unit/integration, three headless, typecheck and all four demos pass. No real full lifecycle or new Gemini/Chroma/verified business lesson is claimed. See ACCOUNT_CONTACT_LIFECYCLE.md for the exact block and next priorities.
+
 ## Approved viewport execution - 007/008
 
 All 15 responsibilities and original P0/P1/P2 registry remain. Explorer/Execution Coordinator completed actual Account and Contact scoped readiness through installed headless Chrome and shared MCP, with fresh identity/build/app, stable name/content, complete bounded inspection and scoped unchanged checks. Reviewer retained exact source-bound viewport rules and one-session/expiry limits. Investigator distinguishes the still-busy deferred Account lists from blocking loaders; it does not label backend behavior complete or claim a Salesforce defect. Test Data reserved/created/adopted/deleted nothing. Knowledge imports host-journal locator sources without automatic source approval/publication; Learning published no business lesson.

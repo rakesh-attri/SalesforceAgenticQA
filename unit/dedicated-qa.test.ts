@@ -5,6 +5,15 @@ import { dedicatedFixture } from './support/dedicated.js';
 import { authorizeEnvironment,environmentHash,EnvironmentDefinitionSchema } from '../src/execution/environment.js';
 import { mutationHash,type Mutation } from '../src/salesforce/approval.js';
 import { SalesforceClient } from '../src/salesforce/client.js';
+test('owned Contact display and exact Account relationship must both match; foreign IDs remain denied',async()=>{
+ const h=new History(':memory:'),f=dedicatedFixture(h,'display-proof');try{await f.data.open(f.input.data,f.org);await f.data.setup(f.input.data);const contact=f.data.owned(f.input.data).find(r=>r.object==='Contact')!,row=f.records.get(contact.id)!;
+  assert.equal((await f.data.verifyOwnedContactDisplay(f.input.data,contact.id)).relationshipVerified,true);
+  await assert.rejects(f.data.verifyOwnedContactDisplay(f.input.data,'003999999999999'),/outside/);
+  row.Name='Unexpected full name';await assert.rejects(f.data.verifyOwnedContactDisplay(f.input.data,contact.id),/display/);delete row.Name;
+  const parent=row.AccountId;row.AccountId='001999999999999';await assert.rejects(f.data.verifyOwnedContactDisplay(f.input.data,contact.id),/payload changed/);assert.equal(f.writes.length,2);row.AccountId=parent;
+  await f.data.cleanup(f.input.data);assert.equal((await f.data.verifyCleanup(f.input.data)).absent,2);f.data.finish(f.input.data);
+ }finally{h.close();}
+});
 import { allowDedicatedRequest,reviewDedicatedUi,dedicatedUiHash } from '../src/execution/dedicated-browser.js';
 import { proposeDedicatedPlan,dedicatedPlanHash } from '../src/salesforce/dedicated-qa.js';
 test('dedicated mode requires named exact org/user policy and never leaks into normal Production/sandbox modes',async()=>{

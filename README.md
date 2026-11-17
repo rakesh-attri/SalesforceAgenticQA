@@ -1,5 +1,7 @@
 # SalesforceAgenticQA
 
+The [first Account/Contact lifecycle preparation](docs/ACCOUNT_CONTACT_LIFECYCLE.md) now includes source-cited visible content checks, strict synthetic Contact Name/AccountId verification, separate bounded selector contexts and a post-cleanup appendix to actual reportingLabs output. Passing execution publishes no verified lesson automatically. Fresh November 17 Account/Contact no-create checks passed; the separate full lifecycle stayed inactive when its readiness receipt expired before final authorization. See the current feature matrix for exact evidence and next operator action.
+
 The latest separately approved headless Chrome/MCP observations passed **Account and Contact visible-view readiness**, including exact identity, name, Related/Details, one-second stability and unchanged scoped pre/post checks. [Stable readiness evidence](docs/LIGHTNING_STABLE_READINESS.md) explains the three off-viewport Account busy nodes and the reviewed scope. Native networking requires exact operator risk/access authorization; normal Production remains guarded. The fresh Account/Contact lifecycle is prepared for separate review and has not executed.
 
 Salesforce-specialized QA framework: **Specs In → Tests Out → Failure Intelligence → Verified Learning**. Windows, TypeScript and headless Playwright; all 15 responsibilities and the complete P0/P1/P2 roadmap remain in scope.

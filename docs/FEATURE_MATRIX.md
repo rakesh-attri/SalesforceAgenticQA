@@ -1,5 +1,21 @@
 # Current capability matrix
 
+## First live lifecycle preparation - November 17
+
+Continues `c8b43ff`; all cumulative requirements below remain. [ACCOUNT_CONTACT_LIFECYCLE.md](ACCOUNT_CONTACT_LIFECYCLE.md) describes the reviewed execution scope and next intelligence priorities.
+
+| Requirement | Current verification | Remaining boundary |
+|---|---|---|
+| Fresh Account/Contact preflight | **Live Salesforce verified** | Explicit scopes 010/011 both passed fresh identity/build/app, shared headless Chrome/MCP, unchanged visible-view assertions and scoped unchanged checks; 197 requests each. No factory authority inferred. |
+| Source-backed generated UI checks | **Offline verified / live package prepared** | Actual observed Lightning origin and name locators; unique visible Related/Details checks now generated with source citations. No cross-object click or unsupported UI relationship locator invented. |
+| Synthetic Contact display and relationship | **Offline verified** | Opt-in signed Name=synthetic LastName check plus exact same-run AccountId; unexpected names, foreign IDs and altered relationships rejected. Live checks require separate lifecycle approval. |
+| Bounded multi-page selector execution | **Offline verified** | New opt-in per-workflow selector contexts; proposed four-session grant separates two observations and two generated tests. Existing grants/budgets/daily quotas unchanged; new permission requires review. |
+| API/cleanup/report traceability | **Offline verified** | Query hashes/checked fields, affirmative relationship proofs and separate cleanup absence queries; actual reportingLabs HTML receives a post-cleanup local appendix with requirements, actual statuses and masked evidence links. No unsupported hosted API or upload. |
+| Verified learning boundary | **Offline verified** | Passing dedicated runs retain execution history but publish no verified lesson. Existing confirmed-failure, reviewed-cause/fix and passing-regression gates preserved. Legacy review field cannot bypass them. |
+| Full live lifecycle | **Authorization/freshness blocked; not executed** | New inactive `.state/live-lifecycle-012/` preserves old 009. Separate lifecycle approval was not received before the Account receipt expired at 9:55:57 a.m. IST. No activation or factory run. Fresh unused readiness grants and a newly hash-bound final review are required; a late reply cannot renew 012. |
+
+Typecheck, **229/229 unit/integration, 3/3 headless tests and all four demos passed**. No Gemini/embedding/Chroma call was executed; existing integrations and all 15 owners/P0/P1/P2 remain. No new Lightning loading/resource investigation or unrelated infrastructure milestone was introduced.
+
 ## Approved viewport observations 007/008 - latest evidence
 
 This entry supersedes earlier pending-readiness statements below while preserving every cumulative P0/P1/P2 requirement and all 15 responsibilities. Existing implementations are retained.

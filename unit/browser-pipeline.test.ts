@@ -27,7 +27,7 @@ test('reviewed browser profile connects existing full lifecycle to actual genera
   try {
     await assert.rejects(runDedicatedWorkflow(f.input,{...services,validation:'live-salesforce'}),/Mock browser/);assert.equal(f.writes.length,0);
     const report=await runDedicatedWorkflow(f.input,services);
-    assert.equal(report.status,'passed');assert.equal(report.created,2);assert.equal(report.cleaned,2);assert.equal(report.learning.status,'verified');assert.equal(report.validation,'offline-mocked-salesforce');assert.ok(f.records.has(outsider));assert.equal(f.records.size,1);
+    assert.equal(report.status,'passed');assert.equal(report.created,2);assert.equal(report.cleaned,2);assert.equal(report.learning.status,'review-required');assert.equal(report.learning.verifiedLessonPublished,false);assert.equal(report.validation,'offline-mocked-salesforce');assert.ok(f.records.has(outsider));assert.equal(f.records.size,1);
     const result=JSON.parse(await readFile(report.reportPath,'utf8'));assert.equal(result.execution.results.length,2);assert.ok(result.execution.results.every((r:{status:string})=>r.status==='passed'));assert.equal(result.execution.reportingLabs.status,'generated');assert.equal(result.execution.reportingLabs.validation,'offline-mocked-salesforce');
     assert.ok(report.stages.includes('reviewed-lightning-build-and-app-preflight-complete'));assert.ok(report.stages.includes('post-browser-independent-soql-verification-complete'));assert.equal(history.db.prepare('SELECT COUNT(*) AS count FROM browser_execution_sessions').get()?.count,3);
   }finally{history.close();await rm(root,{recursive:true,force:true,maxRetries:8,retryDelay:100});await rm(auth,{recursive:true,force:true,maxRetries:8,retryDelay:100});}

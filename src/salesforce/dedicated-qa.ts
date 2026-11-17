@@ -72,7 +72,13 @@ export class DedicatedData {
     if(!row)throw Error('Record is outside the framework run ownership boundary');
     const values=JSON.parse(String(row.values_json)) as Mutation['values'],fields=[...new Set(['Id','CreatedById','Description',...Object.keys(values)])],result=await this.api.get<{records:Record<string,unknown>[]}>(this.query(`SELECT ${fields.join(',')} FROM ${object} WHERE Id='${id}' LIMIT 1`));
     const record=result.records[0];if(result.records.length!==1||record.Id!==id||record.CreatedById!==run.plan.userId||record.Description!==run.plan.marker||Object.entries(values).some(([k,v])=>record[k]!==v))throw Error('Owned record identity, creator, marker or payload changed; manual reconciliation required');
-    return {id,object,verified:true};
+    return {id,object,verified:true as const,queryHash:createHash('sha256').update(this.query(`SELECT ${fields.join(',')} FROM ${object} WHERE Id='${id}' LIMIT 1`)).digest('hex'),verifiedFields:fields,relationshipVerified:object==='Contact'?record.AccountId===values.AccountId:undefined};
+  }
+  async verifyOwnedContactDisplay(raw:unknown,id:string){
+    const {run}=await this.check(raw);await this.verifyOwned(run,'Contact',id);
+    const query=this.query(`SELECT Id,Name,LastName,AccountId FROM Contact WHERE Id='${id}' LIMIT 1`),page=z.object({records:z.array(z.object({Id,Name:z.string(),LastName:z.string(),AccountId:Id})).length(1)}).parse(await this.api.get(query)),record=page.records[0],account=this.owned(run).find(r=>r.object==='Account'&&r.status==='verified');
+    if(record.Id!==id||record.Name!==run.plan.creates.Contact.LastName||record.LastName!==run.plan.creates.Contact.LastName||!account||record.AccountId!==account.id)throw Error('Owned Contact display or exact Account relationship differs; review required');
+    return{object:'Contact' as const,verified:true as const,displayEqualsSyntheticLastName:true,relationshipVerified:true,verifiedFields:['Id','Name','LastName','AccountId'],queryHash:createHash('sha256').update(query).digest('hex')};
   }
   private async noForeignCascade(run:DedicatedRun,object:string,id:string) {
     const parsed=z.object({name:z.string(),childRelationships:z.array(z.object({childSObject:z.string().regex(/^[A-Za-z][A-Za-z0-9_]*$/),field:z.string().regex(/^[A-Za-z][A-Za-z0-9_]*$/),relationshipName:z.string().regex(/^[A-Za-z][A-Za-z0-9_]*$/).nullable().optional(),cascadeDelete:z.boolean()})).max(1000)}).safeParse(await this.api.get(`/services/data/${this.api.apiVersion}/sobjects/${object}/describe`));if(!parsed.success)throw new DedicatedCleanupError('cleanup-schema-unknown',object);const described=parsed.data;
