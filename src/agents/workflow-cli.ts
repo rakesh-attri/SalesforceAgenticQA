@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import {readFile,realpath,stat} from 'node:fs/promises';
-import {relative,isAbsolute} from 'node:path';
+import {relative,isAbsolute,extname} from 'node:path';
+import {ingestSpec,SpecSchema} from '../specs/ingest.js';
 import {History} from '../core/history.js';
 import {KnowledgeIndex} from '../knowledge/index.js';
 import {validateJourney,WorkflowModelStore} from './workflow-models.js';
@@ -10,9 +11,24 @@ import {writeWorkflowReport} from './workflow-report.js';
 import {prepareMultiObjectJourney} from './workflow-assembly.js';
 import {saveJson} from '../core/io.js';
 import {fingerprint} from '../execution/browser-policy.js';
+import {designSalesforceTests} from './test-design.js';
+import {writeTestDesignReport} from './test-design-report.js';
 const Input=z.object({model:z.string(),spec:z.string(),org:z.string(),graph:z.string(),observations:z.array(z.object({review:z.string(),report:z.string()}).strict()).max(20).default([]),changed:z.array(z.string()).max(100).default([])}).strict();
 const EvidenceInput=z.object({spec:z.string(),org:z.string(),graph:z.string(),permission:z.string().min(1),observations:z.array(z.object({object:z.string(),review:z.string(),report:z.string(),view:z.string(),reviewedEvidence:z.string().optional()}).strict()).max(10).default([]),bindings:z.string().optional(),transitions:z.array(z.string()).max(20).default([])}).strict();
 async function localJson(path:string){const root=await realpath('.'),target=await realpath(path),rel=relative(root,target);if(!rel||rel.startsWith('..')||isAbsolute(rel)||(await stat(target)).size>2097152)throw Error('Bounded workspace source file required');return JSON.parse(await readFile(target,'utf8'));}
+async function designSpec(path:string){
+ const root=await realpath('.'),target=await realpath(path),rel=relative(root,target);if(!rel||rel.startsWith('..')||isAbsolute(rel)||(await stat(target)).size>2097152)throw Error('Bounded workspace specification required');
+ if(extname(target).toLowerCase()==='.json'){const value=await localJson(path);if(typeof value.source==='string'&&typeof value.version==='string')return SpecSchema.parse(value);}
+ return ingestSpec(target);
+}
+export async function runTestDesign(path:string){
+ const input=z.object({spec:z.string(),org:z.string(),graph:z.string(),permission:z.string().min(1),model:z.string().optional(),changes:z.array(z.string()).max(1000).default([]),observations:z.array(z.object({review:z.string(),report:z.string(),view:z.string()}).strict()).max(10).default([])}).strict().parse(await localJson(path)),history=new History(),browserHistory=input.observations.length?new History('.state/dedicated-qa.sqlite'):undefined;
+ try{const [spec,org,graph]=await Promise.all([designSpec(input.spec),localJson(input.org),localJson(input.graph)]);let model;
+  if(input.model){const requested=validateJourney(await localJson(input.model));model=new WorkflowModelStore(history).get(requested.scope,requested.id,requested.version);if(fingerprint(model)!==fingerprint(requested))throw Error('Model differs from recorded review');}
+  const observations=await Promise.all(input.observations.map(async o=>({review:await localJson(o.review),report:await localJson(o.report),view:await localJson(o.view)}))),design=await designSalesforceTests({...input,spec,org,graph,model,observations},{history,index:new KnowledgeIndex(history),browserHistory}),report=await writeTestDesignReport(design);
+  return{...report,status:design.status,scenarios:design.scenarios.length,questions:design.questions.length,contradictions:design.contradictions.length,knowledgeHits:design.retrieval.citations.length,externalRequests:0,salesforceRequests:0,executionAuthorized:false};
+ }finally{browserHistory?.close();history.close();}
+}
 // Local-only: this command never configures embeddings, external AI, a browser,
 // factories or an execution grant. Browser source versions come from the host's
 // existing rendering journal, not assertions made by an input model.

@@ -5,6 +5,15 @@ import { z } from 'zod';
 import { History } from '../core/history.js';
 import { KnowledgeIndex,type Scope } from '../knowledge/index.js';
 import { redact } from '../knowledge/rag.js';
+import {DebugManifestSchema} from '../execution/browser-debug.js';
+
+export async function investigateExplorationFailure(index:KnowledgeIndex,scope:Scope,input:{failure:Parameters<typeof investigateFailure>[2];exploration:unknown;visual?:{manifest:unknown;policyHash:string;runId:string}}){
+ const exploration=z.object({mode:z.literal('offline-synthetic-fixture'),observations:z.array(z.object({path:z.string(),state:z.string().regex(/^[a-f0-9]{64}$/)})).max(1000),transitions:z.array(z.object({path:z.string(),before:z.string(),after:z.string(),action:z.number().int()})).max(1000),actions:z.number().int().min(0),budgetExhausted:z.boolean()}).parse(input.exploration);
+ const visual=input.visual?DebugManifestSchema.parse(input.visual.manifest):undefined;
+ if(visual&&(visual.policyHash!==input.visual!.policyHash||visual.runId!==input.visual!.runId))throw Error('Visual evidence belongs to a different reviewed run/policy');
+ const proposal=await investigateFailure(index,scope,input.failure),milestones=visual?.entries.map(e=>({sequence:e.sequence,reason:e.reason,status:e.status,imageHash:e.sha256,classification:e.diagnostics?.classification,denials:e.blocked.denied,elapsedMs:e.elapsedMs}))??[];
+ return{...proposal,exploration:{actions:exploration.actions,stateHashes:[...new Set(exploration.observations.map(o=>o.state))],changedTransitions:exploration.transitions.filter(t=>t.before!==t.after).length,unchangedTransitions:exploration.transitions.filter(t=>t.before===t.after).length,budgetExhausted:exploration.budgetExhausted},visual:{milestones,imagesInterpreted:false,localOnly:true},causality:'unconfirmed',repairApproved:false,verifiedLearningPublished:false,questions:['Reproduce against the exact source outcome before confirming a cause.','A screenshot category or unchanged state alone does not establish a product defect.']};
+}
 export function failureSignature(message:string) {return redact(message).toLowerCase().replace(/https?:\/\/\S+/g,'[url]').replace(/\b[0-9a-f]{8}-[0-9a-f-]{27,}\b/g,'[id]').replace(/\b\d+\b/g,'#').replace(/\s+/g,' ').trim();}
 export function failureSimilarity(left:string,right:string) {const a=new Set(failureSignature(left).match(/[a-z_]+/g)??[]),b=new Set(failureSignature(right).match(/[a-z_]+/g)??[]);return [...a].filter(t=>b.has(t)).length/Math.max(1,new Set([...a,...b]).size);}
 export async function inspectTrace(path:string) {

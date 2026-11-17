@@ -1,5 +1,24 @@
 # Current capability matrix
 
+## Autonomous test design and impact intelligence - current increment
+
+Continues `bcbf068`; all 15 owners and every earlier P0/P1/P2 requirement remain cumulative. The operator **declined package 012**. It stays inactive; this increment prepares no replacement live factory/run package and performs no live Salesforce record or browser operation. [TEST_DESIGN_INTELLIGENCE.md](TEST_DESIGN_INTELLIGENCE.md) documents behavior, commands and remaining autonomy gaps.
+
+| Requirement | Status / verified evidence | Boundary |
+|---|---|---|
+| Story/criteria/persona/business conditions | Offline verified literal clause/boundary analysis, source citations, seven criterion kinds and missing-result/prerequisite questions | Arbitrary prose still fails strict extraction; complex semantic interpretation remains reviewable. |
+| Salesforce application intelligence | Cached source consumption: 909 components, 365 dependencies, two declared Flow conditions, two Describe objects and both host-journal page receipts | No fresh discovery. Metadata, FLS flags and record types do not establish runtime effects or effective sharing. |
+| Multi-object model and reviewer | Existing immutable WorkflowModelStore and source reviews reused; structured business-rule claims, exact condition/observable contradictions and current field/object/persona/version checks | Missing or conflicting rules block proposals; historical page readiness grants no execution permission. |
+| Seven-kind test planning | Fixture has positive, negative, boundary, integration, permission, regression and visual designs; six guarded Playwright proposals plus one independent API verification proposal | Visual remains blocked on an approved baseline/masking/oracle. Planning coverage is not execution coverage. |
+| Change impact / downstream tests | Typed bounded consumer/containment/declared-effect traversal; cached hypothetical changes yield 78 affected components and 76 evidence paths | Unknown IDs/truncation stay explicit. No deployment change or runtime causality inferred. |
+| Gemini / persistent semantic RAG / history | Real adapters with mocked HTTP; nine embedding requests, one chat request, SQLite reopen verified. Seeded confirmed fixture defect raises mapped regression risk 80 -> 130 and makes it mandatory | Exact external payload approval required; no live Gemini/embedding/Chroma validation. Fixture relevance precision 0.5 / recall 1 is reported, not assumed perfect. |
+| Test review / generation | Every scenario carries literal outcome, persona/conditions, prerequisites, data requirements, source/version traceability and questions. API code builds exact-ID queries and verifies rows without transport | No credentials, unapproved fields, HTTP client, executable factory bundle or authority is generated. |
+| Bounded autonomous fixture exploration | Actual private Playwright MCP snapshots reuse the sole Chrome context; opaque chooser can select only unused reviewed references under action/time bounds | Unknown/replayed/hung choices fail closed; live autonomous breadth remains partial. |
+| Failure / screenshot correlation | Existing investigator correlates fixture state hashes and real local screenshot milestones; mismatched policy/run evidence rejected | No pixel interpretation, asserted root cause, automatic repair or learning promotion. |
+| Local test-design HTML | Fixture and cached reports rendered in headless Chrome; source content escaped, proposals/JSON retained locally | Cached report has two requirements/52 questions/zero proposals; unsupported workflows remain unknown. |
+
+Final validation: **237/237 unit/integration, 3/3 headless, typecheck, all five demos and local report inspection passed**. A full-suite parser regression was corrected by preserving the original strict assertion; no prior test was weakened. Existing Gemini chat/gemini-embedding-001, RAG/optional Chroma, LangGraph, JWT/StorageState, headless Chrome/MCP, reportingLabs, ownership/cleanup and normal Production policies remain. New and cached reports are local; no external issue/message or verified Salesforce lesson was published.
+
 ## First live lifecycle preparation - November 17
 
 Continues `c8b43ff`; all cumulative requirements below remain. [ACCOUNT_CONTACT_LIFECYCLE.md](ACCOUNT_CONTACT_LIFECYCLE.md) describes the reviewed execution scope and next intelligence priorities.

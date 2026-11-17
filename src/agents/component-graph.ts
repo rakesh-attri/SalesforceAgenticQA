@@ -59,3 +59,15 @@ export function impactedComponents(graph:ComponentGraph,changed:string[],maxNode
   for(const id of impacted)for(const edge of graph.edges.filter(e=>e.to===id)){if(impacted.has(edge.from))continue;if(impacted.size>=maxNodes){truncated=true;continue;}impacted.add(edge.from);paths.push({component:edge.from,via:id,evidence:edge.evidence});}
   return {components:[...impacted],paths,truncated};
 }
+
+// Consumer impact plus declared effects. These are metadata relationships,
+// never proof of runtime execution, mutation permission or business outcomes.
+export function analyzeChangeImpact(raw:unknown,changed:string[],maxNodes=2000){
+ const graph=ComponentGraphSchema.parse(raw);if(graph.nodes.length>10000||graph.edges.length>50000||changed.length>1000||!Number.isInteger(maxNodes)||maxNodes<1||maxNodes>10000)throw Error('Impact evidence/traversal budget invalid');
+ const nodes=new Map(graph.nodes.map(n=>[n.id,n])),unknown=[...new Set(changed.filter(id=>!nodes.has(id)))],seen=new Set<string>(),queue:Array<{id:string;depth:number}>=[],paths:Array<{component:string;via:string;relation:string;direction:string;depth:number;evidence:string[]}>=[];let truncated=false;
+ const add=(id:string,depth:number,via?:string,relation?:string,evidence?:string[],direction?:string)=>{if(seen.has(id))return;if(seen.size>=maxNodes){truncated=true;return;}seen.add(id);queue.push({id,depth});if(via)paths.push({component:id,via,relation:relation!,direction:direction!,depth,evidence:evidence!});};
+ for(const id of [...new Set(changed)].sort())if(nodes.has(id))add(id,0);
+ const incoming=new Map<string,ComponentGraph['edges']>(),outgoing=new Map<string,ComponentGraph['edges']>();for(const edge of [...graph.edges].sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)))){if(!nodes.has(edge.from)||!nodes.has(edge.to))throw Error('Dependency endpoint is not in the verified graph');const ins=incoming.get(edge.to)??[];ins.push(edge);incoming.set(edge.to,ins);const outs=outgoing.get(edge.from)??[];outs.push(edge);outgoing.set(edge.from,outs);}
+ for(let i=0;i<queue.length;i++){const {id,depth}=queue[i];for(const edge of incoming.get(id)??[])add(edge.from,depth+1,id,edge.relation,edge.evidence,'consumer');for(const edge of outgoing.get(id)??[]){const container=['SObject','Flow','FlowVersion','FlowElement'].includes(nodes.get(id)!.kind)&&edge.relation==='contains';if(container||['declares-mutation-target','invokes','flow-connector'].includes(edge.relation))add(edge.to,depth+1,id,edge.relation,edge.evidence,container?'containment':'declared-effect');}}
+ return{components:[...seen],paths,truncated,unknown,coverage:truncated||unknown.length?'incomplete':'bounded-metadata',runtimeReachabilityVerified:false,questions:[...unknown.map(id=>`Resolve changed component ${id} against current source evidence`),...(truncated?['Expand reviewed impact budget before excluding tests']:[]),...graph.unknowns]};
+}

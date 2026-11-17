@@ -3,6 +3,8 @@ import {runCompatibilityReview} from './execution/compatibility-cli.js';
 import {prepareDedicatedChromeReview} from './execution/dedicated-chrome-review.js';
 import {preferChromeForNewReview} from './execution/dedicated-chrome-profile.js';
 import {demonstrateWorkflowIntelligence} from './demos/workflow-intelligence.js';
+import {demonstrateTestDesign} from './demos/test-design.js';
+import {runTestDesign} from './agents/workflow-cli.js';
 import {runWorkflowReview,runWorkflowEvidenceReview} from './agents/workflow-cli.js';
 import type { z } from 'zod';
 import { Command } from '@langchain/langgraph';
@@ -93,6 +95,8 @@ async function main() {
   if(mode==='workflow-evidence'){try{console.log(JSON.stringify(await runWorkflowEvidenceReview(file)));}catch{console.log(JSON.stringify({status:'workflow-evidence-source-gate',privateDetailsWithheld:true,externalRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode==='workflow-plan'){try{console.log(JSON.stringify(await runWorkflowReview(file)));}catch{console.log(JSON.stringify({status:'workflow-source-review-gate',privateDetailsWithheld:true,externalRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode==='demo-workflow-intelligence'){console.log(JSON.stringify(await demonstrateWorkflowIntelligence()));return;}
+  if(mode==='demo-test-design'){console.log(JSON.stringify(await demonstrateTestDesign()));return;}
+  if(mode==='test-design'){try{console.log(JSON.stringify(await runTestDesign(file)));}catch{console.log(JSON.stringify({status:'test-design-source-gate',privateDetailsWithheld:true,externalRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode==='dedicated-chrome-review'){
     try{const input=LightningReviewInputSchema.parse(await loadJson(file)),state=await readPrivateSessionState(input.statePath);if(!input.viewPath)throw Error('Source-bound view required');const prepared=prepareDedicatedChromeReview(await loadJson(input.sourceReview),{runId:input.runId,stateHash:state.hash,view:await loadJson(input.viewPath)});await saveJson('.state/dedicated-chrome-profile.review.json',prepared.profile);await saveJson('.state/dedicated-chrome-session.review.json',prepared.review);await saveJson('.state/dedicated-chrome-preference.review.json',prepared.preference);console.log(JSON.stringify({profileHash:prepared.profile.approval.hash,sessionHash:prepared.review.approval.hash,expiresAt:prepared.review.approval.expiresAt,activated:false,permissionsGranted:0}));}catch{console.log(JSON.stringify({status:'native-profile-review-source-gate',privateDetailsWithheld:true}));process.exitCode=1;}return;
   }
