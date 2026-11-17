@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {readFile,realpath,stat} from 'node:fs/promises';
+import {readFile,realpath,stat,lstat} from 'node:fs/promises';
 import {relative,isAbsolute,extname} from 'node:path';
 import {ingestSpec,SpecSchema} from '../specs/ingest.js';
 import {History} from '../core/history.js';
@@ -15,13 +15,34 @@ import {designSalesforceTests} from './test-design.js';
 import {writeTestDesignReport} from './test-design-report.js';
 import {discoverApplication,ApplicationReviewStore,ApplicationDecisionSchema,compileReviewedApplication,approveApplicationModel,indexApplicationKnowledge} from './application-intelligence.js';
 import {writeApplicationReport} from './application-report.js';
+import {ExplorationDefinitionSchema,planExploration} from './exploration-plan.js';
+import {ExplorationLedger} from './exploration-ledger.js';
+import {runGoalExploration,fixtureExplorationIdentity} from './exploration-runtime.js';
+import {investigateGoalFailure} from './exploration-investigation.js';
+import {proposeExplorationRepair,executeExplorationRepair} from './exploration-recovery.js';
+import {writeExplorationReport} from './exploration-report.js';
+import {DurableSaver} from '../core/checkpoints.js';
 const Input=z.object({model:z.string(),spec:z.string(),org:z.string(),graph:z.string(),observations:z.array(z.object({review:z.string(),report:z.string()}).strict()).max(20).default([]),changed:z.array(z.string()).max(100).default([])}).strict();
 const EvidenceInput=z.object({spec:z.string(),org:z.string(),graph:z.string(),permission:z.string().min(1),observations:z.array(z.object({object:z.string(),review:z.string(),report:z.string(),view:z.string(),reviewedEvidence:z.string().optional()}).strict()).max(10).default([]),bindings:z.string().optional(),transitions:z.array(z.string()).max(20).default([])}).strict();
-async function localJson(path:string){const root=await realpath('.'),target=await realpath(path),rel=relative(root,target);if(!rel||rel.startsWith('..')||isAbsolute(rel)||(await stat(target)).size>2097152)throw Error('Bounded workspace source file required');return JSON.parse(await readFile(target,'utf8'));}
+async function localJson(path:string){const root=await realpath('.'),target=await realpath(path),rel=relative(root,target);if(!rel||rel.startsWith('..')||isAbsolute(rel)||(await stat(target)).size>2097152)throw Error('Bounded workspace source file required');return JSON.parse((await readFile(target,'utf8')).replace(/^\uFEFF/,''));}
 async function designSpec(path:string){
  const root=await realpath('.'),target=await realpath(path),rel=relative(root,target);if(!rel||rel.startsWith('..')||isAbsolute(rel)||(await stat(target)).size>2097152)throw Error('Bounded workspace specification required');
  if(extname(target).toLowerCase()==='.json'){const value=await localJson(path);if(typeof value.source==='string'&&typeof value.version==='string')return SpecSchema.parse(value);}
  return ingestSpec(target);
+}
+export async function runExplorationCommand(mode:string,path:string){
+ const raw=z.object({history:z.string(),definition:z.string().optional(),approval:z.string().optional(),runId:z.string().optional(),resume:z.string().optional(),signals:z.string().optional(),proposal:z.string().optional(),proposalId:z.string().optional(),review:z.string().optional(),progress:z.object({path:z.string(),stateHash:z.string(),covered:z.array(z.string()),attempted:z.array(z.string()),completed:z.array(z.string()),visited:z.array(z.string()),actionsRemaining:z.number(),remainingMs:z.number(),completeEvidence:z.boolean()}).strict().optional()}).strict().parse(await localJson(path));
+ const db=await realpath(raw.history),workspace=await realpath('.'),stateRoot=await realpath('.state'),rel=relative(stateRoot,db),stateRel=relative(workspace,stateRoot);if(!stateRel||stateRel.startsWith('..')||isAbsolute(stateRel)||!rel||rel.startsWith('..')||isAbsolute(rel)||!db.endsWith('.sqlite')||(await stat(db)).size>209715200)throw Error('Existing contained local intelligence database required');const h=new History(db),ledger=new ExplorationLedger(h);let saver:DurableSaver|undefined;
+ const checkpoint=async(run:string)=>{const path=`.state/exploration-checkpoints-${run}.sqlite`;if(await lstat(path).then(s=>s.isSymbolicLink()).catch(()=>false))throw Error('Checkpoint symlink denied');return new DurableSaver(path);};
+ try{
+  const runId=raw.runId??(raw.definition?ExplorationDefinitionSchema.parse(await localJson(raw.definition)).runId:undefined);
+  if(mode==='exploration-plan'){if(!raw.definition||!raw.progress)throw Error('Source definition and observed progress required');return{...await planExploration(await localJson(raw.definition),raw.progress,h,new KnowledgeIndex(h)),executionAuthorized:false};}
+  if(mode==='exploration-run'||mode==='exploration-resume'){if(!raw.definition||!raw.approval)throw Error('Exact fixture definition and approval required');const d=ExplorationDefinitionSchema.parse(await localJson(raw.definition));saver=await checkpoint(d.runId);const result=await runGoalExploration({definition:d,approval:await localJson(raw.approval)},{history:h,checkpointer:saver,identity:()=>fixtureExplorationIdentity(d),resume:raw.resume?await localJson(raw.resume):undefined});return{...await writeExplorationReport(ledger,d.runId),status:result.state.status,covered:result.state.covered,actions:result.state.attempts.length,sessions:result.state.sessions,validation:result.validation,salesforceRequests:0,executionAuthorized:false};}
+  if(mode==='exploration-repair-propose'){if(!raw.proposal)throw Error('Source-bound repair input required');const proposed=proposeExplorationRepair(ledger,await localJson(raw.proposal)),output=`.state/exploration-repair-${proposed.id}.review.json`;await saveJson(output,proposed);return{output,proposalId:proposed.id,status:'proposed',executionAuthorized:false};}
+  if(mode==='exploration-repair-run'){if(!raw.proposalId||!raw.review)throw Error('Exact repair and operator review required');const row=h.db.prepare('SELECT run FROM exploration_repair_proposals WHERE id=?').get(raw.proposalId);if(!row)throw Error('Unknown repair');const d=ledger.read(String(row.run)).definition;saver=await checkpoint(d.runId);const result=await executeExplorationRepair(ledger,raw.proposalId,await localJson(raw.review),{checkpointer:saver,identity:()=>fixtureExplorationIdentity(d)});return{...await writeExplorationReport(ledger,result.result.runId),status:result.result.state.status,unchangedExpectedResult:result.unchangedExpectedResult,parentSealed:true,executionAuthorized:false};}
+  if(!runId)throw Error('Exact existing exploration run required');if(mode==='exploration-investigate'){if(!raw.signals)throw Error('Bounded diagnostic signals required');const issue=await investigateGoalFailure(ledger,runId,await localJson(raw.signals));return{...await writeExplorationReport(ledger,runId),investigationId:issue.id,status:issue.status,confirmed:false,executionAuthorized:false};}
+  if(mode==='exploration-report')return await writeExplorationReport(ledger,runId);throw Error('Unknown exploration command');
+ }finally{saver?.close();h.close();}
 }
 // Local intelligence commands never connect Salesforce, models, embeddings or
 // browsers. Historical rendering evidence is checked against the host journal.
@@ -29,7 +50,7 @@ export async function runApplicationIntelligence(mode:string,path:string){
  const raw=await localJson(path),scopeSchema=z.object({org:z.string().min(1),permission:z.string().min(1)}).strict(),history=new History(),reviews=new ApplicationReviewStore(history);
  try{
   if(mode==='application-review'){const input=z.object({scope:scopeSchema,decision:ApplicationDecisionSchema}).strict().parse(raw);return reviews.review(input.scope,input.decision);}
-  if(mode==='application-index'){const input=z.object({scope:scopeSchema,studyVersion:z.string()}).strict().parse(raw);return indexApplicationKnowledge(history,reviews.get(input.scope,input.studyVersion),new KnowledgeIndex(history));}
+  if(mode==='application-index'){const input=z.object({scope:scopeSchema,studyVersion:z.string()}).strict().parse(raw);return await indexApplicationKnowledge(history,reviews.get(input.scope,input.studyVersion),new KnowledgeIndex(history));}
   if(mode==='application-approve-model'){const input=z.object({scope:scopeSchema,studyVersion:z.string(),modelVersion:z.string(),operator:z.string(),id:z.string()}).strict().parse(raw),study=reviews.get(input.scope,input.studyVersion),model=approveApplicationModel(history,{...input,scope:study.scope}),output=`.state/application-model-${model.version}.reviewed.json`;await saveJson(output,model);return{output,modelVersion:model.version,executionAuthorized:false};}
   if(mode==='application-discover'){
    const input=z.object({spec:z.string(),org:z.string(),graph:z.string(),permission:z.string().min(1),observations:z.array(z.object({review:z.string(),report:z.string(),view:z.string()}).strict()).max(10).default([]),changes:z.array(z.string()).max(1000).default([])}).strict().parse(raw),[spec,org,graph]=await Promise.all([designSpec(input.spec),localJson(input.org),localJson(input.graph)]),browserHistory=input.observations.length?new History('.state/dedicated-qa.sqlite'):undefined;

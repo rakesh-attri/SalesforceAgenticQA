@@ -1,5 +1,24 @@
 # Current capability matrix
 
+## Goal-directed exploration and intelligent investigation - current increment
+
+Continues `7be0d2c` on `feature/verified-discovery`. This adds to every cumulative P0/P1/P2 requirement and all 15 owners below. [EXPLORATION_INTELLIGENCE.md](EXPLORATION_INTELLIGENCE.md) documents contracts, commands and limitations. No live Salesforce/browser/model/Chroma call or replacement write package is part of this increment. Package 012 remains declined/inactive.
+
+| Capability | Implemented / verification class | Remaining boundary |
+|---|---|---|
+| Goal-directed planner | Offline verified: source-exact objective/specification/study and optional reviewed model; coverage/evidence/risk/cost/uncertainty/prerequisite/history scoring with explanations | Heuristic prioritization, not calibrated probability or invented workflow permissions |
+| Constrained model recommendations | Offline interface-mocked: existing ReasoningAgents structured ranking and exact payload approval; unknown IDs/citations and unapproved candidates remain rejected | Optional API; no automatic Gemini invocation, external semantic query embeddings or new live model validation |
+| Durable exploration execution | Real synthetic headless Chrome/MCP plus SQLite/DurableSaver: explicit interrupt, close/reopen both stores, fresh state verification, original grant/source/identity/engine/MCP checks | New runtime executes fixtures only; actual Salesforce/native identity and live goal adapter are not claimed |
+| Replay / budget / uncertainty | Offline verified: pre-effect intent, unique nonce/run/hash, physical-action and duplicate-navigation rejection, persisted cumulative sessions/actions/requests/navigation/time, abandonment charged and uncertain effects blocked | Nonpersistent filled forms cannot be restored by replay; changed state requires review |
+| Failure intelligence | Offline real locator failure plus mocked diagnostic cases: source-linked application/assumption/locator/permission/data/environment/unknown hypotheses, confidence/uncertainty and minimum next observation | No confirmed Salesforce cause, calibrated diagnostic accuracy or automatic duplicate declaration |
+| Evidence / reproduction | Offline verified: actual source-exact attempted steps, hashed UI results, response/console classes, local PNG/manifest/session integrity, story/component/version/risk/unknowns | No raw traffic/image upload or asserted fresh Salesforce API/SOQL validation |
+| Controlled recovery | Real fixture verified: source-supported locator-only proposal, separate exact operator review, unchanged assertion, parent sealed and remaining allowance delegated once | Unknown/non-idempotent/uncertain cases blocked; live recovery and business mutations unsupported here |
+| Verified fixture learning | Real seeded automation failure + named reviewed cause/fix + passing child observation regression through existing confirmDefect; later mapped action score 170 → 200 | Synthetic automation scope only; zero Salesforce business lessons |
+| Exploration Intelligence HTML/JSON | Offline verified: observed versus source-required unobserved targets, selected/rejected actions, coverage, risk, defects, local images, source provenance, budgets/review questions | Local artifact, not issue publication; reportingLabs remains the actual generated-Playwright reporter |
+| Live / enterprise autonomy | Partially implemented overall | Separately approved live multi-object adapter, semantic state equivalence, independent live verification, business/visual/permission oracles, held-out diagnosis evaluations and enterprise publishing remain engineering work |
+
+Verified: **272/272 full unit/integration**, **19/19 final focused**, **3/3 headless**, typecheck and **eight demos**. The committed discovery tests independently pass 3/3 from a private copy; the user edit remains untouched/excluded. Both reports rendered with local images in Chrome 157, zero external requests/scripts/overflow. The cached Salesforce publisher processed two observed historical browser facts, zero trusted requirements/lessons and no external request. Historical Account/Contact Salesforce readiness and Gemini/persistent semantic integration evidence remain preserved, not refreshed. No approval, quota, original assertion or environment mode is relaxed. See the current implementation report for actual logs/artifacts.
+
 ## Application discovery and workflow understanding - current increment
 
 Continues `dbe3845` on `feature/verified-discovery`. This adds to the cumulative P0/P1/P2 registry and all 15 responsibilities below. [APPLICATION_INTELLIGENCE.md](APPLICATION_INTELLIGENCE.md) documents commands, contracts and remaining autonomy. Package 012 remains declined/inactive; no replacement live data package or live session was prepared.

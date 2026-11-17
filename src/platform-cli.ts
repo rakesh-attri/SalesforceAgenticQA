@@ -7,6 +7,8 @@ import {demonstrateTestDesign} from './demos/test-design.js';
 import {runTestDesign} from './agents/workflow-cli.js';
 import {runApplicationIntelligence} from './agents/workflow-cli.js';
 import {demonstrateApplicationIntelligence} from './demos/application-intelligence.js';
+import {demonstrateExplorationIntelligence} from './demos/exploration-intelligence.js';
+import {runExplorationCommand} from './agents/workflow-cli.js';
 import {runWorkflowReview,runWorkflowEvidenceReview} from './agents/workflow-cli.js';
 import type { z } from 'zod';
 import { Command } from '@langchain/langgraph';
@@ -95,6 +97,8 @@ async function reviewedKnowledge(history:History,remoteApproved=false) {
   return new KnowledgeIndex(history,embed,remote,embeddingSpace);
 }
 async function main() {
+  if(['exploration-plan','exploration-run','exploration-resume','exploration-report','exploration-investigate','exploration-repair-propose','exploration-repair-run'].includes(mode)){try{console.log(JSON.stringify(await runExplorationCommand(mode,file)));}catch{console.log(JSON.stringify({status:'exploration-source-or-approval-gate',privateDetailsWithheld:true,salesforceRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
+  if(mode==='demo-exploration-intelligence'){console.log(JSON.stringify(await demonstrateExplorationIntelligence()));return;}
   if(mode==='demo-application-intelligence'){console.log(JSON.stringify(await demonstrateApplicationIntelligence()));return;}
   if(['application-discover','application-review','application-compile','application-approve-model','application-index'].includes(mode)){try{console.log(JSON.stringify(await runApplicationIntelligence(mode,file)));}catch{console.log(JSON.stringify({status:'application-source-or-review-gate',privateDetailsWithheld:true,externalRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode==='workflow-evidence'){try{console.log(JSON.stringify(await runWorkflowEvidenceReview(file)));}catch{console.log(JSON.stringify({status:'workflow-evidence-source-gate',privateDetailsWithheld:true,externalRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
