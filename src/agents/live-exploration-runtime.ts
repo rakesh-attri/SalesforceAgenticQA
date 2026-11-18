@@ -51,6 +51,7 @@ export function salesforceObservationHost(d:LiveExploration,parent:unknown,h:His
 }
 export async function runLiveExploration(input:{definition:unknown;approval:unknown;parent:unknown},services:{history:History;checkpointer:BaseCheckpointSaver;host:LiveObservationHost;pauseBefore?:string[];resume?:unknown}){
  const h=services.history,d=validateLiveExploration(input.definition,h),approval=ExplorationApprovalSchema.parse(input.approval);authorizeLiveExploration(d,input.parent,approval);
+ if(d.leaves.some(leaf=>leaf.lineage&&leaf.lineage.definition.validation!==services.host.validation))throw Error('Source lineage validation differs from the trusted execution host');
  const ledger=liveLedger(h),opened=ledger.open(d,approval);if(['achieved','failed','blocked'].includes(opened.state.status))return{state:opened.state,validation:services.host.validation,liveExecuted:false};
  if(opened.state.openSession||opened.state.attempts.some(a=>a.status==='pending'||a.status==='uncertain'))throw Error('Uncertain live session/action cannot replay');
  const fresh=await services.host.refresh(),{baselineHash,...identity}=fresh;ledger.verify(d.runId,identity);

@@ -10,6 +10,16 @@ browser/profile/API-read approval → fresh API/native identity → planner choi
 and durable intent → isolated headless Chrome/MCP observation → independent
 equality/drift checks → source-linked local report and proposed investigation.
 
+## Source domains and explicit compatibility
+
+Browser sourceVersion may be a specification hash, not metadataVersion. The saved
+9c734a03… / f4011604… mismatch was explained using original producers and identical
+metadata, not bypassed. [Source reconciliation](SOURCE_EVIDENCE_RECONCILIATION.md)
+describes the separate typed lineage, host-journal evidence and named review. A
+preparation observation can carry its matching lineage review path; both original
+hashes remain unchanged. Unknown/incompatible cases still reject. Historical
+readiness remains expired evidence and does not authorize the new observation.
+
 ## Implemented boundary
 
 `SALESFORCE_OBSERVATION` supports one exact existing Account and optionally one
@@ -97,13 +107,21 @@ npm.cmd run platform -- live-exploration-prepare .state/observation-input.json
 Get-Content .state/live-exploration-<run-id>/manifest.review.json
 ```
 
-If historical view metadata differs from current knowledge, preparation produces
-only a **blocked-source-drift** manifest. It creates no executable definition or
+If a source mismatch lacks an exact compatible lineage link, preparation produces
+only a **blocked-source-drift** manifest. Reconcile artifact domains before inferring metadata drift. It creates no executable definition or
 session grant. Reconcile/review the source evidence first; changing a hash is not
 source verification. Otherwise inspect definition, original assertions, every
 leaf browser/profile/read hash, original expiry and separate native-risk receipt.
 The operator must explicitly authorize the exact package; agents must never fill
 approval names or activate permissions on their own.
+
+The manifest includes the inactive draft hash and exact proposed post-approval
+hash. Only after explicit authorization may a separate named authorization JSON
+(original definitionHash, nonce and expiry) be supplied through the run input's
+authorization path and applied using live-exploration-activate. The command checks
+the unchanged export, changes named approval fields only, writes once and executes
+no browser. Use its returned run.approved.json for execution. Full commands and
+the separate native risk disclosure are in the source reconciliation guide.
 
 Only after that separate authorization and independent fresh state verification:
 

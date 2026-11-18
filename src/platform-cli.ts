@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import {runSourceReconciliation} from './knowledge/reconciliation-cli.js';
 import {runLiveExplorationCommand} from './agents/live-exploration-cli.js';
 import {demonstrateLiveExploration} from './demos/live-exploration.js';
 import {runCompatibilityReview} from './execution/compatibility-cli.js';
@@ -100,6 +101,7 @@ async function reviewedKnowledge(history:History,remoteApproved=false) {
 }
 async function main() {
   if(['exploration-plan','exploration-run','exploration-resume','exploration-report','exploration-investigate','exploration-repair-propose','exploration-repair-run'].includes(mode)){try{console.log(JSON.stringify(await runExplorationCommand(mode,file)));}catch{console.log(JSON.stringify({status:'exploration-source-or-approval-gate',privateDetailsWithheld:true,salesforceRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
+  if(mode==='source-reconcile'){try{console.log(JSON.stringify(await runSourceReconciliation(file)));}catch{console.log(JSON.stringify({status:'source-reconciliation-blocked',privateDetailsWithheld:true,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode.startsWith('live-exploration-')){try{console.log(JSON.stringify(await runLiveExplorationCommand(mode,file)));}catch{console.log(JSON.stringify({status:'live-exploration-prerequisite-or-execution-blocked',privateDetailsWithheld:true,liveVerification:'not-established-by-command-exit',automaticReplay:false}));process.exitCode=1;}return;}
   if(mode==='demo-live-exploration'){console.log(JSON.stringify(await demonstrateLiveExploration()));return;}
   if(mode==='demo-exploration-intelligence'){console.log(JSON.stringify(await demonstrateExplorationIntelligence()));return;}

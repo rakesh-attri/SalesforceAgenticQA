@@ -1,0 +1,20 @@
+import {z} from 'zod';
+import type {History} from '../core/history.js';
+import {fingerprint} from '../execution/browser-policy.js';
+import {WorkflowModelStore,validateJourney} from '../agents/workflow-models.js';
+import {KnowledgeIndex} from './index.js';
+import {SourceLineageStore,ArtifactRefSchema,sourceArtifact,type ArtifactRef} from './source-lineage.js';
+// These bridges record provenance for existing reviewed artifacts; they never
+// manufacture a workflow review, ingest knowledge, or promote a lesson.
+export function bindReviewedWorkflowLineage(h:History,raw:unknown,parents:ArtifactRef[]){
+ const model=validateJourney(raw);if(!model.review)throw Error('Existing exact workflow review required');const current=new WorkflowModelStore(h).get(model.scope,model.id,model.version);if(fingerprint(current)!==fingerprint(model))throw Error('Recorded reviewed workflow differs');
+ const store=new SourceLineageStore(h),sources=z.array(ArtifactRefSchema).min(1).max(100).parse(parents).map(ref=>store.assertCurrent(ref)),scope=sources[0].scope;if(model.scope.org!==scope.org||model.scope.permission!==scope.persona||sources.some(s=>fingerprint(s.scope)!==fingerprint(scope)))throw Error('Workflow source lineage scope differs');
+ if(model.sources.filter(s=>s.kind==='browser').some(source=>!sources.some(parent=>parent.kind==='browser-observation'&&parent.version===source.version)))throw Error('Every browser source requires its exact lineage parent');
+ for(const source of sources){const linked=source.kind==='component-graph'?model.scope.graphVersion===source.version:source.kind==='metadata-snapshot'?model.scope.metadataVersion===source.semanticVersion:model.sources.some(s=>s.version===source.version||s.sourceHashes.includes(source.version));if(!linked)throw Error('Workflow has no declared source reference to lineage parent');}
+ const artifact=sourceArtifact({kind:'workflow-model',logicalName:model.id,scope,version:model.version,algorithm:'journey-model-v1',contentHash:fingerprint(model),parents,context:sources.some(s=>s.context)?{app:sources.find(s=>s.context)!.context!.app,build:sources.find(s=>s.context)!.context!.build}:undefined,capturedAt:new Date().toISOString()}),ref={identity:artifact.identity,version:artifact.version},previous=store.find(ref);if(previous){if(previous.contentHash!==artifact.contentHash||fingerprint(previous.parents)!==fingerprint(parents))throw Error('Reviewed model lineage is immutable');store.assertCurrent(ref);return store.registerDerived('workflow-model',model.scope,model.id,model.version,ref);}return store.registerDerived('workflow-model',model.scope,model.id,model.version,store.publish(artifact));
+}
+export function bindReviewedKnowledgeLineage(h:History,input:{org:string;permission:string;id:string;version:string;parents:ArtifactRef[]}){
+ const index=new KnowledgeIndex(h);index.assertLocalOnly();const document=index.all({org:input.org,permission:input.permission}).find(d=>d.id===input.id&&d.version===input.version);if(!document||document.status!=='verified'||!document.reviewer||document.reviewer==='REVIEW_REQUIRED'||document.schemaVersion!==index.currentSchema(input))throw Error('Existing current reviewed knowledge required');
+ const store=new SourceLineageStore(h),parents=z.array(ArtifactRefSchema).min(1).max(100).parse(input.parents),sources=parents.map(p=>store.assertCurrent(p)),scope=sources[0].scope;if(scope.org!==input.org||scope.persona!==input.permission||sources.some(s=>fingerprint(s.scope)!==fingerprint(scope))||sources.some(s=>!document.evidence.includes(s.version)&&!document.evidence.includes(`source-artifact:${s.identity}@${s.version}`)))throw Error('Knowledge has no exact scoped parent evidence');
+ return store.registerDerived('rag-knowledge',input,document.id,document.version,store.publish(sourceArtifact({kind:'rag-knowledge',logicalName:document.id,scope,version:fingerprint({id:document.id,version:document.version}),algorithm:'knowledge-id-version-v1',contentHash:fingerprint(document),parents,context:sources.find(s=>s.context)?.context,capturedAt:document.capturedAt})));
+}

@@ -1,5 +1,39 @@
 # Implementation report — 2026-11-13
 
+## Source evidence reconciliation - November 18 continuation from c815e7a
+
+
+Verified results for this continuation:
+
+| Check | Actual result / evidence |
+|---|---|
+| TypeScript | Passed; .state/source-reconciliation-final-typecheck.log |
+| Full unit/integration suite | **299/299**; .state/source-reconciliation-verified-unit.log (earlier complete runs also 299/299) |
+| Final lineage/live-adapter focused suite | **27/27**, including 12 new lineage/activation cases; .state/source-reconciliation-final-focused.log |
+| Headless Playwright | **3/3**; .state/source-reconciliation-headless.log |
+| All existing offline demos | **9/9**, including demo and demo:graph; .state/source-reconciliation-demo-summary.json |
+| Original committed discovery tests | **3/3** from ignored private copy; user working edit unchanged/excluded |
+| Cached-source reconciliation | Both Account and Contact compatible-pending-review; zero Salesforce/model calls |
+| Local reconciliation HTML in installed headless Chrome | Two comparison tables, no scripts/external requests/horizontal overflow; .state/source-reconciliation-report-verification.json |
+| Real inactive package negative gate | Execution rejected, zero network attempts and zero run reservations with fetch disabled; .state/source-reconciliation-inactive-gate.json |
+| Decline/ownership audit | 012 remains declined/inactive, zero reservations/activated files and zero active/uncertain owned records |
+
+Source-linked local HTML: artifacts/source-reconciliation/RECON-20261118-002/a6f277a494b5f394ce4bb61357d377a54f69761b3d01743dfef7f17625b56294/index.html; matching JSON is beside it. The exact Account compatibility review is .state/source-reconciliation-RECON-20261118-002/account.lineage.review.json, hash d0beae7f1efb7ac83f8790ac42e2876c8397feba03623e5f63281a7a81d9c263. The fresh inactive Account manifest is .state/live-exploration-SFQA-OBS-20261118-002/manifest.review.json; proposed post-approval definition hash **0fec08c8118c413ddfda8c188a5e205977677c8f362814227e1fa80dbdc8f556**, original expiry **2026-11-18T10:41:10.731Z**. No approval was self-applied and no Salesforce goal session was executed. The existing approved export was not presumed fresh; current hash and native/API identity are mandatory gates. Fresh exact source/browser/profile/read/run authorization was requested separately and is pending. An expired, changed or consumed package cannot renew/replay automatically.
+
+This increment establishes offline cached-source compatibility and working tested approval plumbing, not new live Salesforce/Gemini/Chroma health, a passing generated Salesforce test, cross-object navigation, a transaction, a confirmed application defect or verified business learning. The next execution continuation is the exact single Account observation after fresh authorization/identity. After that, prioritize source-reviewed business-rule oracles, permission-aware tests and visual baselines/evaluations; retain unknown conditions as review questions.
+
+
+The previous source gate compared unrelated artifact domains. The browser's 9c734a03… is the dedicated specification hash, inherited through the static/initialization review chain; it is not a metadata fingerprint. Reconstructing the original specification serialization (before SpecSchema's default criterion kinds/warnings) reproduces it exactly. The metadata's f4011604… is intelligenceFingerprint over schema and canonicalized metadata sections. It also reproduces exactly. The historical package and current local metadata snapshots are identical, including their November 14 capture time. Their schema, intelligence publication and component-graph versions were independently checked. This corrects the earlier assumption without copying or replacing either hash.
+
+Historical Account/Contact journal rows reproduce their content hashes, same org/user/persona/app/build and original selector contracts, with scoped unchanged-record checks at observation time. Their November 17 readiness receipts are expired. They remain source provenance, not fresh session/runtime authority. No current Salesforce layout, permission, metadata or record freshness is inferred from this local comparison.
+
+Implemented dependency order: producer/domain reconstruction + cached journal/scope checks → typed immutable source lineage → separately reviewed narrow compatibility definition → optional lineage-bound application/live goal preparation → exact inactive/post-approval hashing and activation-only command → existing fresh API/native identity, restricted MCP, readiness and independent-read gates. Registered derived workflow/RAG references are checked by their existing lookup/retrieval services; stale ancestors or changed content cannot keep an eligible verified label. Existing artifacts without optional lineage retain their original gates.
+
+Local source-linked HTML/JSON is under artifacts/source-reconciliation/RECON-20261118-002. Account/Contact compatibility reviews are inactive under .state/source-reconciliation-RECON-20261118-002. The Account-only package .state/live-exploration-SFQA-OBS-20261118-002 is also inactive, with one unchanged-record observation, original selectors, one native headless context, exact Account API fields and no UI actions/forms/writes/factories. It binds the existing independently approved export; freshness is not established by file age or preparation. Its fresh identity gates remain mandatory.
+
+No browser/agent framework was rebuilt. SourceLineageStore and its reviewed model/document bridges extend existing evidence/version storage; the live adapter reuses the explicit link instead of equality between unrelated hashes. All original 15/P0/P1/P2, Gemini and embedding model, RAG/Chroma, LangGraph, JWT/StorageState, local headless Chrome, Playwright MCP, reportingLabs, failure/healing/learning and enterprise scope remain. Package 012 stays declined/inactive; no replacement write package, mutation, owned cleanup adoption or automatic lesson is authorized. See SOURCE_EVIDENCE_RECONCILIATION.md and LIVE_EXPLORATION.md for contracts, commands and limits.
+
+
 ## Live Salesforce goal-directed exploration adapter - November 18
 
 

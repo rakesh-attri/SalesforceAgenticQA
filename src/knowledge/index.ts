@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import {fingerprint} from '../execution/browser-policy.js';
+import {registeredLineageCurrent} from './source-lineage.js';
 import { History } from '../core/history.js';
 import { redact,type Embed,SemanticKnowledge } from './rag.js';
 export const KnowledgeSchema=z.object({id:z.string().min(1),version:z.string().min(1),org:z.string().min(1),permission:z.string().min(1),kind:z.enum(['requirement','org','workflow','defect','lesson']),status:z.enum(['observed','proposed','verified','deprecated']),text:z.string().min(1),evidence:z.array(z.string().min(1)).min(1),testIds:z.array(z.string()).default([]),reviewer:z.string().optional(),capturedAt:z.string().datetime(),schemaVersion:z.string().optional(),defect:z.object({rootCause:z.string(),fix:z.string(),classification:z.string(),signature:z.string(),expected:z.string()}).optional()});
@@ -58,7 +60,7 @@ export class KnowledgeIndex {
   }
   all(scope:Scope):Knowledge[] {if(!scope.org||!scope.permission)throw Error('Explicit org and permission required');return this.history.db.prepare('SELECT payload FROM knowledge WHERE org=? AND permission=?').all(scope.org,scope.permission).map(r=>KnowledgeSchema.parse(JSON.parse(String(r.payload))));}
   async retrieve(text:string,scope:Scope,limit=10) {
-    const catalog=this.all(scope).filter(d=>d.status==='verified');
+    const catalog=this.all(scope).filter(d=>d.status==='verified'&&registeredLineageCurrent(this.history,'rag-knowledge',scope,d.id,d.version,fingerprint(d)));
     if(limit<1||limit>50)throw Error('Retrieval limit invalid');const query=tokens(text),vectors=this.embed?await this.embed([redact(text)]):undefined,vector=vectors?.[0];
     if(vectors&&(vectors.length!==1||!vector?.length||vector.some(v=>!Number.isFinite(v))))throw Error('Invalid query vector');
     const remoteHits=new Set<string>();

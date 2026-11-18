@@ -1,5 +1,12 @@
 # Architecture
 
+## Typed source lineage and explicit compatibility
+
+SourceLineageStore extends the existing History database with canonical scoped artifact identities, immutable original-version/content records and bounded current parent traversal. Specification, metadata snapshot, intelligence/graph publication, browser observation, locator, readiness, reviewed workflow and RAG knowledge keep distinct hash domains. The reconciliation service reproduces producers and verifies the existing host readiness journal; it never equates unrelated hashes or grants fresh readiness. Existing model/document bridges require original exact review and declared parent evidence; their lookup/retrieval services reject registered stale or changed derived artifacts.
+
+The live goal leaf optionally carries a separately reviewed, host-journaled compatibility definition binding the old specification/view and current metadata/graph, exact org/user/persona/app/build/origins/record/parent. Existing source hashes stay unchanged. Preparation persists inactive drafts plus the exact proposed named-approval hash; activation verifies it, original expiry/nonce and export binding before writing once. Fresh runtime native/API proof and all four permission planes remain mandatory. No factory/ordinary Production scope is broadened. See [SOURCE_EVIDENCE_RECONCILIATION.md](SOURCE_EVIDENCE_RECONCILIATION.md).
+
+
 ## Live goal-directed observation extension
 
 The existing goal scorer/source validator, exploration ledger and LangGraph selection/review graph now accept a typed observation adapter while keeping the original loopback fixture runtime closed. Live composition is SalesforceClient.connectReviewedBrowser → separately approved closed API-read facade → LightningSession → existing restricted Playwright MCP gateway → reviewed readiness/source acquisition → independent equality/drift receipt → common investigation/report services. Custom fixture ports always label evidence offline.

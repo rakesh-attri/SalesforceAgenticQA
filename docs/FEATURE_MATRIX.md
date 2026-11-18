@@ -1,5 +1,23 @@
 # Current capability matrix
 
+## Source evidence reconciliation - November 18 continuation
+
+Continues **c815e7a**, preserving all 15 owners and cumulative P0/P1/P2. See [SOURCE_EVIDENCE_RECONCILIATION.md](SOURCE_EVIDENCE_RECONCILIATION.md). The earlier blocked-source-drift decision is retained below as history; its original comparison is now explained as a **specification-versus-intelligence domain mismatch**, not demonstrated metadata drift.
+
+| Capability | Current verification | Remaining boundary |
+|---|---|---|
+| Exact fingerprint explanation | Real saved evidence, offline: 9c734a03… reproduces the dedicated specification; f4011604… reproduces canonical intelligence; historical/current parsed metadata snapshots are identical | No fresh Salesforce metadata/authentication claim |
+| Browser/source scope reconciliation | Offline host-journal checks: same org/user/persona/app/build, immutable selectors, independently unchanged historical Account/Contact observations | Historical readiness is expired and grants no execution authority |
+| Typed provenance | SourceLineageStore preserves distinct artifact identities, algorithms, content hashes, bounded parent edges and publication order across all nine kinds | Unknown canonicalization/publication changes remain review/acquisition questions |
+| Workflow and RAG invalidation | Mock verified: existing reviewed model/document bridges; ancestor changes and changed derived contents block lookup/retrieval | No new model, requirement, lesson, external embedding or Chroma publication |
+| Explicit compatibility link | Implemented with exact record/parent/origin/app/build/specification/metadata/graph/view binding and separate named review | No hash copying or automatic approval; stale/cross-scope/incomplete sources reject |
+| Fresh Account no-create preparation | Actual cached-source preparation succeeds locally through the explicit link, with unchanged browser/view sourceVersion and a new inactive run | Exact source/browser/profile/read/run authorization and fresh API/native identity still required |
+| Exact activation hashing | Mock verified: manifest binds both inactive and post-approval hashes; activation can change named approval fields only, verifies unchanged export, writes once | No silent expiry/state/source/nonce changes, no automatic browser execution or replay |
+| First live goal-directed observation | Not claimed by offline reconciliation | Executes only after fresh exact approval; no record create/update/delete, Contact traversal or transaction authority |
+
+**Verified: 299/299 full unit/integration, 27/27 final focused, 3/3 headless, typecheck, all nine demos and original committed discovery 3/3.** Local reconciliation HTML has no scripts/external requests/overflow. The real inactive package gate made zero network attempts/reservations. Fresh live authorization is pending; no Salesforce observation was executed. Exact artifacts/scopes are recorded in the current implementation report. Package 012 remains declined, unreserved and inactive. Gemini/gemini-embedding-001, persistent RAG/optional Chroma, LangGraph, existing Chrome/MCP, reportingLabs, ownership and all ordinary Production restrictions remain in scope and unchanged.
+
+
 ## Live goal-directed Salesforce observation - November 18
 
 Continues **98913a4** on **feature/verified-discovery**. This section supplements every earlier registry row and all 15 owners. See [LIVE_EXPLORATION.md](LIVE_EXPLORATION.md). Package 012 remains declined/inactive; no replacement factory/write package was prepared.

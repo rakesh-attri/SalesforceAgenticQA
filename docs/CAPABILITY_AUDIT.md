@@ -1,5 +1,12 @@
 # Capability audit and agent ownership
 
+## Source evidence reconciliation continuation
+
+All 15 owners/P0/P1/P2 remain. Org Discovery/Knowledge/Reviewer now distinguish specification, Describe/schema, intelligence, publication, graph, browser, locator, readiness, reviewed workflow and RAG versions. The saved mismatch is a real domain error in the framework's earlier assumption; identical metadata and host-journal scope were verified locally. Immutable lineage/current-parent/content checks extend existing workflow/RAG lookup, without another browser or agent framework.
+
+Orchestrator/Coordinator/Explorer retain the existing goal planner, durable graph/ledger, private Chrome/MCP and fresh identity gates. Reviewer owns the separate compatibility and exact source/browser/profile/API/run approvals; activation cannot change scope, expiry, nonce, state or assertions. Analyst/Planner/Risk/Generator keep current scoped sources and unknown business rules. Test Data/cleanup reserve, create and adopt no records. Investigator/Healer/Learning publish no confirmed defect or business lesson from reconciliation. reportingLabs remains reserved for actual generated tests. First live goal execution remains separately gated; source compatibility alone is offline evidence. Package 012 stays declined/inactive. See SOURCE_EVIDENCE_RECONCILIATION.md and current implementation report.
+
+
 ## Live observation adapter - November 18
 
 All 15 owners and cumulative P0/P1/P2 remain. Orchestrator/Coordinator reuse the common source validator, deterministic scorer, SQLite ledger and LangGraph review graph. Application Explorer/Autonomous Explorer now have a real Salesforce composition root with exact existing-record observation references, private same-context Chrome/MCP and no arbitrary click/evaluate/native tool. It is offline verified with actual browser/MCP fixtures, not newly live verified. Org Discovery supplies current metadata/component evidence and independently verified org/user/app context; source drift blocks activation.
