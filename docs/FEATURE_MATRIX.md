@@ -1,5 +1,24 @@
 # Current capability matrix
 
+## Full framework integration and developer experience - continuation from aa8b712
+
+All 15 responsibilities and cumulative P0/P1/P2 rows below remain. The [architecture/capability audit](FRAMEWORK_INTEGRATION_AUDIT.md) maps real services and unresolved connections; the [complete beginner guide](FRAMEWORK_COMPLETE_GUIDE.md) documents Windows commands and safety. Scopes SFQA-OBS-20261118-002 and lifecycle 012 remain explicitly declined/inactive; no replacement live package was prepared.
+
+| Capability | Actual current evidence | Remaining boundary |
+|---|---|---|
+| Connected specs -> data -> generated QA execution -> cleanup -> learning | Offline real-module integration: one shared source/History; imported Account/Contact story, mocked Describe/component evidence, actual MCP application observations, scoped persistent RAG and mocked Gemini transport, reviewed seven-kind design/oracles, actual HybridFactory and child Playwright | Mock services are not live Salesforce/Gemini proof; broad live journeys remain partial |
+| Guard preservation in specs graph | Actual generated child executes original assertion + approved QA checks; trusted runtime hooks extend existing coordinator | No generated authority or alternative browser mode; actual live QA adapter composition still separately gated |
+| Durable exact execution review | Actual interrupt before setup, saver close/reopen and exact hash/operator resume; wrong review rejects before coordinator | No uncertain browser/session replay or approval renewal |
+| Hybrid data and independent verification | Real API/business-service factory modes against synthetic backend, deterministic reviewed values, linked Contact, post-execution SOQL and reverse cleanup + independent absence | Prior real owned data evidence stays historical; arbitrary factories/mutations remain unapproved |
+| Expected negative/permission cases | Actual generated tests assert empty-draft and restricted-read rejection; no invalid record persisted | Mock preview validation is not a Salesforce save or edit-permission proof |
+| Failure/visual/API intelligence | Actual child captures separate wrong-API, locator and layout failures; visual differences remain review candidates | No automatic confirmation of API/visual defects |
+| Guarded healing -> reviewed workflow -> learning | Actual observed locator, byte-exact failing guarded source, unchanged assertions and passing child rerun; cleanup precedes existing confirmation gate; new source-linked workflow and mandatory future regression | Fixture automation defect only; no Salesforce business lesson or unattended live repair |
+| Local reportingLabs | Actual success, fault and repair HTML/JSON/trace output from installed npm reporter, linked from common HTML/manifest with verified masked images | CI/advanced dashboards remain engineering gaps, no paid key blocker |
+| Operator experience | Local doctor, requirement import, status/approvals/history and demo aliases in existing Windows CLI; 20-section guide | Configuration presence never claims connectivity; actual live execution still needs separate exact scope |
+
+Validation: **328/328 full unit/integration, 5/5 headless, typecheck, all 11 demos and 12/12 focused connected integration tests passed**. Focused connected integration passed 12/12. No new Salesforce/remote Gemini/Chroma call, real record mutation, state import/rebinding or live permission activation. User discovery-test edit preserved.
+
+
 ## Business-rule oracles, permission intelligence and reviewed visual baselines - November 18
 
 Continues **71c5716**, preserving all 15 responsibilities and every prior P0/P1/P2 row below. [QA_INTELLIGENCE.md](QA_INTELLIGENCE.md) documents the extension and limits. **SFQA-OBS-20261118-002 and lifecycle 012 are explicitly declined/inactive.** The earlier pending-authorization wording below is historical; no replacement package, browser session, state rebinding or live data run was prepared or activated here.

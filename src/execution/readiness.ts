@@ -5,6 +5,8 @@ import { HybridFactory } from '../agents/hybrid-factory.js';
 import type { Approval,Mutation } from '../salesforce/approval.js';
 import { BrowserIdentitySchema,checkSessionReceipt,probeSession } from '../integrations/session-gate.js';
 import type { Page } from '@playwright/test';
+import type { Workflow,generateTest } from '../agents/workflows.js';
+import type { executeGenerated } from './runner.js';
 export const SandboxRequestSchema=BrowserIdentitySchema.extend({sessionReceipt:z.string().min(1),reviewer:z.string().trim().min(1),expiresAt:z.string().datetime(),nonFinancialReviewed:z.literal(true)});
 export const DataSetupSchema=z.object({recipes:z.array(RecipeSchema).min(1),cleanup:z.enum(['always','retain-reviewed']).default('always'),retentionReviewer:z.string().trim().min(1).optional()}).superRefine((v,c)=>{if(v.cleanup==='retain-reviewed'&&!v.retentionReviewer)c.addIssue({code:'custom',message:'Retention requires named review'});});
 export type SetupRecords=Awaited<ReturnType<HybridFactory['setup']>>;
@@ -12,6 +14,11 @@ export interface PipelineRuntime {
   factory:HybridFactory;
   approvalFor(m:Mutation):Promise<Approval>;
   preflight(input:PipelineInput):Promise<{storageState?:string;orgId?:string;userId?:string;persona?:string}>;
+  // Trusted host adapters extend existing execution; none are model tools.
+  prepareExecution?(input:PipelineInput,owned:SetupRecords):Promise<void>;
+  guardFor?(input:PipelineInput,workflow:Workflow):Promise<Parameters<typeof generateTest>[2]>;
+  afterExecution?(input:PipelineInput,execution:Awaited<ReturnType<typeof executeGenerated>>):Promise<void>;
+  verifyCleanup?(input:PipelineInput,owned:SetupRecords):Promise<void>;
 }
 export function sandboxRuntime(input:{factory:HybridFactory;approvalFor:(m:Mutation)=>Promise<Approval>;identity:()=>Promise<{Id:string;IsSandbox:boolean;userId:string}>;verifySchema:(request:PipelineInput)=>Promise<void>;allowedOrgIds:string[];allowedOrigins:string[];probe:(page:Page)=>Promise<z.infer<typeof BrowserIdentitySchema>>}):PipelineRuntime {
   return {factory:input.factory,approvalFor:input.approvalFor,async preflight(request) {

@@ -1,5 +1,36 @@
 # Implementation report — 2026-11-13
 
+## Connected Account/Contact framework - continuation from aa8b712
+
+Implemented actual integration rather than another browser architecture. See [FRAMEWORK_COMPLETE_GUIDE.md](FRAMEWORK_COMPLETE_GUIDE.md) for the 20-topic walkthrough and [FRAMEWORK_INTEGRATION_AUDIT.md](FRAMEWORK_INTEGRATION_AUDIT.md) for P0/P1/P2/service boundaries.
+
+| Change | Actual verification |
+|---|---|
+| Existing specs graph | Exact checkpointed execution-review node before setup; guarded final generation; trusted prepare/post-execution/cleanup verification hooks preserve all default behavior |
+| Shared integrated fixture | Real importer, mocked Describe reader/component evidence, actual application/MCP observations, persistent RAG through actual Gemini adapter mocks, QA/risk/generation with one shared History |
+| Factories and cleanup | API Account + business-service Contact via existing HybridFactory/DataExecution, deterministic values and parent, independent SOQL, foreign-sentinel exclusion and reverse cleanup/absence |
+| Actual generated execution | Success: seven passed; fault phase: three actual failed/four passed; reviewed repair: one passed. Real local headless Chrome/Playwright child + reportingLabs |
+| Reviewed recovery/learning | Actual MCP observes renamed locator; guarded executed-source comparison; original assertion and QA checks unchanged; actual regression + cleanup required; only fixture automation cause confirmed; next plan risk 80 -> 130 and mandatory, new reviewed workflow uses repaired locator |
+| Operator experience | doctor/demo:framework aliases; existing CLI local import/status/approvals/history; exact report/image paths and safe diagnostics; complete guide and capability map |
+
+**328/328 full unit/integration, 5/5 headless, typecheck, all 11 demos and 12/12 focused connected integration tests passed**. Focused integration: 12/12. Logs: .state/framework-full-unit.log, framework-typecheck.log, framework-headless.log, framework-focused.log and framework-demo-summary.json. Actual CLI doctor/import/status/approvals/history all exited zero. Local report inspection passed with four masked image links/two reportingLabs links, generated test rows visible, no overflow/script errors/external requests (.state/framework-report-inspection.json). The read-only declined-scope/ownership/user-edit audit passed (.state/framework-safety-audit.json).
+
+Actual final demonstration files (local and excluded from Git):
+
+- Summary: artifacts/framework-c6225e61-247b-4e3e-b4c0-7e85d124f167/index.html
+- Manifest/history: artifacts/framework-c6225e61-247b-4e3e-b4c0-7e85d124f167/manifest.json; artifacts/framework-c6225e61-247b-4e3e-b4c0-7e85d124f167/history.sqlite
+- Success reportingLabs: artifacts/framework-c6225e61-247b-4e3e-b4c0-7e85d124f167/success/fw-c6225e61-247b-4e3e-b4c0-7e85d124f167-success/execution/reporting-labs/index.html
+- Fault reportingLabs: artifacts/framework-c6225e61-247b-4e3e-b4c0-7e85d124f167/faults/fw-c6225e61-247b-4e3e-b4c0-7e85d124f167-faults/execution/reporting-labs/index.html
+- Passing repair reportingLabs: artifacts/framework-c6225e61-247b-4e3e-b4c0-7e85d124f167/faults/repair-execution/reporting-labs/index.html
+- Reviewed QA plans: artifacts/framework-c6225e61-247b-4e3e-b4c0-7e85d124f167/success/report.html and faults/report.html; learned future plan: artifacts/framework-c6225e61-247b-4e3e-b4c0-7e85d124f167/future-plan/report.html
+
+Actual injected transport counts: 10 Gemini chat and 21 embedding HTTP mocks; zero live Gemini/Salesforce/Chroma requests. Across the two actual data phases: four mock records created, four deleted, zero active owned and foreign sentinel unchanged. Original phases: 11 passed and three deliberately failed; separate repair: one passed (15 actual generated rows overall). Expected failing tests remain failed in reportingLabs; the demonstration validates that these failures, reviewed recovery and safe cleanup actually happened.
+
+Engineering findings: the original final generator discarded QA guards, healer source comparison assumed plain tests, and the application study requires one selected current page per object. These are connected without weakening their assertions. An initial integration run correctly failed identity comparison because raw JSON key order differed; the adapter now schema-parses the exact literal identity before comparison. Another first-run failure selected multiple Contact case pages; selection now explicitly supplies primary Account/Contact pages while preserving all seven scenario observations. These attempts were offline and are not recorded as passing evidence.
+
+No new live Salesforce identity/discovery/browser/data call or live Gemini/Chroma request occurred. No live approval package was prepared. Scopes 002/012 remain declined, unreserved and inactive; no state rebinding. Existing unit/discovery.test.ts edit is unchanged and excluded from the commit. Historical live evidence remains scoped to the original records, dates and permissions. Remaining gaps and the shortest separately requested no-create live oracle verification are documented in the guide.
+
+
 ## Reviewed QA Intelligence - continuation from 71c5716
 
 Implemented reusable TypeScript oracles, permission-evidence analysis and versioned masked visual baselines through the existing planner/generator/reviewer, component graph, RAG and investigator. No alternate agent framework or browser policy was introduced. See [QA_INTELLIGENCE.md](QA_INTELLIGENCE.md).

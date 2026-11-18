@@ -1,0 +1,16 @@
+{
+  "id": "integrated-account-contact",
+  "title": "Reviewed Account and Contact QA preview",
+  "description": "As a QA analyst I want to preview Account and Contact business cases, verify their owned relationship independently and retain reviewed failure evidence. These are synthetic fixture contracts, not claims about a live Salesforce org.",
+  "objects": ["Account", "Contact"],
+  "persona": "QA",
+  "acceptanceCriteria": [
+    {"id":"AC1","kind":"positive","text":"A valid Account preview displays Draft ready and its owned Name matches independent API data.","expectedText":"Draft ready"},
+    {"id":"AC2","kind":"negative","text":"An empty draft surname displays Surname required and the independent mock draft validator returns REQUIRED_FIELD_MISSING. No invalid record is saved.","expectedText":"Surname required"},
+    {"id":"AC3","kind":"boundary","text":"Exactly 80 draft surname characters display Length accepted. The unchanged owned Contact still references the owned Account; the preview is not a persisted edit.","expectedText":"Length accepted"},
+    {"id":"AC4","kind":"integration","text":"The related Account preview displays Synthetic QA Account and independent SOQL verifies Contact.AccountId.","expectedText":"Synthetic QA Account"},
+    {"id":"AC5","kind":"permission","text":"The restricted read preview displays Insufficient access and independent mock access returns INSUFFICIENT_ACCESS.","expectedText":"Insufficient access"},
+    {"id":"AC6","kind":"regression","text":"The reviewed Contact preview displays Known rule restored and its owned LastName matches independent SOQL.","expectedText":"Known rule restored"},
+    {"id":"AC7","kind":"visual","text":"The Contact preview displays Layout approved and matches its separately reviewed masked fixture baseline and accessible preview button.","expectedText":"Layout approved"}
+  ]
+}

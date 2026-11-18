@@ -1,4 +1,4 @@
-import { Annotation,StateGraph,START,END,type BaseCheckpointSaver } from '@langchain/langgraph';
+import { Annotation,StateGraph,START,END,interrupt,type BaseCheckpointSaver } from '@langchain/langgraph';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { z } from 'zod';
@@ -57,7 +57,8 @@ type Execution=Awaited<ReturnType<typeof executeGenerated>>;
 type Observation=Awaited<ReturnType<typeof observeProduction>>;
 type Lifecycle={status:'not-executed'|'passed'|'failed';stages:string[];errors:string[];created:number;cleaned:number};
 const State=Annotation.Root({input:Annotation<PipelineInput>(),context:Annotation<Context>(),analysis:Annotation<Analysis>(),files:Annotation<Array<{id:string;code:string}>>(),execution:Annotation<Execution|undefined>(),observation:Annotation<Observation|undefined>(),lifecycle:Annotation<Lifecycle>(),investigations:Annotation<Array<Awaited<ReturnType<typeof investigateFailure>>>>(),reportPath:Annotation<string>(),advice:Annotation<Partial<Record<ReasoningRole,AgentAdvice>>>(),modelFailures:Annotation<ReasoningRole[]>()});
-export function createSpecPipeline(services:{history:History;knowledge:KnowledgeIndex;root:string;checkpointer?:BaseCheckpointSaver;runtime?:PipelineRuntime;reasoning?:ReasoningAgents;observe?:(request:z.infer<typeof ObservationRequestSchema>)=>Promise<Observation>}) {
+export function createSpecPipeline(services:{history:History;knowledge:KnowledgeIndex;root:string;checkpointer?:BaseCheckpointSaver;requireExecutionReview?:boolean;runtime?:PipelineRuntime;reasoning?:ReasoningAgents;observe?:(request:z.infer<typeof ObservationRequestSchema>)=>Promise<Observation>}) {
+  if(services.requireExecutionReview&&!services.checkpointer)throw Error('Execution review requires a checkpoint saver');
   services.history.db.exec('CREATE TABLE IF NOT EXISTS pipeline_runs(run TEXT PRIMARY KEY,status TEXT,payload TEXT)');
   async function modelAdvice(state:typeof State.State,role:ReasoningRole,analysis=state.analysis,investigations=state.investigations) {
     const advice={...state.advice},modelFailures=[...state.modelFailures??[]];
@@ -82,6 +83,7 @@ export function createSpecPipeline(services:{history:History;knowledge:Knowledge
     .addNode('knowledge_agent',async state=>{const context=await services.knowledge.retrieve(`${state.input.spec.title} ${state.input.spec.description} ${state.input.spec.acceptanceCriteria.map(a=>a.text).join(' ')}`,{org:state.input.org.orgIdentityHash??state.input.org.orgAlias,permission:state.input.permission});return {context,...await modelAdvice({...state,context},'spec-analyst')};})
     .addNode('planner_reviewer_risk',async state=>{const analysis=analyze(state.input,state.context,services.history);return {analysis,...await modelAdvice(state,'test-planner',analysis)};})
     .addNode('generator',async state=>({files:state.input.productionReadOnly?[]:state.analysis.selection.flatMap(selected=>{const scenario=state.analysis.scenarios.find(s=>s.id===selected.id)!;if(scenario.status!=='reviewed')return [];const mapping=state.input.mappings.find(m=>m.criterionId===scenario.criterionId)!;return [{id:scenario.id,code:generateTest(mapping.workflow,state.input.allowedOrigins)}];}),...await modelAdvice(state,'generator')}))
+    .addNode('execution_review',state=>{if(services.requireExecutionReview&&state.input.executionApproval){const hash=executionHash(state.input),answer=interrupt({kind:'exact-execution-review',runId:state.input.runId,hash,executionStarted:false});if(answer?.hash!==hash||!answer?.reviewer?.trim()||answer.reviewer==='REVIEW_REQUIRED'||answer.reviewer!==state.input.executionApproval.reviewer)throw Error('Exact named execution review required');}return{};})
     .addNode('execution_coordinator',async state=>{
       const lifecycle:Lifecycle={status:'not-executed',stages:[],errors:[],created:0,cleaned:0};
       if(state.input.productionReadOnly){
@@ -117,14 +119,16 @@ export function createSpecPipeline(services:{history:History;knowledge:Knowledge
         const owned=services.runtime?.factory.owned(state.input.runId)??[];lifecycle.created=owned.length;
         if(!fixture)session=await services.runtime!.preflight(state.input);
         const replace=(value:string)=>value.replace(/\{\{record:([A-Za-z][A-Za-z0-9_]*)\}\}/g,(_match,name)=>{const id=owned.find(r=>r.object===name)?.id;if(!id)throw Error(`Missing verified record reference: ${name}`);return id;});
-        const files=state.files.map(file=>{const mapping=state.input.mappings.find(m=>m.workflow.id===file.id)!;const workflow=structuredClone(mapping.workflow);workflow.path=replace(workflow.path);for(const step of workflow.steps)if(step.value!==undefined)step.value=replace(step.value);for(const api of workflow.apiAssertions)api.path=replace(api.path);return {id:file.id,code:generateTest(workflow,state.input.allowedOrigins)};});
-        execution=await executeGenerated(join(services.root,state.input.runId,'execution'),state.input.runId,files,120000,session);
+        await services.runtime?.prepareExecution?.(state.input,owned);
+        const files=await Promise.all(state.files.map(async file=>{const mapping=state.input.mappings.find(m=>m.workflow.id===file.id)!;const workflow=structuredClone(mapping.workflow);workflow.path=replace(workflow.path);for(const step of workflow.steps)if(step.value!==undefined)step.value=replace(step.value);for(const api of workflow.apiAssertions)api.path=replace(api.path);const guard=await services.runtime?.guardFor?.(state.input,workflow);return {id:file.id,code:generateTest(workflow,state.input.allowedOrigins,guard)};}));
+        execution=await executeGenerated(join(services.root,state.input.runId,'execution'),state.input.runId,files,120000,{...session,...(fixture?{validation:'offline-mocked-salesforce' as const}:{})});
         for(const result of execution.results)services.history.record(result);
+        await services.runtime?.afterExecution?.(state.input,execution);
         lifecycle.stages.push('browser-execution-complete');lifecycle.status=execution.exitCode===0&&execution.results.every(r=>r.status==='passed')?'passed':'failed';
       }catch(error){lifecycle.status='failed';lifecycle.errors.push(error instanceof Error?error.message:'Execution lifecycle failed');}
       finally {
         const owned=services.runtime?.factory.owned(state.input.runId)??[];lifecycle.created=owned.length;
-        if(setupStarted&&owned.length&&state.input.dataSetup?.cleanup==='always')try{lifecycle.cleaned=(await services.runtime!.factory.cleanup(state.input.runId,owned,services.runtime!.approvalFor)).length;lifecycle.stages.push('cleanup-complete');}catch(error){lifecycle.status='failed';lifecycle.errors.push(`Cleanup failed: ${error instanceof Error?error.message:'unknown'}`);}
+        if(setupStarted&&owned.length&&state.input.dataSetup?.cleanup==='always')try{lifecycle.cleaned=(await services.runtime!.factory.cleanup(state.input.runId,owned,services.runtime!.approvalFor)).length;await services.runtime?.verifyCleanup?.(state.input,owned);lifecycle.stages.push('cleanup-complete');}catch(error){lifecycle.status='failed';lifecycle.errors.push(`Cleanup failed: ${error instanceof Error?error.message:'unknown'}`);}
         services.history.db.prepare('UPDATE pipeline_runs SET status=?,payload=? WHERE run=?').run(lifecycle.status,JSON.stringify(lifecycle),state.input.runId);
         await saveJson(join(services.root,state.input.runId,'lifecycle.json'),lifecycle);
       }
@@ -141,6 +145,6 @@ export function createSpecPipeline(services:{history:History;knowledge:Knowledge
       const report={mode:state.input.productionReadOnly?'PRODUCTION_READ_ONLY_QA':state.input.org.source==='fixture'?'offline-fixture':'authorized-sandbox',runId:state.input.runId,lifecycle:state.lifecycle,source:{id:state.input.spec.source,version:state.input.spec.version},analysis:state.analysis,knowledge:state.context.map(d=>d.citation),observation:state.observation,execution:state.execution??{status:'not-executed'},investigations:state.investigations,modelAdvice:state.advice,modelFailures:state.modelFailures,metrics:services.history.metrics(),evaluation:evaluateReadiness(state.analysis.scenarios,state.observation?services.history.results().filter(r=>r.runId===state.input.runId):state.execution?.results??[]),trends:crossRunTrends(services.history.results())};
       await saveJson(reportPath,report);await writeFile(join(services.root,state.input.runId,'report.html'),htmlReport(report));return {reportPath};
     })
-    .addEdge(START,'spec_analyst').addEdge('spec_analyst','knowledge_agent').addEdge('knowledge_agent','planner_reviewer_risk').addEdge('planner_reviewer_risk','generator').addEdge('generator','execution_coordinator').addEdge('execution_coordinator','failure_investigator').addEdge('failure_investigator','reporter').addEdge('reporter',END);
+    .addEdge(START,'spec_analyst').addEdge('spec_analyst','knowledge_agent').addEdge('knowledge_agent','planner_reviewer_risk').addEdge('planner_reviewer_risk','generator').addEdge('generator','execution_review').addEdge('execution_review','execution_coordinator').addEdge('execution_coordinator','failure_investigator').addEdge('failure_investigator','reporter').addEdge('reporter',END);
   return graph.compile({checkpointer:services.checkpointer});
 }

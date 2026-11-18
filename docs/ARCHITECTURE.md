@@ -1,5 +1,14 @@
 # Architecture
 
+## Connected framework execution composition
+
+The existing specs graph now optionally interrupts at exact execution review before its coordinator. PipelineRuntime host hooks preserve reviewed generation guards after owned data setup, perform post-execution checks/reviewed recovery and independently check cleanup absence. Existing callers retain their default graph behavior and all live mode restrictions. The original assertion is generated unchanged; QA checks add verification rather than authority.
+
+The connected fixture composition in demos/integrated-framework uses the actual importer/discovery/application/workflow/RAG/risk/QA services, durable workflow and execution reviews, HybridFactory/DataExecution, runner, reportingLabs, investigator, typed healer and confirmed-defect gate with one shared History. Its closed loopback child adapter reconstructs a reviewed QA binding only for fixture evidence and journaled owned records; it cannot accept Salesforce origins or Production evidence. Shared deterministic factory values prevent a second data generator. Guarded healing compares actual executed source, requires observed locator review, preserves assertions/QA and publishes the reviewed repair as a new workflow version. Cleanup still runs after failed tests and before eligible learning.
+
+The successful and deliberately faulty phases have distinct status and reportingLabs output. Only the actual passing locator regression can support its reviewed fixture automation lesson; API/visual issues remain unconfirmed. See [FRAMEWORK_INTEGRATION_AUDIT.md](FRAMEWORK_INTEGRATION_AUDIT.md) and [FRAMEWORK_COMPLETE_GUIDE.md](FRAMEWORK_COMPLETE_GUIDE.md).
+
+
 ## Reviewed business, permission and visual expectations
 
 The existing test-design service now composes through designQAIntelligence: source-grounded criteria/workflow review -> immutable QA oracle/permission/baseline contracts -> existing risk/history/scenario plan -> unchanged original Playwright assertions plus exact-version QA checks -> scoped local receipts/report. QAContractStore extends History; existing JourneyEvidence gains an oracle claim distinct from narrative business-rule evidence. Existing metadata graph retains validation declaration details without evaluating formulas.

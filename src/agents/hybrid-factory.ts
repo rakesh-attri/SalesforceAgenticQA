@@ -6,6 +6,13 @@ import { DataExecution,type DataAdapter } from './data-execution.js';
 import { snapshotVersion } from '../knowledge/snapshots.js';
 import { authorize,type Mutation,type Approval } from '../salesforce/approval.js';
 type Mode=Recipe['mode'];
+export function factoryMutationValues(runId:string,recipe:Recipe,references:Map<string,string>) {
+  const values:Mutation['values']={};
+  for(const [name,field] of Object.entries(recipe.fields)){
+    const seed=createHash('sha256').update(`${runId}:${recipe.id}:${name}`).digest('hex').slice(0,12);
+    values[name]=field.kind==='parent'?references.get(field.object)!:field.kind==='picklist'?field.value:field.type==='boolean'?false:field.type==='integer'?1:field.type==='email'?`sfqa-${seed}@example.test`:`sfqa-${seed}`;
+  }return values;
+}
 export interface FactoryAdapter extends DataAdapter {
   identity():Promise<{Id:string;IsSandbox:boolean}>;
   verify(m:Mutation,id:string):Promise<unknown>;
@@ -30,11 +37,7 @@ export class HybridFactory {
   async setup(runId:string,recipes:Recipe[],org:OrgSnapshot,approvalFor:(m:Mutation)=>Promise<Approval>) {
     const sorted=this.plan(recipes,org),created:Array<{object:string;id:string;mode:Mode;evidence:unknown}>=[],references=new Map<string,string>();
     for(const recipe of sorted) {
-      const values:Mutation['values']={};
-      for(const [name,field] of Object.entries(recipe.fields)){
-        const seed=createHash('sha256').update(`${runId}:${recipe.id}:${name}`).digest('hex').slice(0,12);
-        values[name]=field.kind==='parent'?references.get(field.object)!:field.kind==='picklist'?field.value:field.type==='boolean'?false:field.type==='integer'?1:field.type==='email'?`sfqa-${seed}@example.test`:`sfqa-${seed}`;
-      }
+      const values=factoryMutationValues(runId,recipe,references);
       const m:Mutation={runId,object:recipe.object,operation:'create',values};
       const id=String(await this.executor(recipe.mode).execute(m,await approvalFor(m)));
       this.history.db.prepare('INSERT OR IGNORE INTO factory_records VALUES(?,?,?,?,NULL)').run(runId,recipe.object,id,recipe.mode);

@@ -1,5 +1,16 @@
 # Framework Knowledge Base
 
+## Connected framework integration - continuation from aa8b712
+
+- Use the existing specs graph and coordinator, not another agent framework. Optional exact execution-review interrupt requires durable saver + matching reviewer/hash before data. prepareExecution/guardFor preserve reviewed QA checks after setup; afterExecution/verifyCleanup connect post-run SOQL, reviewed recovery and independent absence. Old callers retain default behavior and live mode policies are unchanged.
+- The integrated fixture shares imported story, mocked Describe/component evidence, selected Account/Contact application pages, all seven actual MCP case observations, persistent source/RAG/History, real Gemini adapters under mocks, factories, runner, reportingLabs, investigation/healing and confirmation. HybridFactory factoryMutationValues is shared for proposal and actual deterministic setup; no duplicate factory logic.
+- fixture-qa-guard is loopback-only, source=fixture, exact fixed synthetic identity, named content/expiry review, actual created-mutation ownership and preview-only one-use actions. It reconstructs actual child QA bindings; it cannot accept real Salesforce origins or Production evidence. Raw identity key ordering must not cause mismatch: compare schema-parsed exact identity. Application compiler still selects one current page/object; retain all scenario evidence separately.
+- Real connected results: success seven passed; deliberate wrong API/locator/layout three failed and four passed; reviewed locator repair one passed. Both data phases create/verify/clean two mock records, independent absence passes and foreign sentinel is unchanged. Never describe expected faults as passing tests.
+- Guarded healer compares actual executed source with the same guard. An actual MCP-observed locator, named typed repair, unchanged assertion/QA checks, passing regression and verified cleanup precede confirmation. Only the seeded fixture automation defect is learned; API/visual issues remain hypotheses. Reviewed locator evidence forms a new workflow version for future proposals; learned risk 80 -> 130/mandatory.
+- **328/328 full unit/integration, 5/5 headless, typecheck, all 11 demos and 12/12 focused connected integration tests passed**. Focused 12/12 passed. New guide: docs/FRAMEWORK_COMPLETE_GUIDE.md; service map: FRAMEWORK_INTEGRATION_AUDIT.md. doctor is local/config presence only; demo uses mock providers, local Chrome/MCP and actual local reportingLabs. No configured credential implies service success.
+- Scope 002 and lifecycle 012 stay explicitly declined/inactive/unreserved. Do not prepare replacements or call live Salesforce/browser/model/vector services without a new explicit request. User discovery edit hash stays 113D6D786185D998EB987C6D8FF8F86017D6E29081484FF458707B9A8494CAA1 and must remain unstaged. Broader autonomous QA/workflows/personas/visual/enterprise connector gaps remain cumulative.
+
+
 ## Reviewed QA Intelligence - November 18 continuation
 
 - Continue 71c5716 on feature/verified-discovery. Scope 002 was explicitly declined (keep inactive), as was lifecycle 012. Historical pending wording below is superseded. Do not activate, renew, rebind state or prepare a replacement live observation/data package without a new explicit request. No live Salesforce/Gemini/Chroma call in this increment.

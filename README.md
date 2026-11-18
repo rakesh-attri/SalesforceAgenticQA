@@ -1,5 +1,8 @@
 # SalesforceAgenticQA
 
+[Complete framework guide](docs/FRAMEWORK_COMPLETE_GUIDE.md) explains all 15 responsibilities, source locations, approvals, data ownership, Gemini/RAG, browser execution and troubleshooting. Run `npm.cmd run doctor` for local prerequisites and `npm.cmd run demo:framework` for the connected Account/Contact fixture: actual generated headless Chrome tests, MCP, persisted RAG/checkpoints, independent mock API checks, reviewed visual comparison, owned cleanup, real reportingLabs and eligible fixture learning. Salesforce/Gemini transports are mocked; scopes 002/012 remain declined/inactive.
+
+
 [Reviewed QA Intelligence](docs/QA_INTELLIGENCE.md) adds source-grounded business oracles, persona/operation-aware permission comparisons and independently reviewed masked visual baselines through the existing planner, generator and RAG. Run `npm.cmd run platform -- demo-qa-intelligence` for the real offline headless Chrome/MCP demonstration and local HTML report. No new Salesforce/model calls occur. Observation SFQA-OBS-20261118-002 and lifecycle 012 are explicitly declined/inactive; no replacement live package is prepared.
 
 [Exploration Intelligence](docs/EXPLORATION_INTELLIGENCE.md) adds deterministic goal-directed action selection, durable LangGraph interruptions/resume, evidence-linked failure hypotheses, reproducible reports and separately reviewed locator-only recovery within the parent's remaining budget. Run `npm.cmd run platform -- demo-exploration-intelligence` for actual synthetic headless Chrome/MCP execution, checkpoint reopening, recovery and fixture-only learning. Live autonomous Salesforce exploration remains unverified; lifecycle 012 stays declined/inactive.
@@ -38,7 +41,7 @@ Run `npm.cmd run platform -- demo-learning` for the existing offline Specs → g
 
 ## Requirements
 - Windows 10/11 (PowerShell), Node.js 22+, Git optional, VS Code / Codex optional.
-- Internet access for `npm install` and `npm.cmd run browsers:install`.
+- Internet access for dependency installation; installed local Chrome or Edge for headless execution.
 - No Python and no Docker for this starter.
 
 ## Install and run on Windows
@@ -46,7 +49,7 @@ Run `npm.cmd run platform -- demo-learning` for the existing offline Specs → g
 Expand-Archive .\SalesforceAgenticQA.zip -DestinationPath $HOME\Documents
 cd $HOME\Documents\SalesforceAgenticQA
 npm install
-npm.cmd run browsers:install
+npm.cmd run doctor
 npm run typecheck
 npm run unit
 npm run demo

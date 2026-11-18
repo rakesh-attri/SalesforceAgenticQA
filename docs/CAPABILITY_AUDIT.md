@@ -1,5 +1,14 @@
 # Capability audit and agent ownership
 
+## Connected framework integration audit
+
+The existing 15-owner inventory remains below; no duplicate agent framework was introduced. [FRAMEWORK_INTEGRATION_AUDIT.md](FRAMEWORK_INTEGRATION_AUDIT.md) maps P0/P1/P2, missing connections and actual code. Orchestrator/Coordinator now preserve QA guards at final generation and can require durable exact execution review before setup. Data Agent uses shared deterministic values with actual ownership/verification/cleanup services. Planner/Reviewer/Risk/Generator reuse source-grounded QA contracts, current evidence and confirmed history.
+
+Knowledge uses one persistent scoped catalog/vector history and actual Gemini adapters under mock transports; Analyst/Planner/Generator/Investigator advice remains Zod/citation-bound. Explorer/MCP supplies actual fixture page evidence; Autonomous Explorer retains its existing bounded service and live-action limits. Investigator keeps the three deliberate failures visible. Healer validates a separately observed locator with unchanged guarded assertions, then a reviewed workflow version carries that repair forward. Learning requires actual regression and verified cleanup and promotes only a fixture automation defect. reportingLabs writes actual local reports for all phases.
+
+**328/328 full unit/integration, 5/5 headless, typecheck, all 11 demos and 12/12 focused connected integration tests passed**. Focused 12/12 passed. Live Salesforce/Gemini/Chroma evidence is historical, not repeated here. Neither declined live scope is activated or replaced. General business semantics, alternate personas/effective sharing, broader autonomous live actions, semantic visual assessment and enterprise connectors remain partial/not implemented as registered.
+
+
 ## Reviewed QA Intelligence continuation
 
 All 15 owners and cumulative P0/P1/P2 rows remain below. Spec Analyst/Test Planner/Test Reviewer now consume exact reviewed rule, permission and visual contracts, source traceability and unresolved questions through the existing design service. Risk Analyzer retains dependency/history ranking. Generator appends exact-version QA checks after unchanged assertions; Coordinator/Orchestrator retain approval/session/checkpoint ownership. Org Discovery supplies cached declaration details, not runtime business truth.

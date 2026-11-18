@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "tsx src/cli.ts",
     "platform": "tsx src/platform-cli.ts",
+    "doctor": "tsx src/platform-cli.ts framework-doctor",
+    "demo:framework": "tsx src/platform-cli.ts demo-framework",
     "model:check": "tsx src/ai/check.ts",
     "demo": "tsx src/cli.ts demo",
     "demo:graph": "tsx src/cli.ts graph-demo",
