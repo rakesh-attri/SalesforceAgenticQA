@@ -1,5 +1,31 @@
 # Implementation report — 2026-11-13
 
+## Reviewed QA Intelligence - continuation from 71c5716
+
+Implemented reusable TypeScript oracles, permission-evidence analysis and versioned masked visual baselines through the existing planner/generator/reviewer, component graph, RAG and investigator. No alternate agent framework or browser policy was introduced. See [QA_INTELLIGENCE.md](QA_INTELLIGENCE.md).
+
+| Deliverable | Actual evidence |
+|---|---|
+| Reviewed rules | Five synthetic Account/Contact source-linked rules with literal positive/negative/boundary/integration/regression outcomes; missing/contradictory/invalid evidence remains blocked by existing reviewer and new contract checks |
+| Permission intelligence | Profile/direct/group/muting extraction, object + field grant candidates, missing sharing/runtime questions, independently observed synthetic read-denial and rejection of read/edit, field, object or persona substitution |
+| Visual baselines | Four actual masked local captures; reviewed clock tolerance (86 ignored changed pixels), layout review and accessibility review; immutable review, source/engine/render/masking, manifest/image integrity and critical-mask limits |
+| Generation | Seven reviewable Playwright TypeScript and four independent API proposals; exact original assertions remain; real generated callback passes expected UI/API and rejects independently wrong API name |
+| Browser/MCP evidence | Installed headless local Chrome; real loopback fixture; 14 same-context MCP snapshots and seven reviewed synthetic preview clicks; zero fixture mutations |
+| RAG/failure integration | Six reviewed declarations retrieved locally, stale and foreign-persona exclusion; existing investigator consumes visual receipts without auto-confirming a defect or learning |
+| Cached actual Salesforce report | .state/qa-intelligence-local-e17a0031d5cefb94/report.html + report.json; saved snapshot/graph: two requirements, seven metadata-rule candidates, 58 questions, zero test proposals. No new live requests |
+| Synthetic report and screenshots | Paths emitted in .state/qa-intelligence-demo-qa-intelligence.log; local report/JSON and four contained images under artifacts/browser-debug; no Git publication |
+
+Validation: **316/316 full unit/integration, 5/5 headless, typecheck, 10/10 demos, 18/18 focused plus 17/17 expanded permission/oracle checks passed**. Logs: .state/qa-intelligence-final-unit.log, .state/qa-intelligence-verified-typecheck.log, .state/qa-intelligence-headless.log, .state/qa-intelligence-demo-summary.json. All ten demos were executed successfully. First full run was 315/316: the existing invalid-action negative test exhausted its one-second fixture setup budget before reaching the chooser. Its offline budget now matches the existing 20-second fixture allowance; rejection assertion and all production runtime limits are unchanged. The focused rerun passed 18/18.
+
+Local report inspection passed: six evidence sections, no horizontal overflow, scripts or external requests (.state/qa-intelligence-report-inspection.json). Read-only safety audit passed: declined scopes unreserved/inactive, zero active or uncertain owned effects and unchanged user edit (.state/qa-intelligence-safety-audit.json).
+
+No new Salesforce authentication, API discovery, session, mutation, Gemini or Chroma call occurred. Existing live Salesforce/Gemini evidence remains historical, not repeated validation. Inputs are host-bound; arbitrary business conditions and general Flow/formula execution are not independently proven. Permission declarations do not establish actual read/edit access. Visual differences are review candidates, not confirmed defects. No verified lesson was published.
+
+SFQA-OBS-20261118-002 and lifecycle 012 stay explicitly declined/inactive with zero reservations/approved files. No replacement live observation/write package was prepared. Refreshed storage state is not activation/rebinding authority. The pre-existing unit/discovery.test.ts edit remains unchanged and excluded from this commit. All 15 owners/P0/P1/P2 remain in FEATURE_MATRIX.md.
+
+Shortest next real verification (only if separately requested): independently review one existing-record business/read expectation, obtain fresh exact no-create identity/browser/read authorization, reuse working local Chrome/MCP readiness and an independent exact-ID SOQL adapter, then separately review a masked baseline and compare another authorized observation. Read-only cannot prove validation-on-save, mutation rules or unrelated persona access. No live package is created as part of this recommendation.
+
+
 ## Source evidence reconciliation - November 18 continuation from c815e7a
 
 

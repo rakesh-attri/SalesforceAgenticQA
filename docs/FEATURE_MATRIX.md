@@ -1,5 +1,26 @@
 # Current capability matrix
 
+## Business-rule oracles, permission intelligence and reviewed visual baselines - November 18
+
+Continues **71c5716**, preserving all 15 responsibilities and every prior P0/P1/P2 row below. [QA_INTELLIGENCE.md](QA_INTELLIGENCE.md) documents the extension and limits. **SFQA-OBS-20261118-002 and lifecycle 012 are explicitly declined/inactive.** The earlier pending-authorization wording below is historical; no replacement package, browser session, state rebinding or live data run was prepared or activated here.
+
+| Capability | Current verification | Remaining boundary |
+|---|---|---|
+| Typed business-rule oracles | Offline verified: independently reviewed literal criterion + complete rule, real schema/component references, bounded typed predicates and separate UI/API/error signals | No general Flow/Apex/formula execution or inferred business expectation |
+| Declaration / observation / independent comparison | Offline verified: unknown, not-applicable, mismatch and compared outcomes; exact source/persona/run/record/input/channel joins | Host-bound inputs are prerequisites; comparison does not establish general business behavior or a verified lesson |
+| Oracle review and version storage | Offline verified: immutable content hashes, exact named reviews, stale source rejection and persistent receipts in existing History | No review grants browser, API, write or AI authority |
+| Permission-aware planning | Offline verified: current-user profile/direct-set/group declarations, group-local muting, conjunctive object/field candidates and sharing gaps | Metadata grants are not effective record access; partial inventories stay unknown |
+| Runtime permission expectations | Offline verified: exact object/field/operation/persona evidence; real synthetic GET denial; cross-operation/scope rejection | No actual Salesforce permission attempt or alternate-persona session in this increment; read denial cannot prove edit denial |
+| Reviewed visual baseline lifecycle | Offline headless Chrome verified: contained masked manifests/images, immutable version, independent named review and current source/engine/render/masking binding | No live Salesforce baseline approved; masking remains best effort |
+| Visual/accessibility differences | Offline verified: approved clock difference ignored (86 pixels); critical layout and accessibility changes require review; incompatible/tampered/unreviewed evidence rejected | No automatic defect, baseline update, full WCAG claim or verified lesson |
+| Existing generator integration | Offline verified: seven TypeScript proposals plus four independent API proposals; original assertion retained, exact QA checks appended; actual generated body/real Playwright assertions fail on wrong API result | Trusted authorized execution host must separately bind reviewed Page/adapters; proposals confer zero authority |
+| Scoped local RAG | Offline verified: six reviewed-declaration documents retrieved; current-source invalidation and persona isolation; external adapter rejected before upload | Existing Gemini/gemini-embedding-001 and optional Chroma preserved, no fresh remote validation |
+| Intelligence report | Real local fixture HTML/JSON + actual cached Salesforce evidence gap report (two requirements, seven metadata candidates, 58 questions, zero proposals) | Saved-source analysis is not current Salesforce runtime verification |
+| Preserved broader roadmap | All existing intelligence, browser, durable LangGraph, MCP, Gemini, reportingLabs, ownership and cleanup implementations remain | Richer autonomous workflows, broader visual semantics, general rule coverage and independently authorized real-oracle evaluation remain partial |
+
+Validation: **316/316 full unit/integration, 5/5 headless, typecheck, 10/10 demos, 18/18 focused plus 17/17 expanded permission/oracle checks passed**. All ten demos passed. No new Salesforce/Gemini/Chroma request or live mutation was made. Existing user discovery-test edit remains outside this change.
+
+
 ## Source evidence reconciliation - November 18 continuation
 
 Continues **c815e7a**, preserving all 15 owners and cumulative P0/P1/P2. See [SOURCE_EVIDENCE_RECONCILIATION.md](SOURCE_EVIDENCE_RECONCILIATION.md). The earlier blocked-source-drift decision is retained below as history; its original comparison is now explained as a **specification-versus-intelligence domain mismatch**, not demonstrated metadata drift.
@@ -301,7 +322,7 @@ Latest org-intelligence run: OAuth/org identity succeeded but **IsSandbox=false*
 | JSON/YAML/Markdown/text/PDF/DOCX/OpenAPI input | Verified | actual parser tests; explicit criteria only; no OCR/layout semantics or external refs |
 | Jira/Azure DevOps / arbitrary existing test imports | Not implemented | normalized explicit criteria supported; connector/import engineering and credentials required |
 | Requirement analysis and persona/object extraction | Partially implemented | BDD/bullets/actor-intent spans, catalog-backed object proposals and requirement review; exact source quotes enforced; unrestricted semantic/business-rule interpretation remains reviewed |
-| Positive/negative/boundary scenarios | Partially implemented | authored kinds retained; missing expected behavior becomes questions rather than invented scenarios |
+| Positive/negative/boundary scenarios | Partially implemented | authored kinds and reviewed typed rule predicates/independent UI+API outcomes verified offline; missing expected behavior becomes questions; general Salesforce business-rule semantics remain incomplete |
 | Integration scenarios and requirement gaps | Verified | integration kind supported; absent category/outcome becomes review question; no invented expected results/actions; broad semantic coverage remains partial |
 | Intelligent spec planning/review/traceability | Verified | reviewed local RAG handoff, historical regression/data proposals, exact outcome/workflow/source prerequisites, JSON/HTML report; reviewed generated LWC TypeScript actually executed against synthetic fixture; live story remains blocked with zero invented files |
 | Reviewed story→workflow→generated assertions | Verified | exact criterion/expectedText mapping, source citations, blocked prerequisites and schema/hash gates |
@@ -312,7 +333,7 @@ Latest org-intelligence run: OAuth/org identity succeeded but **IsSandbox=false*
 | Backend API assertions | Verified | generated independent HTTP expectations; no assumption that JWT authenticates browser/request context |
 | Change/risk/mandatory regression selection | Partially implemented | deterministic history/lesson risk plus optional org/version-bound graph dependency impact; full runtime/business-process impact still missing |
 | Learning influences future planning | Verified | real synthetic browser failure→unchanged-assertion passing regression→reviewed cause→future intelligent plan; same history without knowledge score 35/mandatory=false, with knowledge 75/mandatory=true |
-| Failure trace/screenshot/API/state mapping | Partially implemented | bounded trace events, screenshots linked, explicit API/state data; no screenshot visual diagnosis or exhaustive trace causality |
+| Failure trace/screenshot/API/state mapping | Partially implemented | bounded trace/API/state evidence plus reviewed pixel/role/name baseline differences; visual candidates require review, no semantic screenshot diagnosis or exhaustive causality |
 | Lifecycle investigations | Verified | session/setup/cleanup errors produce evidence-linked hypotheses without inventing executed test failures |
 | Defect review/deduplication/root cause/fix knowledge | Partially implemented | scoped fingerprints, normalized similarity, structured historical cause/fix hypotheses and regression recommendations; actual evidence/review gates preserved; current cause never auto-confirmed; broad semantic/visual adjudication partial |
 | Lifecycle-aware verified learning | Verified | passing test from failed cleanup lifecycle cannot confirm a fix; same reviewed causes idempotent; conflicts denied |
@@ -351,7 +372,11 @@ Latest org-intelligence run: OAuth/org identity succeeded but **IsSandbox=false*
 
 ## Next dependency
 
-Current live continuation: source-backed actual parameter/data/effect review for `RecordGvpController.getRecord` and other matched initialization/personalization operations; passive source/shape evidence for the unresolved action; documented alternatives and rejection tests; then a fresh separately reviewed bounded no-create observation. Existing two slots are exhausted. OneController has succeeded but is not evidence of complete rendering or server purity. After real positive Account/Contact selectors are reviewed, obtain a fresh factory/UI/session/data-run package, execute generated Playwright and independent SOQL, clean only owned records, report through reportingLabs and publish only eligible learning. No auto-renewal, resource-URL churn, quota increase or old-run replay. Broader cumulative engineering gaps remain unchanged.
+Current direction: expand held-out business/permission/visual oracle evaluations and source-backed autonomous coverage using saved evidence and fixtures. Existing Account/Contact rendering is historically verified. Both live scopes 002 and 012 are explicitly declined/inactive; do not prepare replacements or perform live observation/data creation without a new explicit request. If requested later, the shortest live validation is one independently reviewed existing-record expectation with fresh exact identity/browser/read authorization, independent SOQL comparison and separately approved masked baseline. Broader autonomous exploration, semantic visual QA, business mutations, additional personas and enterprise connectors remain cumulative partial work.
+
+### Historical browser dependency (superseded by later readiness evidence)
+
+Earlier live continuation: source-backed actual parameter/data/effect review for `RecordGvpController.getRecord` and other matched initialization/personalization operations; passive source/shape evidence for the unresolved action; documented alternatives and rejection tests; then a fresh separately reviewed bounded no-create observation. Existing two slots are exhausted. OneController has succeeded but is not evidence of complete rendering or server purity. After real positive Account/Contact selectors are reviewed, obtain a fresh factory/UI/session/data-run package, execute generated Playwright and independent SOQL, clean only owned records, report through reportingLabs and publish only eligible learning. No auto-renewal, resource-URL churn, quota increase or old-run replay. Broader cumulative engineering gaps remain unchanged.
 
 ### Previous architecture chain (historical)
 

@@ -1,5 +1,14 @@
 # Capability audit and agent ownership
 
+## Reviewed QA Intelligence continuation
+
+All 15 owners and cumulative P0/P1/P2 rows remain below. Spec Analyst/Test Planner/Test Reviewer now consume exact reviewed rule, permission and visual contracts, source traceability and unresolved questions through the existing design service. Risk Analyzer retains dependency/history ranking. Generator appends exact-version QA checks after unchanged assertions; Coordinator/Orchestrator retain approval/session/checkpoint ownership. Org Discovery supplies cached declaration details, not runtime business truth.
+
+Explorer/Autonomous Explorer reuse actual headless synthetic preview actions and 14 same-context MCP observations; existing live policies are unchanged. Investigator receives independent rule/permission/visual receipts as hypotheses/evidence, never automatic confirmed defects. Self-Healing cannot alter an expectation/baseline or approve policy. Knowledge indexes reviewed declarations locally with current-source/persona filtering. Learning retains confirmed failure + reviewed cause/fix + passing regression gates. Data Agent and cleanup create/adopt/remove no Salesforce record. Execution Coordinator's existing headless reportingLabs integration remains; new headless cases exercise actual generated callbacks and visual/source rejection gates.
+
+**316/316 full unit/integration, 5/5 headless, typecheck, 10/10 demos, 18/18 focused plus 17/17 expanded permission/oracle checks passed**. Ten demos and focused 18/18 passed. Real cached report: two criteria, seven metadata candidates, 58 review questions, zero proposals; synthetic fixture generates seven TypeScript/four API proposals and meaningful visual reviews. No new live Salesforce/Gemini/Chroma verification; broader autonomous rule/runtime/persona/semantic visual/connector scope remains partial. SFQA-OBS-20261118-002 and lifecycle 012 are explicitly declined/inactive, not awaiting activation; no replacement is prepared. See [QA_INTELLIGENCE.md](QA_INTELLIGENCE.md).
+
+
 ## Source evidence reconciliation continuation
 
 All 15 owners/P0/P1/P2 remain. Org Discovery/Knowledge/Reviewer now distinguish specification, Describe/schema, intelligence, publication, graph, browser, locator, readiness, reviewed workflow and RAG versions. The saved mismatch is a real domain error in the framework's earlier assumption; identical metadata and host-journal scope were verified locally. Immutable lineage/current-parent/content checks extend existing workflow/RAG lookup, without another browser or agent framework.

@@ -1,5 +1,14 @@
 # Architecture
 
+## Reviewed business, permission and visual expectations
+
+The existing test-design service now composes through designQAIntelligence: source-grounded criteria/workflow review -> immutable QA oracle/permission/baseline contracts -> existing risk/history/scenario plan -> unchanged original Playwright assertions plus exact-version QA checks -> scoped local receipts/report. QAContractStore extends History; existing JourneyEvidence gains an oracle claim distinct from narrative business-rule evidence. Existing metadata graph retains validation declaration details without evaluating formulas.
+
+Permission analysis consumes profile/direct/group/muting declarations, conjunctive object/field grants and sharing uncertainty. Only independent exact-operation/persona/record observations support runtime comparisons. Visual baselines reuse masked manifests/images with immutable entry hashes, source/engine/render/masking compatibility and separate named review; bounded pixel and accessibility comparisons request review rather than declaring defects.
+
+bindReviewedQAContext is a trusted-host adapter for an already authorized Page and approved independent readers/capture. Generated tests cannot bind credentials, create sessions, activate policy, supply arbitrary tools or broaden the existing action broker. Four browser permission planes, durable LangGraph checkpoints, private same-context MCP and all normal Production restrictions remain unchanged. New intelligence ingestion/retrieval is local-only; existing explicit external-AI review paths remain separate. No automatic defect/lesson or baseline update occurs. See [QA_INTELLIGENCE.md](QA_INTELLIGENCE.md).
+
+
 ## Typed source lineage and explicit compatibility
 
 SourceLineageStore extends the existing History database with canonical scoped artifact identities, immutable original-version/content records and bounded current parent traversal. Specification, metadata snapshot, intelligence/graph publication, browser observation, locator, readiness, reviewed workflow and RAG knowledge keep distinct hash domains. The reconciliation service reproduces producers and verifies the existing host readiness journal; it never equates unrelated hashes or grants fresh readiness. Existing model/document bridges require original exact review and declared parent evidence; their lookup/retrieval services reject registered stale or changed derived artifacts.

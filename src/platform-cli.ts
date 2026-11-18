@@ -1,4 +1,6 @@
 import 'dotenv/config';
+import {demonstrateQAIntelligence} from './demos/qa-intelligence.js';
+import {runQAIntelligence} from './agents/qa-intelligence-cli.js';
 import {runSourceReconciliation} from './knowledge/reconciliation-cli.js';
 import {runLiveExplorationCommand} from './agents/live-exploration-cli.js';
 import {demonstrateLiveExploration} from './demos/live-exploration.js';
@@ -110,6 +112,8 @@ async function main() {
   if(mode==='workflow-evidence'){try{console.log(JSON.stringify(await runWorkflowEvidenceReview(file)));}catch{console.log(JSON.stringify({status:'workflow-evidence-source-gate',privateDetailsWithheld:true,externalRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode==='workflow-plan'){try{console.log(JSON.stringify(await runWorkflowReview(file)));}catch{console.log(JSON.stringify({status:'workflow-source-review-gate',privateDetailsWithheld:true,externalRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode==='demo-workflow-intelligence'){console.log(JSON.stringify(await demonstrateWorkflowIntelligence()));return;}
+  if(mode==='demo-qa-intelligence'){console.log(JSON.stringify(await demonstrateQAIntelligence()));return;}
+  if(mode==='qa-intelligence'){try{console.log(JSON.stringify(await runQAIntelligence(file)));}catch{console.log(JSON.stringify({status:'qa-intelligence-source-review-required',externalRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode==='demo-test-design'){console.log(JSON.stringify(await demonstrateTestDesign()));return;}
   if(mode==='test-design'){try{console.log(JSON.stringify(await runTestDesign(file)));}catch{console.log(JSON.stringify({status:'test-design-source-gate',privateDetailsWithheld:true,externalRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode==='dedicated-chrome-review'){
