@@ -1,4 +1,6 @@
 import 'dotenv/config';
+import {runLiveExplorationCommand} from './agents/live-exploration-cli.js';
+import {demonstrateLiveExploration} from './demos/live-exploration.js';
 import {runCompatibilityReview} from './execution/compatibility-cli.js';
 import {prepareDedicatedChromeReview} from './execution/dedicated-chrome-review.js';
 import {preferChromeForNewReview} from './execution/dedicated-chrome-profile.js';
@@ -98,6 +100,8 @@ async function reviewedKnowledge(history:History,remoteApproved=false) {
 }
 async function main() {
   if(['exploration-plan','exploration-run','exploration-resume','exploration-report','exploration-investigate','exploration-repair-propose','exploration-repair-run'].includes(mode)){try{console.log(JSON.stringify(await runExplorationCommand(mode,file)));}catch{console.log(JSON.stringify({status:'exploration-source-or-approval-gate',privateDetailsWithheld:true,salesforceRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
+  if(mode.startsWith('live-exploration-')){try{console.log(JSON.stringify(await runLiveExplorationCommand(mode,file)));}catch{console.log(JSON.stringify({status:'live-exploration-prerequisite-or-execution-blocked',privateDetailsWithheld:true,liveVerification:'not-established-by-command-exit',automaticReplay:false}));process.exitCode=1;}return;}
+  if(mode==='demo-live-exploration'){console.log(JSON.stringify(await demonstrateLiveExploration()));return;}
   if(mode==='demo-exploration-intelligence'){console.log(JSON.stringify(await demonstrateExplorationIntelligence()));return;}
   if(mode==='demo-application-intelligence'){console.log(JSON.stringify(await demonstrateApplicationIntelligence()));return;}
   if(['application-discover','application-review','application-compile','application-approve-model','application-index'].includes(mode)){try{console.log(JSON.stringify(await runApplicationIntelligence(mode,file)));}catch{console.log(JSON.stringify({status:'application-source-or-review-gate',privateDetailsWithheld:true,externalRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}

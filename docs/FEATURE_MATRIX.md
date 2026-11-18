@@ -1,5 +1,25 @@
 # Current capability matrix
 
+## Live goal-directed Salesforce observation - November 18
+
+Continues **98913a4** on **feature/verified-discovery**. This section supplements every earlier registry row and all 15 owners. See [LIVE_EXPLORATION.md](LIVE_EXPLORATION.md). Package 012 remains declined/inactive; no replacement factory/write package was prepared.
+
+| Capability | Current evidence | Remaining boundary |
+|---|---|---|
+| Source-bound live observation adapter | Implemented; offline verified through actual installed headless Chrome + real private Playwright MCP on two synthetic Salesforce pages | No new live Salesforce goal execution; exact current approvals/state/source required |
+| Existing planner/RAG/history integration | Shared deterministic scorer, source validation, prerequisites, evidence/coverage/risk/cost and scoped local retrieval; shared selection LangGraph | Optional Gemini ranking retains existing separate payload review; no external model/embedding/Chroma calls in this increment |
+| Independent API/SOQL reads | Mock verified closed exact-record grants, Account/Contact Name/stamp comparison and Contact.AccountId verification, missing/denied/malformed/foreign rejection | Arbitrary fields/SOQL blocked; raw values stay trusted-host-only; field presence is not effective FLS/sharing |
+| Workflow evidence | Direct-record-navigation receipts, source-linked reviewed selectors, journal-backed JourneyEvidence acquisition, original model review boundary preserved | Separate isolated observations do not prove in-app relationship traversal or a business transaction; no automatic model/lesson publication |
+| Durable goal execution | Offline verified SQLite/DurableSaver interruption/resume, original expiry/identity/state/source/engine/MCP checks, pre-effect intent, conservative native request reservation, cumulative budgets | Unknown/native background effects can be irreversible; no uncertain/consumed session replay or quota refund |
+| Live failure intelligence | Shared investigator + sanitized transport/console/readiness, independent drift, source/history/duplicate hypotheses and verified local images | Proposed causes/duplicates only; no confirmed Salesforce defect or fresh passing regression |
+| Controlled locator proposals | Source-only, observed candidate and original assertion checks; no execution or replay authority | Native observation repair/rerun requires separately reviewed current grants, remaining budgets and effect review |
+| Live Exploration Intelligence report | HTML/JSON coverage, risk-ranked unvisited/rejected proposals, direct-navigation labels, independent receipts, local images, sources and remaining questions | No fabricated Playwright test passes/reportingLabs rows; screenshots remain local/best-effort masked |
+| Inactive no-create preparation | Real saved Account evidence evaluated locally; source-version mismatch detected; blocked manifest at .state/live-exploration-SFQA-OBS-20261118-001/manifest.review.json | Historical browser source 9c734a03… differs from current metadata f4011604…; no executable definition/grant created, no inferred layout break |
+| Fresh external integrations | None executed this increment | Earlier Salesforce Account/Contact readiness, JWT, Gemini chat/embedding and persistent semantic evidence preserved as historical; live autonomy, business/visual/permission oracles and enterprise publishing remain partial |
+
+**Verified: 287/287 full unit/integration, 34/34 final focused, 3/3 headless, typecheck and nine demos; local Chrome HTML with 2/2 images, no scripts/external requests/overflow.** The original committed discovery suite independently passed 3/3 and the user edit is unchanged/excluded. Evidence paths are recorded in the current implementation report. No Salesforce records were created/updated/deleted/adopted; no new permission plane, unrestricted MCP tool or default Production behavior was introduced.
+
+
 ## Goal-directed exploration and intelligent investigation - current increment
 
 Continues `7be0d2c` on `feature/verified-discovery`. This adds to every cumulative P0/P1/P2 requirement and all 15 owners below. [EXPLORATION_INTELLIGENCE.md](EXPLORATION_INTELLIGENCE.md) documents contracts, commands and limitations. No live Salesforce/browser/model/Chroma call or replacement write package is part of this increment. Package 012 remains declined/inactive.

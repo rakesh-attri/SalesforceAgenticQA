@@ -11,6 +11,7 @@ import { authorizeDedicatedDiagnostics } from '../execution/diagnostic-review.js
 import { projectSelectedApp } from '../execution/lightning-initialization.js';
 import { authorizeBrowserSession, BrowserReviewSchema, resolveBrowserRecords, digest } from '../execution/browser-policy.js';
 import { sameSalesforceIdentity } from '../execution/lightning-identity.js';
+import {readObservationRecords} from './observation-read.js';
 export class SalesforceClient {
   private environment?:{policy:EnvironmentPolicy;identity:{Id:string;IsSandbox:boolean;userId:string};policyPath?:string};
   private constructor(private instance:string,private token:string, private version:string) {}
@@ -32,6 +33,14 @@ export class SalesforceClient {
         let actor:unknown,selected:unknown;try{actor=await client.get(`/services/data/${client.version}/query?q=${encodeURIComponent(`SELECT Id,IsActive FROM User WHERE Id='${identity.userId}' LIMIT 1`)}`);selected=await client.get(`/services/data/${client.version}/ui-api/apps/selected?formFactor=Large`);}catch{throw Error('Browser actor/app preflight unavailable; provider details withheld');}
         const active=z.object({records:z.array(z.object({Id:z.string(),IsActive:z.literal(true)})).length(1)}).safeParse(actor);
         if(!active.success||active.data.records[0].Id!==identity.userId||projectSelectedApp(selected).appIdHash!==review.plan.selectedAppIdHash)throw Error('Browser actor/app preflight changed');return identity;
+      },
+      async readObservation(grant:unknown){
+        const identity=await client.identity();authorizeBrowserSession(review,parent,identity,build);
+        return readObservationRecords(grant,review,identity,async soql=>{
+          const current=await client.identity();authorizeBrowserSession(review,parent,current,build);
+          if(current.Id!==identity.Id||current.userId!==identity.userId)throw Error('Independent read identity changed');
+          return client.readRequest(`/services/data/${client.version}/query?q=${encodeURIComponent(soql)}`,undefined,true);
+        });
       },
       async verifyReferences(){
         const identity=await client.identity();authorizeBrowserSession(review,parent,identity,build);

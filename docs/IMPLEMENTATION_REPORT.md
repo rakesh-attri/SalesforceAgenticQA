@@ -1,5 +1,37 @@
 # Implementation report — 2026-11-13
 
+## Live Salesforce goal-directed exploration adapter - November 18
+
+
+Verified commands/results:
+
+| Check | Actual result / local evidence |
+|---|---|
+| npm run typecheck | Passed; .state/live-adapter-final-typecheck.log |
+| npm run unit | **287/287** full unit/integration; .state/live-adapter-final-unit.log |
+| Final affected exploration suites | **34/34** (15 new + 19 existing), after final report/locator-safety refinements; .state/live-adapter-final-focused.log |
+| npm test | **3/3** headless tests; .state/live-adapter-headless.log |
+| All existing demos plus new demo-live-exploration | **9/9** passed, including demo and demo:graph; .state/live-adapter-demo-summary.json. New demo reran successfully after final refinements |
+| Committed discovery tests | **3/3** independently passed from an ignored private copy; original user edit hash unchanged and excluded |
+| Local HTML in installed headless Chrome | 2/2 images loaded; 0 scripts, 0 external requests, no horizontal overflow; .state/live-adapter-report-verification.json |
+| Local ownership/decline audit | 012 declined, zero activated files/reservations, zero active/uncertain owned records; no live calls |
+
+Final fixture HTML: artifacts/exploration-intelligence/live-fixture-85aa6817-95a7-444a-8799-119be2315dbf/4e1b83a9487313c73ae9c14bccbea64a666aaf5bb394283ef98363c2e3f85773/index.html. It shows two actual isolated headless Chrome/MCP fixture observations, original checkpoint resume and independent mocked relationship verification. API-only preflight has no UI coverage; request reservations are labeled separately from observed counts; direct-navigation edges do not claim relationship traversal. Screenshots stay local. No new Salesforce/Gemini/embedding/Chroma integration was executed, no generated Salesforce tests ran, and no Salesforce lesson was published.
+
+
+Continued **98913a4**, verified repository/root and feature/verified-discovery. Reused the existing planner, source-linked application studies, knowledge/history, durable selection graph and exploration ledger rather than creating another agent framework. Preserved the user's discovery-test edit unchanged and excluded from the implementation commit. Package 012 remains declined/inactive; no replacement write/data-creation package, quota renewal or record mutation was attempted.
+
+Dependency chain implemented: exact specification/study/browser sources → per-object observation references and closed independent-read grant → separate native profile/browser/run approval → fresh API/native identity and app/build/state verification → deterministic planner/interrupt → durable pre-effect intent and conservative native request reservation → same-context private MCP navigation/readiness/discovery → API display/relationship/record drift verification → local report and existing investigator/source-only repair mechanisms. The original fixture runtime remains fixture-only.
+
+New services: agents/live-exploration.ts, live-exploration-runtime.ts, live-exploration-report.ts, live-exploration-cli.ts and salesforce/observation-read.ts. The Salesforce facade gains only a narrowly approved read method. Existing BrowserActionBroker, Production modes, browser profile, resource rules, identity checks, ownership and cleanup behavior are unchanged. No generic click/evaluate/native MCP/URL/SOQL capability is added. Account/Contact navigation is explicitly direct-record observation, not an observed relationship click or transaction. Tabs and independently reviewed content remain subject to unchanged readiness assertions.
+
+The actual headless Chrome/MCP fixture demonstration observes Account, interrupts before Contact, reopens the SQLite checkpointer, verifies the original baseline and resumes only the unattempted Contact. Independent mocked relationship equality passes. Receipts remain offline-mocked-salesforce; no Salesforce business lesson or generated test result is recorded. The shared report and investigator retain evidence-linked hypotheses, image integrity and current scoped defect retrieval. Source-only locator proposals cannot replay uncertain native effects or activate a browser grant.
+
+Local saved Salesforce evidence was genuinely inspected. Preparing the minimum inactive Account scope detected historical view metadata 9c734a03… versus current org snapshot f4011604…. The resulting .state/live-exploration-SFQA-OBS-20261118-001/manifest.review.json is blocked-source-drift with no executable definition, session grant or permissions. This establishes a local version mismatch, not an observed layout regression or new Salesforce failure. Reconcile/review source evidence, then obtain fresh exact native-risk/browser/read authorization and independently approved session state before live validation. No Salesforce/Gemini/embedding/Chroma calls were made. Existing live readiness/integration evidence remains historical.
+
+Execution contracts and PowerShell prepare/run/resume/report/investigate/demo commands are documented in [LIVE_EXPLORATION.md](LIVE_EXPLORATION.md). ReportingLabs remains the actual generated-Playwright reporter, with no exploration pass fabrication. Remaining next priorities: reviewed business-rule oracles and held-out goal/visual/permission evaluations; then relationship interactions and broader LWC/Experience exploration, duplicate/diagnosis accuracy and approved enterprise publishing. All original P0/P1/P2 and 15 responsibilities remain in scope.
+
+
 ## Goal-directed exploration and intelligent investigation - November 17
 
 Continued `7be0d2c` on `feature/verified-discovery`. Reviewed the implementation, current cumulative feature matrix, architecture, application studies and engineering memory before coding. Preserved all 15 owners/P0/P1/P2, the current Salesforce browser readiness implementation and the original user discovery-test edit. Package 012 remains explicitly declined/inactive; no replacement Salesforce write package, live browser exploration, Salesforce mutation or external model/vector request was prepared/executed.

@@ -1,5 +1,14 @@
 # Capability audit and agent ownership
 
+## Live observation adapter - November 18
+
+All 15 owners and cumulative P0/P1/P2 remain. Orchestrator/Coordinator reuse the common source validator, deterministic scorer, SQLite ledger and LangGraph review graph. Application Explorer/Autonomous Explorer now have a real Salesforce composition root with exact existing-record observation references, private same-context Chrome/MCP and no arbitrary click/evaluate/native tool. It is offline verified with actual browser/MCP fixtures, not newly live verified. Org Discovery supplies current metadata/component evidence and independently verified org/user/app context; source drift blocks activation.
+
+Knowledge/RAG retains local scoped retrieval/history and immutable source review. Analyst/Planner/Reviewer preserve explicit observation oracles, current prerequisites and questions; Generator and reportingLabs do not mistake observations for generated test passes. Test Data/ownership/cleanup create, reserve and adopt no records. Risk prioritization reuses current mapped confirmed history. Investigator correlates sanitized receipts and local images through the existing hypotheses/duplicate service; Healer produces source-preserving proposals without new authority. Learning keeps failure + reviewed cause/fix + passing regression mandatory, with zero new Salesforce lessons.
+
+Live readiness is partial: a minimum Account draft is locally blocked by historical-browser/current-metadata version mismatch, before any network call. It neither diagnoses an actual changed layout nor authorizes a new session. Business outcomes, effective FLS/sharing, in-app relationship clicks, richer field/layout/visual oracles, broader LWC/Experience goals and enterprise publication remain partial/unverified. Package 012 stays declined/inactive, with no replacement factory/write package. Gemini/gemini-embedding-001, RAG/optional Chroma, LangGraph, JWT/StorageState, installed headless Chrome, Playwright MCP and prior safety modes are preserved. See LIVE_EXPLORATION.md and current implementation report for commands/evidence.
+
+
 ## Goal-directed exploration and investigation - current increment
 
 All 15 owners and cumulative P0/P1/P2 remain. Orchestrator and Execution Coordinator gain the source-bound goal contract, durable selection/review graph and execution ledger. Spec Analyst supplies exact reviewed criteria and missing requirements. Org Discovery still supplies existing application/component/source intelligence without a fresh org call. Application Explorer and Autonomous Explorer reuse the same fixture action owner, exact navigation rules, opaque references, private Chrome/MCP context and masked evidence store; a new live adapter is not implemented or authorized.
