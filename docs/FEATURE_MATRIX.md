@@ -1,5 +1,23 @@
 # Current capability matrix
 
+## Real integration readiness and reliability - continuation from 6aa3d64
+
+All 15/P0/P1/P2 responsibilities remain cumulative. [LIVE_INTEGRATION_READINESS.md](LIVE_INTEGRATION_READINESS.md) gives the current service audit, exact operator decisions, minimal AI commands and future E2E prerequisites. The latest explicit request permits preparation of a fresh no-create Account draft only; earlier no-replacement statements below are historical. Scopes 002/012 remain declined/inactive, and no new write-execution package is prepared.
+
+| Capability | Current evidence | Remaining gate |
+|---|---|---|
+| Integration readiness | Local-only PASS/FAIL/BLOCKED checks: shared JWT endpoint validation/local RSA parse, provider-specific Gemini config, saved source/graph and private export readability; no credential output | No current OAuth/API/native identity, service response or session validity claim |
+| Source reconciliation | New inactive review over actual saved Account provenance and distinct original hash domains; zero service calls | Cached metadata is November 14; current server metadata/build/permissions remain unverified |
+| Connected no-create observation preparation | Existing source-linked planner/native Chrome/restricted MCP/independent read/report services compose a fresh exact Account draft; no grants/reservations | Fresh named browser/profile/read/source/run approval, native/access risk acceptance, fresh API/native identity and unchanged record checks |
+| Minimal real Gemini/RAG review | Two observed structural fields + synthetic story; separate inactive bundle/destination review; local-only/planner-only/single-attempt/source-check options reuse existing providers/index/queue | Operator approval before any external request; actual persistence/grounding/citations must execute, no current live result claimed |
+| AI review safety | Named shared validator rejects REVIEW_REQUIRED/blank drafts before queue or transport; saved source guard rejects altered/foreign/stale field evidence | Explicit named content/destination consent still required; no raw records/documents/traces/images |
+| Runner recovery/replay | Durable run intent blocks repeated/uncertain same-directory/run execution; prerequisite rejection spends no reservation; explicit different-run reporting history retained | No auto-resume of unknown browser/data effects or old live grants |
+| Report completeness | Actual HTML + JSON stats + validation receipt must agree with executed outcomes; old generated reports removed before a fresh explicit run, history retained; runner-level errors cannot pass | Local outputs do not establish live Salesforce success or cleanup by themselves |
+| Future complete live lifecycle | Existing implementation reviewed and prerequisites documented; no lifecycle 012 activation or new write package | Separate explicit request plus automation/factory/UI/session/run approvals, fresh Account/Contact readiness, quota/ownership/SOQL/cleanup/report gates |
+
+Verified: TypeScript typecheck passed; **336/336 full unit/integration tests**, **23/23 focused reliability/JWT/reporting tests**, **5/5 headless tests**, **all 11 offline demos**, and **3/3 tests of the committed discovery contract** passed. The existing discovery-test edit remains byte-for-byte unchanged and excluded. Logs: `.state/live-readiness-{typecheck,final-unit,final-focused,headless,committed-discovery}.log`; demo summary: `.state/live-readiness-demo-summary.json`.. Live authorization unavailable: fresh Salesforce/Gemini/Chroma execution remains BLOCKED, not failed credentials and not an inferred success. Existing user discovery-test edit is preserved.
+
+
 ## Full framework integration and developer experience - continuation from aa8b712
 
 All 15 responsibilities and cumulative P0/P1/P2 rows below remain. The [architecture/capability audit](FRAMEWORK_INTEGRATION_AUDIT.md) maps real services and unresolved connections; the [complete beginner guide](FRAMEWORK_COMPLETE_GUIDE.md) documents Windows commands and safety. Scopes SFQA-OBS-20261118-002 and lifecycle 012 remain explicitly declined/inactive; no replacement live package was prepared.

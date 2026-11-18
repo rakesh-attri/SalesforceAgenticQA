@@ -1,5 +1,23 @@
 # Implementation report — 2026-11-13
 
+## Live integration readiness and reliability - continuation from 6aa3d64
+
+The current milestone is an authorization-gated transition, not fresh live validation. [LIVE_INTEGRATION_READINESS.md](LIVE_INTEGRATION_READINESS.md) audits historical service evidence, present configuration/source checks, exact review decisions, minimal commands and full real-lifecycle prerequisites. The complete guide now links this practical handoff.
+
+Implemented existing-service corrections: shared AI review rejects inactive placeholder operators; optional cached-source verification checks exact org/schema/field facts before provider access; planner-only/local-only/single-attempt options support a small explicit Gemini validation without changing normal defaults. The actual JWT helper shares its unchanged endpoint/required-setting checks with static readiness, which parses a local RSA key without signing/sending an assertion.
+
+Runner reliability now records atomic per-directory/run intent, rejects replay, preserves prior evidence when prerequisites fail, removes only prior generated result artifacts before an explicit different run and preserves reporting history. Actual reportingLabs HTML, JSON stats and framework receipt must match real test counts/validation; runner-level errors do not become passing lifecycles. Existing factory/cleanup/session/write policies are unchanged.
+
+Verified: TypeScript typecheck passed; **336/336 full unit/integration tests**, **23/23 focused reliability/JWT/reporting tests**, **5/5 headless tests**, **all 11 offline demos**, and **3/3 tests of the committed discovery contract** passed. The existing discovery-test edit remains byte-for-byte unchanged and excluded. Logs: `.state/live-readiness-{typecheck,final-unit,final-focused,headless,committed-discovery}.log`; demo summary: `.state/live-readiness-demo-summary.json`.. First complete interim regression was 335/335; the final source-version regression was added afterward, so a fresh full run verifies the complete current suite. Focused guards/provider/reporting tests and final counts/logs are recorded below after validation. No stale or mocked result is called current service success.
+
+Saved Salesforce metadata capture: November 14; local org/graph fingerprints and fresh inactive source reconciliation match. Existing browser export is readable, not identity/freshness proof. JWT and Gemini configuration validations pass locally; app approval, certificate match, auth, native session/build and actual provider responses remain unverified this increment. Readiness overall is BLOCKED for missing fresh authorization/current proof, not a claim that configured credentials fail.
+
+Fresh no-create Account and two-fact Gemini handoff paths/hashes/expiry are recorded after all checks; no approved files are written, no observation run is reserved and no service requests are made. Scopes 002/012 remain declined/inactive; no new data-write package or factory renewal. The existing discovery-test edit remains unchanged and unstaged.
+
+
+
+Actual connected demo: artifacts/framework-00877ec0-203a-417f-93c7-573ee683b40e/index.html; real generated 15 result rows (12 passed, three expected fault failures), four mock-created/four cleaned, fixture risk 80 -> 130. Readiness has six local PASS/four BLOCKED; zero remote requests. Fresh inactive Account run SFQA-OBS-20261118-003 and separately inactive minimal-ai-20261118-001 exact hashes/original expiry are recorded in [the handoff](../docs/LIVE_INTEGRATION_READINESS.md#verified-local-results-and-exact-inactive-handoff). Local safety audit confirms declined 002/012 inactive, no reservations, zero active/uncertain owned records; no new write package.
+
 ## Connected Account/Contact framework - continuation from aa8b712
 
 Implemented actual integration rather than another browser architecture. See [FRAMEWORK_COMPLETE_GUIDE.md](FRAMEWORK_COMPLETE_GUIDE.md) for the 20-topic walkthrough and [FRAMEWORK_INTEGRATION_AUDIT.md](FRAMEWORK_INTEGRATION_AUDIT.md) for P0/P1/P2/service boundaries.

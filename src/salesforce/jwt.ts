@@ -44,11 +44,15 @@ export async function oauthFailureDiagnostic(response:Response):Promise<string> 
   }
   return `Salesforce JWT OAuth failed (HTTP ${response.status}): ${code}. ${reason} ${guidance}`;
 }
-export async function getSalesforceToken() {
-  const login = process.env.SF_LOGIN_URL ?? 'https://test.salesforce.com';
+export function salesforceJWTConfiguration(env:NodeJS.ProcessEnv=process.env) {
+  const login = env.SF_LOGIN_URL ?? 'https://test.salesforce.com';
   const loginUrl=new URL(login);
   if (loginUrl.protocol!=='https:' || loginUrl.username || loginUrl.password || loginUrl.port || loginUrl.pathname!=='/' || loginUrl.search || loginUrl.hash || !(loginUrl.hostname==='test.salesforce.com' || loginUrl.hostname==='login.salesforce.com' || loginUrl.hostname.endsWith('.my.salesforce.com'))) throw Error('Unexpected Salesforce login host');
-  const clientId=required('SF_CLIENT_ID'), username=required('SF_USERNAME'), keyPath=required('SF_PRIVATE_KEY_PATH');
+  const configured=(name:string)=>{const value=env[name];if(!value)throw Error(`Missing ${name}`);return value;};
+  return{login,loginUrl,clientId:configured('SF_CLIENT_ID'),username:configured('SF_USERNAME'),keyPath:configured('SF_PRIVATE_KEY_PATH')};
+}
+export async function getSalesforceToken() {
+  const {login,loginUrl,clientId,username,keyPath}=salesforceJWTConfiguration();
   const now = Math.floor(Date.now()/1000);
   const header=b64url(JSON.stringify({alg:'RS256',typ:'JWT'}));
   const payload=b64url(JSON.stringify({iss:clientId,sub:username,aud:login,iat:now,exp:now+180}));
@@ -65,4 +69,3 @@ export async function getSalesforceToken() {
   if(token===null||typeof token!=='object'||!('access_token' in token)||!('instance_url' in token)||typeof token.access_token!=='string'||!token.access_token||typeof token.instance_url!=='string'||!token.instance_url)throw Error('Invalid Salesforce OAuth response');
   return {access_token:token.access_token,instance_url:token.instance_url};
 }
-function required(name:string) {const value=process.env[name]; if(!value) throw Error(`Missing ${name}`); return value;}

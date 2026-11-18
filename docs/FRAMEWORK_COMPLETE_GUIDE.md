@@ -1,5 +1,7 @@
 # SalesforceAgenticQA: the complete framework guide
 
+For the current transition to actual services, read [LIVE_INTEGRATION_READINESS.md](LIVE_INTEGRATION_READINESS.md). It separates historical live proof, current local configuration checks and fresh authorization gates, with practical commands. This continuation prepares an inactive no-create Account scope and separate minimal Gemini content review; neither is permission to run. The declined scopes remain inactive.
+
 ## 1. What this project is building
 
 SalesforceAgenticQA is building an AI QA engineer for Salesforce. Its goal is **Specs In → Tests Out → Failure Intelligence → Verified Learning**. You give it a requirement. It uses available Salesforce evidence to propose tests, explains what it does not know, runs only approved work and keeps evidence of the result.
@@ -293,7 +295,7 @@ Earlier separately authorized evidence covers JWT authentication, bounded Salesf
 
 This integration milestone proves the connected composition offline with real local browsers, generated child execution, mock service transports, persistent retrieval, reviews/checkpoint reopening, QA checks, cleanup, reportingLabs and eligible fixture learning. It does not validate an external Chroma deployment, actual role/sharing behavior, arbitrary Flows/Apex, new Salesforce writes or a complete live Salesforce generated lifecycle.
 
-Observation scope **SFQA-OBS-20261118-002** and lifecycle **012** remain explicitly declined/inactive. No replacement live package is prepared. A refreshed browser state does not change this decision.
+Observation scope **SFQA-OBS-20261118-002** and lifecycle **012** remain explicitly declined/inactive. The latest readiness request permits only a fresh inactive no-create Account draft and separate minimal AI review; it does not authorize activation or a new write package. A refreshed browser state does not change this decision.
 
 The highest-value next live step, only if separately requested, is one reviewed existing-record business/read expectation: fresh exact org/user/origin/record authorization, verified browser/API identity, unchanged UI observation plus independent exact-ID SOQL and scoped pre/post checks. Then separately review a masked baseline. This needs no record creation. Read-only work cannot prove validation-on-save or alternate-persona mutation permissions.
 
@@ -302,3 +304,9 @@ The highest-value next live step, only if separately requested, is one reviewed 
 For another object, add source-backed discovery/dependencies, a reviewed requirement and workflow, appropriate permission evidence and exact expected outcomes. Add a recipe/business adapter only after nonfinancial automation and cleanup review. Register new locators/transitions from actual approved observations. Add tests for wrong scope, unknown fields, stale sources, failure cleanup and unchanged assertions before requesting live validation.
 
 Remaining work includes broader Salesforce workflows and business-rule semantics, additional reviewed personas/sharing evidence, richer bounded autonomous exploration, semantic/visual accessibility assessment, held-out AI quality evaluation, reliable CI recovery/report publishing, richer data factories and Jira/Azure DevOps connectors. Optional Chroma Cloud tenancy/import and broad external retrieval remain incomplete. None is removed from the cumulative registry. Improve these capabilities through the existing agents and approved tool boundaries, not another parallel framework.
+
+## 21. Practical real-service handoff
+
+Run `npm.cmd run platform -- integration-readiness .state/integration-readiness-input.json` for local PASS/FAIL/BLOCKED checks. BLOCKED (exit 2) is expected before fresh exact service authorization; it is not a failed OAuth request. Inspect `.state/integration-readiness/report.html` and the private draft manifests. Use [LIVE_INTEGRATION_READINESS.md](LIVE_INTEGRATION_READINESS.md) for the two independent operator decisions, exact minimal Gemini/RAG commands, source/session freshness rules and future real-lifecycle prerequisites. No approved file, service request, browser session or write package is created by reading that guide.
+
+Generated executions now have `.sfqa-runs/<run>.json` intent records. A pending or completed record blocks replay. Preserve it and inspect the actual result; only a separately reviewed fresh run is eligible. reportingLabs HTML without matching JSON/validation evidence is incomplete. The existing source-linked failure, cleanup, healing and learning gates remain in force.

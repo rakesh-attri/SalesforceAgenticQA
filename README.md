@@ -1,5 +1,8 @@
 # SalesforceAgenticQA
 
+[Live integration readiness](docs/LIVE_INTEGRATION_READINESS.md) separates current local checks, historical service evidence and fresh authorization gates. `npm.cmd run platform -- integration-readiness .state/integration-readiness-input.json` makes no service calls and reports PASS/FAIL/BLOCKED. The current request permits one new inactive no-create Account draft and a separate minimal Gemini review; neither activates execution. Declined scopes 002/012 and all Production/write restrictions remain.
+
+
 [Complete framework guide](docs/FRAMEWORK_COMPLETE_GUIDE.md) explains all 15 responsibilities, source locations, approvals, data ownership, Gemini/RAG, browser execution and troubleshooting. Run `npm.cmd run doctor` for local prerequisites and `npm.cmd run demo:framework` for the connected Account/Contact fixture: actual generated headless Chrome tests, MCP, persisted RAG/checkpoints, independent mock API checks, reviewed visual comparison, owned cleanup, real reportingLabs and eligible fixture learning. Salesforce/Gemini transports are mocked; scopes 002/012 remain declined/inactive.
 
 

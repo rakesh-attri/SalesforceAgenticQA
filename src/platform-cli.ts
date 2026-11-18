@@ -1,4 +1,6 @@
+import {verifyReviewedBundleSource} from './knowledge/reviewed.js';
 import 'dotenv/config';
+import {runIntegrationReadiness} from './core/integration-readiness.js';
 import {demonstrateIntegratedFramework} from './demos/integrated-framework.js';
 import {frameworkDoctor,importFrameworkRequirement,inspectFramework} from './core/framework-operator.js';
 import {demonstrateQAIntelligence} from './demos/qa-intelligence.js';
@@ -116,6 +118,7 @@ async function main() {
   if(mode==='demo-workflow-intelligence'){console.log(JSON.stringify(await demonstrateWorkflowIntelligence()));return;}
   if(mode==='demo-qa-intelligence'){console.log(JSON.stringify(await demonstrateQAIntelligence()));return;}
   if(mode==='demo-framework'){try{console.log(JSON.stringify(await demonstrateIntegratedFramework()));}catch(error){console.log(JSON.stringify({status:'integrated-fixture-failed',diagnostic:error instanceof Error?error.message:'Unknown local failure',salesforceRequests:0,liveModelRequests:0}));process.exitCode=1;}return;}
+  if(mode==='integration-readiness'){try{const result=await runIntegrationReadiness(file);console.log(JSON.stringify(result));process.exitCode=result.status==='FAIL'?1:2;}catch{console.log(JSON.stringify({status:'BLOCKED',reason:'Readiness input unavailable or invalid; private details withheld.',liveRequests:0}));process.exitCode=2;}return;}
   if(['framework-doctor','framework-import','framework-status','framework-approvals','framework-history'].includes(mode)){try{console.log(JSON.stringify(mode==='framework-doctor'?await frameworkDoctor():mode==='framework-import'?await importFrameworkRequirement(file):await inspectFramework(file,mode.replace('framework-',''))));}catch{console.log(JSON.stringify({status:'local-framework-command-failed',guidance:'Check the path and docs/FRAMEWORK_COMPLETE_GUIDE.md. Private content withheld.',liveRequests:0}));process.exitCode=1;}return;}
   if(mode==='qa-intelligence'){try{console.log(JSON.stringify(await runQAIntelligence(file)));}catch{console.log(JSON.stringify({status:'qa-intelligence-source-review-required',externalRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode==='demo-test-design'){console.log(JSON.stringify(await demonstrateTestDesign()));return;}
@@ -310,9 +313,10 @@ async function main() {
   }
   if(mode==='knowledge-publish'||mode==='grounded-plan'||mode==='knowledge-benchmark') {
     const bundle=ReviewBundleSchema.parse(await loadJson(file||'.state/ai-review-bundle.json')),review=await loadJson(arg||'.state/ai-review-approval.json');
-    authorizeAI(bundle,review,'gemini-embeddings');if(process.env.CHROMA_HOST)authorizeAI(bundle,review,'chroma');
+    const sourceArg=process.argv.indexOf('--source');if(sourceArg>=0){const source=process.argv[sourceArg+1];if(!source||source.startsWith('--'))throw Error('Exact saved source path required');verifyReviewedBundleSource(bundle,await loadJson(source));}
+    const localOnly=process.argv.includes('--local-only'),validationEnv=process.argv.includes('--single-attempt')?{...process.env,SFQA_GEMINI_RETRIES:'0'}:process.env;authorizeAI(bundle,review,'gemini-embeddings');if(process.env.CHROMA_HOST&&!localOnly)authorizeAI(bundle,review,'chroma');
     const h=new History('.state/reviewed-rag.sqlite');try {
-      const index=await reviewedKnowledge(h,!!process.env.CHROMA_HOST);
+      const index=localOnly?new KnowledgeIndex(h,configuredEmbeddings(validationEnv),undefined,configuredEmbeddingSpace()):await reviewedKnowledge(h,!!process.env.CHROMA_HOST);
       if(mode==='knowledge-benchmark'){const cases=bundle.facts.slice(0,2).map(f=>({id:f.id,query:`${f.object} ${f.field}`,scope:{org:bundle.org,permission:bundle.permission},relevant:[`${f.id}@${bundle.sourceVersion}`]})),report=await benchmarkRetrieval(index,cases,3);await saveJson(`artifacts/${bundle.story.id}/retrieval-benchmark.json`,report);console.log(JSON.stringify({cases:report.cases.length,mean:report.mean,limitations:report.limitations}));return;}
       if(mode==='knowledge-publish'){
         const setting=(name:string,fallback:number)=>process.env[name]?Number(process.env[name]):fallback;
@@ -322,8 +326,8 @@ async function main() {
         if(process.argv.includes('--retry-blocked'))queue.retryBlocked(bundle,review);
         const result=await queue.drain(bundle,review,policy);console.log(JSON.stringify({sourceVersion:bundle.sourceVersion,...result}));if(result.status.some(s=>s.status==='pending'||s.status==='blocked'))process.exitCode=2;return;
       }
-      const chat=configuredChat();if(!chat)throw Error('Chat provider not configured');
-      const report=await groundedPlanning(bundle,review,index,chat);await saveJson(`artifacts/${bundle.story.id}/grounded-plan.json`,report);
+      const chat=configuredChat(validationEnv);if(!chat)throw Error('Chat provider not configured');
+      const report=await groundedPlanning(bundle,review,index,chat,{plannerOnly:process.argv.includes('--planner-only')});await saveJson(`artifacts/${bundle.story.id}/grounded-plan.json`,report);
       console.log(JSON.stringify({status:report.status,scenarios:report.scenarios.length,roles:Object.keys(report.advice),evaluation:report.evaluation,executable:false}));
     }finally{h.close();}return;
   }

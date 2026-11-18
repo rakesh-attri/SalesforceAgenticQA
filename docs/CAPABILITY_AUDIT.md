@@ -1,5 +1,14 @@
 # Capability audit and agent ownership
 
+## Live-readiness and reliability continuation
+
+All 15 original owners and cumulative P0/P1/P2 remain below. Reviewer/Knowledge now share strict named external-AI review rejection and optional exact saved-source verification; Planner's explicit minimal validation mode uses one role while the default five-role flow remains. Existing Gemini, embeddings, ingestion queues, quota/Retry-After and Chroma adapters are preserved; local-only validation excludes Chroma without changing other flows.
+
+Execution Coordinator adds durable per-directory/run reservations, validates prerequisites before altering prior evidence and verifies actual reportingLabs HTML/JSON/validation counts. Explicit fresh runs retain report history; uncertain/completed same runs cannot replay. JWT authentication uses its same endpoint checks through an exported static validator; local key parsing grants no API access. Orchestrator/Discovery/Explorer retain the existing source reconciliation, goal planner, exact native profile/MCP/independent readers and live report; only a fresh inactive one-Account package is requested, not a browser architecture change.
+
+Verified: TypeScript typecheck passed; **336/336 full unit/integration tests**, **23/23 focused reliability/JWT/reporting tests**, **5/5 headless tests**, **all 11 offline demos**, and **3/3 tests of the committed discovery contract** passed. The existing discovery-test edit remains byte-for-byte unchanged and excluded. Logs: `.state/live-readiness-{typecheck,final-unit,final-focused,headless,committed-discovery}.log`; demo summary: `.state/live-readiness-demo-summary.json`.. Historical actual Salesforce/Gemini evidence is distinguished from current local/mocked checks in [LIVE_INTEGRATION_READINESS.md](LIVE_INTEGRATION_READINESS.md). No fresh remote service request, state import, live session, record write or write package. Learning/Healing/Data/cleanup and all remaining enterprise/autonomy/CI/connector scope stay unchanged. Scopes 002/012 remain declined/inactive.
+
+
 ## Connected framework integration audit
 
 The existing 15-owner inventory remains below; no duplicate agent framework was introduced. [FRAMEWORK_INTEGRATION_AUDIT.md](FRAMEWORK_INTEGRATION_AUDIT.md) maps P0/P1/P2, missing connections and actual code. Orchestrator/Coordinator now preserve QA guards at final generation and can require durable exact execution review before setup. Data Agent uses shared deterministic values with actual ownership/verification/cleanup services. Planner/Reviewer/Risk/Generator reuse source-grounded QA contracts, current evidence and confirmed history.

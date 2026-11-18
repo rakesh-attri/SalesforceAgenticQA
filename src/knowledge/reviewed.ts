@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import type { OrgIntelligence } from '../agents/org-intelligence.js';
 import { schemaFingerprint,knowledgeFingerprint } from './snapshots.js';
-import { StorySchema,type Story } from '../core/types.js';
+import { StorySchema,OrgSnapshotSchema,type Story } from '../core/types.js';
 import { KnowledgeIndex,type Knowledge,KnowledgeSchema } from './index.js';
 import { redactModelText,environmentSecrets } from '../ai/privacy.js';
 const Name=z.string().regex(/^[A-Za-z][A-Za-z0-9_]*$/),Hash=z.string().regex(/^[a-f0-9]{64}$/);
@@ -12,8 +12,14 @@ export const ReviewBundleSchema=z.object({
   history:z.array(KnowledgeSchema).default([]),
 }).strict();
 export type ReviewBundle=z.infer<typeof ReviewBundleSchema>;
-export const AIReviewSchema=z.object({operator:z.string().trim().min(1),bundleHash:Hash,destinations:z.array(z.enum(['gemini-chat','gemini-embeddings','chroma'])).min(1),expiresAt:z.string().datetime()}).strict();
+export const AIReviewSchema=z.object({operator:z.string().trim().min(1).refine(value=>value!=='REVIEW_REQUIRED','A named operator must approve external AI content'),bundleHash:Hash,destinations:z.array(z.enum(['gemini-chat','gemini-embeddings','chroma'])).min(1),expiresAt:z.string().datetime()}).strict();
 export function bundleHash(bundle:ReviewBundle) {return createHash('sha256').update(JSON.stringify(ReviewBundleSchema.parse(bundle))).digest('hex');}
+export function verifyReviewedBundleSource(raw:unknown,rawOrg:unknown){
+  const bundle=ReviewBundleSchema.parse(raw),org=OrgSnapshotSchema.parse(rawOrg);
+  if(org.source!=='salesforce-api'||org.orgIdentityHash!==bundle.org||schemaFingerprint(org)!==bundle.sourceVersion||bundle.knowledgeVersion&&bundle.knowledgeVersion!==knowledgeFingerprint(org))throw Error('Reviewed AI bundle does not match the saved org/source version');
+  for(const fact of bundle.facts){const field=org.objects.find(o=>o.name===fact.object)?.fields.find(f=>f.name===fact.field);if(!field||fact.id!==`field:${fact.object}.${fact.field}`||fact.type!==field.type||fact.required!==(field.createable&&!field.nillable&&!field.defaultedOnCreate)||JSON.stringify(fact.references)!==JSON.stringify(field.referenceTo??[])||fact.source!==`describe:${fact.object}@${bundle.sourceVersion}`)throw Error('Reviewed AI field differs from saved source evidence');}
+  return{status:'saved-source-matched',serverFreshness:'not-established',facts:bundle.facts.length};
+}
 export function payloadHash(payload:unknown) {return createHash('sha256').update(JSON.stringify(payload)).digest('hex');}
 export function authorizePayload(payload:unknown,raw:unknown,destinations:Array<'gemini-chat'|'gemini-embeddings'|'chroma'>) {
   const review=AIReviewSchema.parse(raw);
