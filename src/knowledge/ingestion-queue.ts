@@ -20,6 +20,10 @@ export class IngestionQueue {
       CREATE TABLE IF NOT EXISTS ingest_budget(space TEXT,day TEXT,requests INTEGER,texts INTEGER,nextAt REAL,PRIMARY KEY(space,day));
       CREATE TABLE IF NOT EXISTS ingest_lock(space TEXT PRIMARY KEY,owner TEXT,expires REAL);`);
   }
+  private scopedJobs(bundle:ReviewBundle) {
+    const keys=new Set(reviewedDocuments(bundle,'scope-only').map(doc=>hash(JSON.stringify([doc.org,doc.permission,doc.id,doc.version,(bundle.knowledgeVersion??bundle.sourceVersion),this.space]))));
+    return this.history.db.prepare('SELECT * FROM ingest_jobs WHERE org=? AND permission=? AND source=? AND space=? ORDER BY rowid').all(bundle.org,bundle.permission,(bundle.knowledgeVersion??bundle.sourceVersion),this.space).filter(job=>keys.has(String(job.key)));
+  }
   enqueue(bundle:ReviewBundle,review:unknown) {
     const operator=authorizeAI(bundle,review,'gemini-embeddings').operator,docs=reviewedDocuments(bundle,operator).map(d=>this.index.validateDocument(d)),db=this.history.db;
     if(docs.some(d=>d.org!==bundle.org||d.permission!==bundle.permission||d.status!=='verified'))throw Error('Queue documents must match reviewed org/permission and verified status');
@@ -37,10 +41,11 @@ export class IngestionQueue {
     }catch(error){db.exec('ROLLBACK');throw error;}
     return this.status(bundle);
   }
-  status(bundle:ReviewBundle) {return this.history.db.prepare('SELECT status,COUNT(*) AS count FROM ingest_jobs WHERE org=? AND permission=? AND source=? AND space=? GROUP BY status').all(bundle.org,bundle.permission,(bundle.knowledgeVersion??bundle.sourceVersion),this.space).map(r=>({status:String(r.status),count:Number(r.count)}));}
-  retryBlocked(bundle:ReviewBundle,review:unknown) {authorizeAI(bundle,review,'gemini-embeddings');const current=this.history.db.prepare('SELECT version FROM ingest_sources WHERE org=? AND permission=?').get(bundle.org,bundle.permission);if(current?.version!==(bundle.knowledgeVersion??bundle.sourceVersion))throw Error('Queue source is no longer current');return this.history.db.prepare("UPDATE ingest_jobs SET status='pending',nextAt=0,code=NULL WHERE org=? AND permission=? AND source=? AND space=? AND status='blocked'").run(bundle.org,bundle.permission,(bundle.knowledgeVersion??bundle.sourceVersion),this.space).changes;}
+  status(bundle:ReviewBundle) {const counts=new Map<string,number>();for(const job of this.scopedJobs(bundle)){const status=String(job.status);counts.set(status,(counts.get(status)??0)+1);}return [...counts].sort(([a],[b])=>a.localeCompare(b)).map(([status,count])=>({status,count}));}
+  retryBlocked(bundle:ReviewBundle,review:unknown) {authorizeAI(bundle,review,'gemini-embeddings');const current=this.history.db.prepare('SELECT version FROM ingest_sources WHERE org=? AND permission=?').get(bundle.org,bundle.permission);if(current?.version!==(bundle.knowledgeVersion??bundle.sourceVersion))throw Error('Queue source is no longer current');let changed=0;for(const job of this.scopedJobs(bundle).filter(j=>j.status==='blocked'))changed+=Number(this.history.db.prepare("UPDATE ingest_jobs SET status='pending',nextAt=0,code=NULL WHERE key=? AND status='blocked'").run(String(job.key)).changes);return changed;}
   async drain(bundle:ReviewBundle,review:unknown,rawPolicy:unknown={}) {
-    const policy=IngestionPolicySchema.parse(rawPolicy),db=this.history.db,owner=randomUUID();authorizeAI(bundle,review,'gemini-embeddings');
+    const policy=IngestionPolicySchema.parse(rawPolicy),db=this.history.db,owner=randomUUID(),operator=authorizeAI(bundle,review,'gemini-embeddings').operator;
+    const expected=new Map(reviewedDocuments(bundle,operator).map(doc=>{const validated=this.index.validateDocument(doc);return [hash(JSON.stringify([doc.org,doc.permission,doc.id,doc.version,(bundle.knowledgeVersion??bundle.sourceVersion),this.space])),validated] as const;}));
     const source=db.prepare('SELECT version FROM ingest_sources WHERE org=? AND permission=?').get(bundle.org,bundle.permission);
     if(source?.version!==(bundle.knowledgeVersion??bundle.sourceVersion))throw Error('Queue source is no longer current');
     db.exec('BEGIN IMMEDIATE');
@@ -48,12 +53,13 @@ export class IngestionQueue {
     let requests=0,deferredUntil:number|undefined;
     try {
       for(;;){authorizeAI(bundle,review,'gemini-embeddings');
-        const jobs=db.prepare("SELECT * FROM ingest_jobs WHERE org=? AND permission=? AND source=? AND space=? AND status='pending' ORDER BY rowid").all(bundle.org,bundle.permission,(bundle.knowledgeVersion??bundle.sourceVersion),this.space);
+        const jobs=this.scopedJobs(bundle).filter(job=>job.status==='pending');
         if(!jobs.length)break;
+        for(const job of jobs){const doc=this.index.validateDocument(JSON.parse(String(job.document))),approved=expected.get(String(job.key));if(!approved||job.hash!==hash(embeddingContent(approved))||JSON.stringify({...doc,reviewer:undefined})!==JSON.stringify({...approved,reviewer:undefined}))throw Error('Queued content differs from the exact approved bundle; no embedding request authorized');}
         // Materialize durable cached vectors before spending any request quota.
         for(const job of jobs){const cache=job.vector?{vector:job.vector}:db.prepare('SELECT vector FROM embed_cache WHERE org=? AND permission=? AND space=? AND hash=?').get(bundle.org,bundle.permission,this.space,String(job.hash));
           if(cache?.vector){await this.index.ingestVector(JSON.parse(String(job.document)),JSON.parse(String(cache.vector)));db.prepare("UPDATE ingest_jobs SET status='complete',vector=?,code=NULL WHERE key=?").run(String(cache.vector),String(job.key));}}
-        const remaining=db.prepare("SELECT * FROM ingest_jobs WHERE org=? AND permission=? AND source=? AND space=? AND status='pending' ORDER BY rowid").all(bundle.org,bundle.permission,(bundle.knowledgeVersion??bundle.sourceVersion),this.space);if(!remaining.length)break;
+        const remaining=this.scopedJobs(bundle).filter(job=>job.status==='pending');if(!remaining.length)break;
         const now=this.now(),due=remaining.filter(j=>Number(j.nextAt)<=now);
         if(!due.length){deferredUntil=Math.min(...remaining.map(j=>Number(j.nextAt)));break;}
         let unique=[...new Map(due.map(j=>[String(j.hash),j])).values()].slice(0,policy.batchSize);

@@ -1,5 +1,23 @@
 # Capability audit and agent ownership
 
+## Approved live validation - continuation from 10e74af
+
+The operator approved the exact Account-only scope and the separate two-fact Gemini review. These approvals were applied before their original expiry without renewal, rebinding or a new write package. This section supersedes earlier inactive-handoff wording for **003 and minimal-ai-20261118-001 only**. Scopes 002/012 remain declined/inactive. All 15 agent responsibilities and every P0/P1/P2 requirement remain cumulative.
+
+| Capability | Actual current result | Limit |
+|---|---|---|
+| Salesforce JWT/API identity | PASS: live authentication, exact org/user, active-user and selected-app checks | Does not prove a current native browser session or refreshed full metadata |
+| Existing Account independent reads | PASS: exact Id/Name/LastModifiedDate baseline and post-failure comparison unchanged | Scope is one existing approved Account and those fields; no claim about all native background effects |
+| Account browser attempt | BLOCKED: one consumed/uncertain attempt, no UI receipt, no new screenshots/readiness | Original catch retained no underlying code; actual failure cause is unresolved; no replay or replacement package |
+| Gemini structural ingestion | PASS: actual gemini-embedding-001 request persisted two reviewed field vectors | No records/descriptions/formulas/permission rows/documents/traffic/images sent; no Chroma |
+| Grounded Gemini planning | PASS: one planner call; criterion coverage 1, no unverified field references, two reviewed retrieved citations | Proposed only; synthetic requirement and saved November 14 metadata; no workflow correctness or execution authority |
+| Reopened persistent hybrid retrieval | PASS in the separate grounded-planning process over the persisted reviewed vectors | Local negative org/persona checks passed; scoring contributions were not retained separately during the live query |
+| Two-query retrieval benchmark | FAIL: both requests returned HTTP 200, but adapter rejected a response; full metrics unavailable | Exact provider-response failure cause unresolved; no retry, invalid-vector acceptance or fabricated scores |
+| Safe queue/diagnostic hardening | Exact bundle document scope for drain/status/retry; altered content rejected before requests; partial benchmark evidence/error categories retained; closed browser codes | New safeguards are offline-regression verified, not retroactive reconstruction of lost live failure detail |
+
+Actual Node transport receipts: **2 OAuth**, **54 Salesforce API**, **4 embedding** and **1 chat** requests. Native browser transport is not included in these fetch counts. Zero framework Salesforce record writes, zero live generated Playwright tests and zero verified Salesforce lessons. [Detailed results](LIVE_INTEGRATION_RESULTS.md) distinguish attempted browser execution from a valid live UI receipt. Final verification: **341/341 unit/integration tests**, **5/5 headless tests**, **18/18 focused live-reliability tests**, TypeScript typecheck and **all 11 offline demos** passed. The focused queue/RAG/live suite also passed 29/29. Logs: .state/service-validation-final-{unit,typecheck,headless,live-focused,live-demo}.log; demo summary .state/service-validation-demo-summary.json. The final mocked live-adapter demo was rerun after the provenance correction. No further live calls were made during these tests.
+
+
 ## Live-readiness and reliability continuation
 
 All 15 original owners and cumulative P0/P1/P2 remain below. Reviewer/Knowledge now share strict named external-AI review rejection and optional exact saved-source verification; Planner's explicit minimal validation mode uses one role while the default five-role flow remains. Existing Gemini, embeddings, ingestion queues, quota/Retry-After and Chroma adapters are preserved; local-only validation excludes Chroma without changing other flows.

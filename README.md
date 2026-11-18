@@ -1,5 +1,8 @@
 # SalesforceAgenticQA
 
+[Approved live integration results](docs/LIVE_INTEGRATION_RESULTS.md): current Salesforce API identity and unchanged Account reads passed; two reviewed Gemini vectors persisted and grounded planning passed. The browser attempt and full retrieval benchmark remain incomplete. Neither was retried; declined scopes 002/012 and all write restrictions remain. Earlier inactive-handoff statements are historical for the subsequently approved exact 003/AI scopes.
+
+
 [Live integration readiness](docs/LIVE_INTEGRATION_READINESS.md) separates current local checks, historical service evidence and fresh authorization gates. `npm.cmd run platform -- integration-readiness .state/integration-readiness-input.json` makes no service calls and reports PASS/FAIL/BLOCKED. The current request permits one new inactive no-create Account draft and a separate minimal Gemini review; neither activates execution. Declined scopes 002/012 and all Production/write restrictions remain.
 
 

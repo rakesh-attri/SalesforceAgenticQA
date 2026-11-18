@@ -114,7 +114,7 @@ export async function integrationReadiness(raw: unknown, env: NodeJS.ProcessEnv 
     }
     else
         add('gemini-content-authorization', 'BLOCKED', 'authorization', 'No fresh separately reviewed AI validation bundle supplied.', 'Prepare the existing filtered structural bundle with a synthetic story and independent Gemini destination review.');
-    add('current-live-verification', 'BLOCKED', 'not-executed', 'No fresh Salesforce OAuth/API/browser, Gemini or Chroma validation was executed. Historical success is separate evidence.', 'Execute only after fresh exact authorization; retain genuine FAIL/BLOCKED outcomes and source-linked evidence.');
+    add('current-live-verification', 'BLOCKED', 'not-executed', 'This local preflight performs no live service validation. Inspect separate execution receipts; configuration and local grants do not establish service health.', 'Execute only after fresh exact authorization; retain genuine FAIL/BLOCKED outcomes and source-linked evidence.');
     add('future-write-lifecycle', 'BLOCKED', 'authorization', 'No new write-execution request. Declined lifecycle 012 stays inactive.', 'A future explicit request must separately review current automation, factory/UI/session/run quotas, owned cleanup, independent SOQL and reportingLabs.');
     return { version: 1, status: checks.some(c => c.status === 'FAIL') ? 'FAIL' as const : 'BLOCKED' as const, checkedAt: new Date().toISOString(), checks, scope002: 'declined-inactive', scope012: 'declined-inactive', salesforceRequests: 0, externalModelRequests: 0, credentialsRetained: false, permissionsGranted: 0 };
 }

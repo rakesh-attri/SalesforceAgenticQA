@@ -56,7 +56,7 @@ import { IngestionQueue,IngestionPolicySchema } from './knowledge/ingestion-queu
 import { discoverDeepIntelligence } from './agents/deep-discovery.js';
 import { discoverApplicationLayouts } from './agents/application-layouts.js';
 import { intelligentSpecPlan } from './agents/spec-intelligence.js';
-import { benchmarkRetrieval } from './knowledge/benchmarks.js';
+import { benchmarkRetrieval,RetrievalBenchmarkError } from './knowledge/benchmarks.js';
 import { exploreFixture } from './agents/fixture-explorer.js';
 import { htmlReport } from './agents/evaluation.js';
 import { buildComponentGraph } from './agents/component-graph.js';
@@ -108,7 +108,7 @@ async function reviewedKnowledge(history:History,remoteApproved=false) {
 async function main() {
   if(['exploration-plan','exploration-run','exploration-resume','exploration-report','exploration-investigate','exploration-repair-propose','exploration-repair-run'].includes(mode)){try{console.log(JSON.stringify(await runExplorationCommand(mode,file)));}catch{console.log(JSON.stringify({status:'exploration-source-or-approval-gate',privateDetailsWithheld:true,salesforceRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode==='source-reconcile'){try{console.log(JSON.stringify(await runSourceReconciliation(file)));}catch{console.log(JSON.stringify({status:'source-reconciliation-blocked',privateDetailsWithheld:true,executionAuthorized:false}));process.exitCode=1;}return;}
-  if(mode.startsWith('live-exploration-')){try{console.log(JSON.stringify(await runLiveExplorationCommand(mode,file)));}catch{console.log(JSON.stringify({status:'live-exploration-prerequisite-or-execution-blocked',privateDetailsWithheld:true,liveVerification:'not-established-by-command-exit',automaticReplay:false}));process.exitCode=1;}return;}
+  if(mode.startsWith('live-exploration-')){try{const result=await runLiveExplorationCommand(mode,file);console.log(JSON.stringify(result));if('status'in result&&result.status==='blocked')process.exitCode=2;}catch{console.log(JSON.stringify({status:'live-exploration-prerequisite-or-execution-blocked',privateDetailsWithheld:true,liveVerification:'not-established-by-command-exit',automaticReplay:false}));process.exitCode=1;}return;}
   if(mode==='demo-live-exploration'){console.log(JSON.stringify(await demonstrateLiveExploration()));return;}
   if(mode==='demo-exploration-intelligence'){console.log(JSON.stringify(await demonstrateExplorationIntelligence()));return;}
   if(mode==='demo-application-intelligence'){console.log(JSON.stringify(await demonstrateApplicationIntelligence()));return;}
@@ -317,7 +317,7 @@ async function main() {
     const localOnly=process.argv.includes('--local-only'),validationEnv=process.argv.includes('--single-attempt')?{...process.env,SFQA_GEMINI_RETRIES:'0'}:process.env;authorizeAI(bundle,review,'gemini-embeddings');if(process.env.CHROMA_HOST&&!localOnly)authorizeAI(bundle,review,'chroma');
     const h=new History('.state/reviewed-rag.sqlite');try {
       const index=localOnly?new KnowledgeIndex(h,configuredEmbeddings(validationEnv),undefined,configuredEmbeddingSpace()):await reviewedKnowledge(h,!!process.env.CHROMA_HOST);
-      if(mode==='knowledge-benchmark'){const cases=bundle.facts.slice(0,2).map(f=>({id:f.id,query:`${f.object} ${f.field}`,scope:{org:bundle.org,permission:bundle.permission},relevant:[`${f.id}@${bundle.sourceVersion}`]})),report=await benchmarkRetrieval(index,cases,3);await saveJson(`artifacts/${bundle.story.id}/retrieval-benchmark.json`,report);console.log(JSON.stringify({cases:report.cases.length,mean:report.mean,limitations:report.limitations}));return;}
+      if(mode==='knowledge-benchmark'){const cases=bundle.facts.slice(0,2).map(f=>({id:f.id,query:`${f.object} ${f.field}`,scope:{org:bundle.org,permission:bundle.permission},relevant:[`${f.id}@${bundle.sourceVersion}`]}));try{const report=await benchmarkRetrieval(index,cases,3);await saveJson(`artifacts/${bundle.story.id}/retrieval-benchmark.json`,report);console.log(JSON.stringify({cases:report.cases.length,mean:report.mean,limitations:report.limitations}));}catch(error){if(!(error instanceof RetrievalBenchmarkError))throw error;await saveJson(`artifacts/${bundle.story.id}/retrieval-benchmark-incomplete.json`,error.report);console.log(JSON.stringify({status:error.report.status,completed:error.report.completed.length,failedCase:error.report.failedCase,unexecuted:error.report.unexecuted.length,fullBenchmarkVerified:false}));process.exitCode=error.report.status==='BLOCKED'?2:1;}return;}
       if(mode==='knowledge-publish'){
         const setting=(name:string,fallback:number)=>process.env[name]?Number(process.env[name]):fallback;
         const policy=IngestionPolicySchema.parse({batchSize:setting('SFQA_EMBEDDING_BATCH_SIZE',5),maxRequestsPerRun:setting('SFQA_INGEST_REQUESTS_PER_RUN',5),maxRequestsPerDay:setting('SFQA_INGEST_REQUESTS_PER_DAY',30),maxTextsPerDay:setting('SFQA_INGEST_TEXTS_PER_DAY',100),minIntervalMs:setting('SFQA_INGEST_MIN_INTERVAL_MS',1000)});

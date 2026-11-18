@@ -38,3 +38,13 @@ test('small Gemini batches and long Retry-After diagnostics are bounded and sani
   const limited=geminiEmbeddings({apiKey:'mock',model:'mock-model',retries:0},{fetch:async()=>new Response('private provider key',{status:429,headers:{'retry-after':'90'}})});
   await assert.rejects(limited(['a']),error=>error instanceof ModelProviderError&&error.retryAfterMs===90000&&!error.message.includes('private provider key'));
 });
+
+test('a narrowed review drains, reports and retries only its own queued documents from the same source',async()=>{
+ const h=new History(':memory:'),uploaded:string[][]=[],embed=async(texts:string[])=>{uploaded.push(texts);return texts.map(()=>[1,0]);},q=new IngestionQueue(h,new KnowledgeIndex(h),embed,'A'),b=bundle(),narrow={...b,facts:b.facts.slice(0,2)};
+ try{q.enqueue(b,review(b));q.enqueue(narrow,review(narrow));await q.drain(narrow,review(narrow),{minIntervalMs:0});assert.equal(uploaded.length,1);assert.equal(uploaded[0].length,2);assert.ok(uploaded[0].every(text=>narrow.facts.some(f=>text.includes(f.id))));assert.deepEqual(q.status(narrow),[{status:'complete',count:2}]);assert.deepEqual(q.status(b),[{status:'complete',count:2},{status:'pending',count:3}]);h.db.exec("UPDATE ingest_jobs SET status='blocked'");assert.equal(q.retryBlocked(narrow,review(narrow)),2);assert.deepEqual(q.status(b),[{status:'blocked',count:3},{status:'pending',count:2}]);}finally{h.close();}
+});
+
+test('altered queued content is rejected before cached materialization, embedding or spending a request',async()=>{
+ const h=new History(':memory:');let calls=0;const b=bundle(),q=new IngestionQueue(h,new KnowledgeIndex(h),async texts=>{calls++;return texts.map(()=>[1,0]);},'A');
+ try{q.enqueue(b,review(b));const row=h.db.prepare('SELECT key,document FROM ingest_jobs LIMIT 1').get()!,doc=JSON.parse(String(row.document));doc.text=doc.text.replace('string','PRIVATE_CHANGED_TYPE');h.db.prepare('UPDATE ingest_jobs SET document=? WHERE key=?').run(JSON.stringify(doc),String(row.key));await assert.rejects(q.drain(b,review(b)),/differs from the exact approved bundle/);assert.equal(calls,0);assert.equal(h.db.prepare('SELECT COUNT(*) AS n FROM ingest_budget').get()?.n,0);}finally{h.close();}
+});
