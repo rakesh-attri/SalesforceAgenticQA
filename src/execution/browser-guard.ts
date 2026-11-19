@@ -49,7 +49,11 @@ export async function executeReviewedWorkflowStep(page: Page, workflowRaw: unkno
 // Generated tests use this sole network boundary. Native initialization has no
 // connection to agent action permits and cannot acquire browser write authority.
 export async function installDedicatedGuardFile(context: BrowserContext, path: string) {
-  const config = JSON.parse(await readFile(path, 'utf8')) as { review: unknown; parent: unknown; statePath: string; ownershipJournal: string }, review = BrowserReviewSchema.parse(config.review), parent = EnvironmentPolicySchema.parse(config.parent), history = await openBrowserJournal(config.ownershipJournal);
+  const config = JSON.parse(await readFile(path, 'utf8')) as { review: unknown; parent: unknown; statePath: string; ownershipJournal: string }, review = BrowserReviewSchema.parse(config.review), parent = EnvironmentPolicySchema.parse(config.parent);
+  // Reject inactive/expired/cross-mode proposals before opening a journal or
+  // authenticating. Fresh server identity is still proved below for valid grants.
+  authorizeBrowserSession(review, parent, { Id: review.plan.orgId, userId: review.plan.userId, IsSandbox: false }, review.plan);
+  const history = await openBrowserJournal(config.ownershipJournal);
   try {
     const client = await SalesforceClient.connectReviewedBrowser(parent, review, history), identity = await client.identity(), references = await client.verifyReferences();
     // Factory ownership is checked again in each actual generated-test context.

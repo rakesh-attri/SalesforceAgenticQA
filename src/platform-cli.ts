@@ -1,5 +1,6 @@
 import {verifyReviewedBundleSource} from './knowledge/reviewed.js';
 import 'dotenv/config';
+import {runLifecycleReviewCommand} from './execution/lifecycle-review-cli.js';
 import {runIntegrationReadiness} from './core/integration-readiness.js';
 import {runIntegrationResults} from './core/integration-results.js';
 import {demonstrateIntegratedFramework} from './demos/integrated-framework.js';
@@ -108,6 +109,7 @@ async function reviewedKnowledge(history:History,remoteApproved=false) {
 }
 async function main() {
   if(['exploration-plan','exploration-run','exploration-resume','exploration-report','exploration-investigate','exploration-repair-propose','exploration-repair-run'].includes(mode)){try{console.log(JSON.stringify(await runExplorationCommand(mode,file)));}catch{console.log(JSON.stringify({status:'exploration-source-or-approval-gate',privateDetailsWithheld:true,salesforceRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
+  if(mode==='lifecycle-review'||mode==='lifecycle-review-check'){try{const result=await runLifecycleReviewCommand(mode==='lifecycle-review'?'prepare':'check',file);console.log(JSON.stringify(result));}catch{console.log(JSON.stringify({status:'lifecycle-review-blocked',privateDetailsWithheld:true,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode==='source-reconcile'){try{console.log(JSON.stringify(await runSourceReconciliation(file)));}catch{console.log(JSON.stringify({status:'source-reconciliation-blocked',privateDetailsWithheld:true,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode.startsWith('live-exploration-')){try{const result=await runLiveExplorationCommand(mode,file);console.log(JSON.stringify(result));if('status'in result&&result.status==='blocked')process.exitCode=2;}catch{console.log(JSON.stringify({status:'live-exploration-prerequisite-or-execution-blocked',privateDetailsWithheld:true,liveVerification:'not-established-by-command-exit',automaticReplay:false}));process.exitCode=1;}return;}
   if(mode==='demo-live-exploration'){console.log(JSON.stringify(await demonstrateLiveExploration()));return;}

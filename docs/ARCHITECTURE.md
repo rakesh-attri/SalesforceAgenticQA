@@ -1,5 +1,9 @@
 # Architecture
 
+## Inactive lifecycle review composition
+
+execution/lifecycle-review composes the existing dedicated factory, schemas, host-journaled view evidence, native profile and generator into an inactive review. The saved-package checker independently compares exact identities/source/locators/original expected values, deterministic data/ownership tokens, reviewer/content citations, approval placeholders, limits, manifest/proposal bytes and a pinned artifact inventory. It issues no execution authority, copies no historical readiness hash and neither reserves runs nor changes profile preference. The existing generated browser guard rejects invalid/inactive scope before JWT/journal access, then retains its fresh server/ownership/build checks for valid grants. Source provenance, runtime readiness and business/native/run approvals remain separate; all existing browser planes and normal Production restrictions are unchanged. See [LIVE_LIFECYCLE_REVIEW.md](LIVE_LIFECYCLE_REVIEW.md).
+
 ## Focused integration diagnostics
 
 Existing LightningSession/context attachment now emit bounded hash/run-bound stage evidence through BrowserExecutionDiagnostics into the existing History. Local state validation precedes launch; the existing minimizer produces only a separately reviewed copy. The trusted observation host preserves approved independent post-checks on failed initialization. Live reports aggregate the latest diagnostics across every required object, never reclassifying attempts as rendered proof.

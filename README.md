@@ -1,5 +1,7 @@
 # SalesforceAgenticQA
 
+[New inactive Account/Contact lifecycle review](docs/LIVE_LIFECYCLE_REVIEW.md): package SFQA-E2E-20261119-013 contains separate business/native approvals, exact synthetic factories and generated proposals. Independent preparation PASS; execution BLOCKED pending fresh readiness/permissions and exact final consent. No live service call, activation or record mutation. Run `npm.cmd run platform -- lifecycle-review-check .state/lifecycle-013-prepare.json` for local saved-package verification only. 012 stays declined and 005 consumed.
+
 [Real Account observation passed](docs/ACCOUNT_OBSERVATION_REVIEW.md): exact operator-approved run 005 achieved the integrated goal-directed objective in one headless local Chrome/MCP session, with fresh identity/build/state proof, real name/heading/Related/Details, reviewed visible readiness, four masked local images and independent unchanged Account checks. No UI mutation, Gemini repeat or data-write package. The completed run cannot replay; the full generated synthetic lifecycle remains separately gated.
 
 [Approved November 19 retrieval validation](docs/APPROVED_VALIDATION_20261119.md): two actual Gemini embedding requests passed strict validation and retrieved both reviewed targets at rank one from persisted scoped vectors. Account package 004 received approval after its original noon deadline and remains inactive; no new Salesforce call ran. The benchmark is consumed, with no replay, metadata upload, chat or Chroma call. The connected result remains PARTIAL.

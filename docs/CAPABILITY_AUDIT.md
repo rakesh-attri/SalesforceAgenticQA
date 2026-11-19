@@ -1,5 +1,9 @@
 # Capability audit and agent ownership
 
+## Inactive lifecycle review delivery - November 19
+
+[New review 013](LIVE_LIFECYCLE_REVIEW.md) supports the existing Orchestrator/Test Data/Generator/Reviewer/Reporting responsibilities through deterministic factory/source/expectation/approval and persisted-artifact checks. Preparation audit PASS / live execution BLOCKED; zero new service calls, grants, records or run reservations. 364/364 unit/integration, 6/6 focused, 5/5 headless, typecheck, required demo and actual proposal semantic checks passed; local review HTML has no network/error/overflow. No agent is added or responsibility removed. The full live generated Account/Contact lifecycle, current effective permissions/readiness and its independent cleanup/reporting evidence remain unexecuted. Prior live 005/Gemini proof stays scoped historical evidence, 012 remains declined, and all P0/P1/P2 rows below remain cumulative.
+
 ## November 19 real Account goal-directed exploration
 
 [Run 005 passed](ACCOUNT_OBSERVATION_REVIEW.md) using the existing Orchestrator/Application Explorer/Org evidence and native browser/MCP/report services: one real Account, exact current identity/app/build/state, actual name/heading/Related/Details, reviewed visible readiness, four local masked images and independent unchanged record verification. No new agent subsystem, permissions expansion, runtime/assertion change, factory, write, Contact traversal, Gemini call, generated test or verified lesson. All 15 responsibilities remain cumulative. Full business workflows, alternate-persona permissions, generated synthetic Account/Contact lifecycle/reportingLabs and broader autonomy remain partial; optional Chroma remains externally unverified. Existing 358-unit/5-headless baseline was freshly rerun and passed with typecheck and required demo.
