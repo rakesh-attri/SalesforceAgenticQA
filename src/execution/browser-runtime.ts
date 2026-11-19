@@ -88,6 +88,7 @@ export type ContextAttachmentInput={onStage?:BrowserStageObserver;dedicatedChrom
 const attachedContexts=new WeakMap<BrowserContext,{hash:string;attachment:Promise<Awaited<ReturnType<typeof attachContext>>>}>();
 async function attachContext(context:BrowserContext,input:ContextAttachmentInput){
   const authority=authorizeBrowserSession(input.review,input.parent,input.identity,input.review.plan);
+  if(fingerprint(input.records)!==fingerprint(resolveBrowserRecords(input.review.plan,input.history)))throw Error('Browser records differ from the exact approved observation/ownership journal');
   const dedicatedNative=input.review.plan.executionProfile==='DEDICATED_QA_NORMAL_CHROME';
   if(dedicatedNative)authorizeDedicatedChromeProfile(input.dedicatedChromeProfile,input.review,input.parent,input.identity);
   if(input.dedicatedChromeProfile&&!dedicatedNative||input.review.plan.profileHash&&!dedicatedNative||dedicatedNative&&input.normalNetworkingReceipt)throw Error('Browser transport grants cannot be mixed or inherited');
@@ -99,7 +100,7 @@ async function attachContext(context:BrowserContext,input:ContextAttachmentInput
   if(!sameSalesforceIdentity(build.orgId,input.identity.Id)||!sameSalesforceIdentity(build.userId,input.identity.userId))throw Error('Native browser build identity mismatch');
   authorizeBrowserSession(input.review,input.parent,input.identity,build);
   const sessionId=randomUUID();await withBrowserStage(input.onStage,'session-budget',async()=>reserveBrowserSession(input.review,input.history,sessionId));
-  const boundary=await withBrowserStage(input.onStage,'network-boundary',async()=>input.normalNetworkingReceipt||dedicatedNative?observeNormalNetworking(context,input.review,dedicatedNative?'dedicated-native-execution':'normal-network-observation'):await installReviewedBrowserBoundary(context,{...input,build}));
+  const boundary=await withBrowserStage(input.onStage,'network-boundary',async()=>input.normalNetworkingReceipt||dedicatedNative?observeNormalNetworking(context,input.review,dedicatedNative?'dedicated-native-execution':'normal-network-observation',input.records):await installReviewedBrowserBoundary(context,{...input,build}));
   const validation=input.verifyContext||input.nativeBuild||input.resourceFetch||input.prepareContext?'offline-mocked-salesforce' as const:'live-salesforce' as const;
   const documents=new WeakMap<Page,boolean>(),pendingDocuments=new Set<Promise<void>>();
   context.on('request',request=>{if(request.resourceType()==='document')try{const page=request.frame().page();if(request.frame()===page.mainFrame())documents.set(page,false);}catch{}});

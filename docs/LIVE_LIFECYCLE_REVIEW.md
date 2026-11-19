@@ -1,5 +1,7 @@
 # New inactive Account / Contact lifecycle review
 
+**November 19 continuation:** 013 is now expired/inactive; its original hashes/deadline are unchanged. The separately approved read-only 014 preflight passed API/source/cleanup checks but failed native browser HTTP identity before observing a page. [Actual results and single next input](LIFECYCLE_READINESS_014.md). An optional newly tested, UI-hash-bound managed MCP selector path now reuses the existing four-context lifecycle budget; references below to direct-only selector observation describe the original 013 proposal. No old approval acquires this option or a new expiry automatically.
+
 This continuation from 133b2a4 prepares **SFQA-E2E-20261119-013**, independently checks the saved package and preserves all 15 agent responsibilities and cumulative P0/P1/P2 requirements. It does not activate a grant, make a Salesforce/model call, open a live browser, reserve a data run, create/delete a record or upload evidence. Declined package 012 is neither reused nor renewed. Completed Account observation 005 is not replayed.
 
 ## Existing implementation reused

@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import type {BrowserContext} from '@playwright/test';
-import {BrowserReviewSchema,authorizeBrowserSession,browserPlanHash,browserDocument,fingerprint,type BrowserReview} from './browser-policy.js';
+import {BrowserReviewSchema,authorizeBrowserSession,browserPlanHash,browserDocument,fingerprint,type BrowserReview,type BrowserRecord} from './browser-policy.js';
 import type {EnvironmentIdentity} from './environment.js';
 import {BrowserBudget} from './browser-resources.js';
 import {RequestTraceClock,BrowserTraceSchema,browserTraceScope,summarizeBrowserExchange} from './browser-trace.js';
@@ -16,10 +16,10 @@ export function authorizeNormalComparison(raw:unknown,review:BrowserReview,paren
 // Native requests may have unknown effects; this explicit one-off receipt is
 // never available to ordinary execution modes or AI tools. Budget breach closes
 // the owned context; event observation cannot prevent an already dispatched call.
-export function observeNormalNetworking(context:BrowserContext,review:BrowserReview,transport='normal-network-observation'){
+export function observeNormalNetworking(context:BrowserContext,review:BrowserReview,transport='normal-network-observation',records:BrowserRecord[]=review.plan.records){
   const clock=new RequestTraceClock(),budget=new BrowserBudget(review),entries:Array<ReturnType<typeof summarizeBrowserExchange>>=[];let closedForBudget=false,bytes=0;const pending=new Set<Promise<void>>();
   const close=()=>{closedForBudget=true;void context.close().catch(()=>{});};
-  context.on('request',request=>{clock.start(request);try{budget.request();if(request.isNavigationRequest()&&request.frame()===request.frame().page().mainFrame()&&!browserDocument(review.plan,request.url()))close();}catch{close();}});
+  context.on('request',request=>{clock.start(request);try{budget.request();if(request.isNavigationRequest()&&request.frame()===request.frame().page().mainFrame()&&!browserDocument(review.plan,request.url(),records))close();}catch{close();}});
   context.on('response',response=>{const work=(async()=>{const request=response.request(),length=Number(response.headers()['content-length']??0);bytes+=Number.isFinite(length)?length:0;if(bytes>review.plan.budgets.resourceBytes)close();if(entries.length<250)entries.push({...summarizeBrowserExchange({url:request.url(),method:request.method(),type:request.resourceType(),body:request.postData()},response.status()),...clock.stamp(request)});})().catch(()=>{});pending.add(work);void work.finally(()=>pending.delete(work));});
-  return{budget,summary(){return{requests:budget.requests,denied:0,reasons:{}};},async finish(){await Promise.allSettled([...pending]);return{transport,cacheHits:0,cacheMisses:0,requests:budget.requests,blocked:0,closedForBudget,advertisedResponseBytes:bytes,byteLimitIsPostResponse:true,trace:BrowserTraceSchema.parse({version:1,scope:browserTraceScope(review.plan,review.plan.records),provenance:'operator-live-normal-observation',sourceHash:fingerprint(entries),identityVerified:true,entries,truncated:entries.length>=250,rawValuesRetained:false})};}};
+  return{budget,summary(){return{requests:budget.requests,denied:0,reasons:{}};},async finish(){await Promise.allSettled([...pending]);return{transport,cacheHits:0,cacheMisses:0,requests:budget.requests,blocked:0,closedForBudget,advertisedResponseBytes:bytes,byteLimitIsPostResponse:true,trace:BrowserTraceSchema.parse({version:1,scope:browserTraceScope(review.plan,records),provenance:'operator-live-normal-observation',sourceHash:fingerprint(entries),identityVerified:true,entries,truncated:entries.length>=250,rawValuesRetained:false})};}};
 }
