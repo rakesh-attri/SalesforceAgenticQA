@@ -1,5 +1,14 @@
 # Framework Knowledge Base
 
+## Exact consent execution - November 19, 2026
+
+- Fresh regression: 358/358 units/integration, 5/5 headless, typecheck and required demo passed; local HTML inspection found 12 component rows and zero external requests/errors/overflow. Logs .state/approved-gemini-validation-{unit,headless,typecheck,demo}.log. Prior other ten demos were not rerun; no runtime code/assertions changed. User discovery edit retains its recorded SHA-256 and is excluded from commit.
+
+- Separately approved GEMINI-RETRIEVAL-20261119-001 executed once at 13:13 IST: two actual HTTP 200 embedding responses, strict 3,072 dimensions each, unchanged gemini-embedding-001/SEMANTIC_SIMILARITY/model namespace. Fresh process reopened existing scoped vectors without re-ingestion. Both targets ranked first; recall/MRR/NDCG 1, precision@3 1/3, two compatible hits per query. This is a tiny hybrid exact-name benchmark, not semantic-only quality or business correctness. See [actual results](../docs/APPROVED_VALIDATION_20261119.md).
+- Durable .state/gemini-retrieval-20261119-001/execution-intent.json is complete. Never replay even before its original November 20 deadline. No query response values/headers/provider text retained, no metadata upload, retries, chat, Chroma, Salesforce calls or verified Salesforce learning.
+- Account 004 approval was processed at 13:12 IST after its original November 19 12:00:12 IST expiry. No approved copies, session, native identity proof, SOQL check or new screenshot; no automatic renewal or replacement prepared. Existing 002/012 remain declined and 003 consumed. A different future Account package requires an explicit request and separate exact consent.
+- Combined report .state/approved-validation-20261119-outcome.json / APPROVED-VALIDATION-20261119-001 remains PARTIAL. Current transport counts are two embeddings only; historical API/planner/ingestion evidence remains labeled historical. Report generation makes zero calls; that does not negate the preceding two approved actual calls. The old failed benchmark/first browser exception remain unresolved historical evidence.
+
 ## November 19 diagnostic fixes - continuation from 069e2f2
 
 This increment made **zero new Salesforce/Gemini/Chroma service calls**. All 15 responsibilities and cumulative P0/P1/P2 capabilities remain in scope. Live results below remain November 18 evidence; fresh scoped revalidation is prepared but inactive. [Detailed diagnostic report and operator steps](../docs/INTEGRATION_DIAGNOSTICS.md) records verified fixes, historical uncertainty and exact new reviews. Scopes 002/012 remain declined; 003 remains consumed/expired. No write package, record mutation or automatic retry/replay.

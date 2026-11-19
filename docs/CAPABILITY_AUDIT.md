@@ -1,5 +1,9 @@
 # Capability audit and agent ownership
 
+## November 19 approved validation outcome
+
+The [actual two-query Gemini benchmark](APPROVED_VALIDATION_20261119.md) passed with two strict 3,072-dimensional responses and both reviewed targets ranked first from reopened scoped vectors. This advances live embedding/retrieval evidence only; broader relevance, Salesforce business correctness and current browser readiness remain partial. No chat, metadata upload, Chroma or Salesforce call; intent complete/non-replayable. Account 004's consent arrived after its original noon deadline and it stays inactive without replacement. All 15 ownership responsibilities and cumulative requirements below remain preserved.
+
 ## November 19 diagnostic fixes - continuation from 069e2f2
 
 This increment made **zero new Salesforce/Gemini/Chroma service calls**. All 15 responsibilities and cumulative P0/P1/P2 capabilities remain in scope. Live results below remain November 18 evidence; fresh scoped revalidation is prepared but inactive. [Detailed diagnostic report and operator steps](INTEGRATION_DIAGNOSTICS.md) records verified fixes, historical uncertainty and exact new reviews. Scopes 002/012 remain declined; 003 remains consumed/expired. No write package, record mutation or automatic retry/replay.

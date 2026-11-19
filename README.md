@@ -1,5 +1,7 @@
 # SalesforceAgenticQA
 
+[Approved November 19 retrieval validation](docs/APPROVED_VALIDATION_20261119.md): two actual Gemini embedding requests passed strict validation and retrieved both reviewed targets at rank one from persisted scoped vectors. Account package 004 received approval after its original noon deadline and remains inactive; no new Salesforce call ran. The benchmark is consumed, with no replay, metadata upload, chat or Chroma call. The connected result remains PARTIAL.
+
 [November 19 integration diagnostics](docs/INTEGRATION_DIAGNOSTICS.md): confirmed state-origin input blocker, separate scoped import, stage-aware browser evidence and strict Gemini response subcodes. The original lost exceptions remain uncertain. Run `npm.cmd run platform -- integration-results .state/integration-diagnostics-results-input.json` for saved-evidence reporting only (expected PARTIAL/exit 2). Fresh reviews remain inactive.
 
 

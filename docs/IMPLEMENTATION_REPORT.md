@@ -1,5 +1,11 @@
 # Implementation report — 2026-11-13
 
+## Approved validation follow-through
+
+Fresh checks: 358/358 full unit/integration tests, 5/5 headless tests, typecheck and required offline demo passed. Local HTML inspection passed with 12 component rows and zero external requests/script errors/overflow. The other ten historical demonstrations were not rerun; no runtime code or assertions changed. Evidence/log paths are in the linked report.
+
+[November 19 execution evidence](APPROVED_VALIDATION_20261119.md): the exact separately approved Gemini benchmark executed once at 13:13 IST. Two query-only requests returned HTTP 200 and strict 3,072-dimensional vectors; both reviewed targets ranked first over persisted source-scoped knowledge (recall/MRR/NDCG 1, precision@3 0.3333333333333333). No model/task migration, retry, metadata upload, chat, Chroma or Salesforce call. Its durable intent is complete and cannot replay. Account 004 approval was received after its original 12:00:12 IST expiry; no activation, identity call, screenshot, write or replacement package. Connected HTML remains PARTIAL and separates current benchmark results from historical API/planner evidence. No runtime code/assertion changed; full scope and existing user edits are preserved.
+
 ## November 19 diagnostic fixes - continuation from 069e2f2
 
 This increment made **zero new Salesforce/Gemini/Chroma service calls**. All 15 responsibilities and cumulative P0/P1/P2 capabilities remain in scope. Live results below remain November 18 evidence; fresh scoped revalidation is prepared but inactive. [Detailed diagnostic report and operator steps](INTEGRATION_DIAGNOSTICS.md) records verified fixes, historical uncertainty and exact new reviews. Scopes 002/012 remain declined; 003 remains consumed/expired. No write package, record mutation or automatic retry/replay.

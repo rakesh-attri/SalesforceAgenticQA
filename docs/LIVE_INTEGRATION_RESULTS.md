@@ -1,5 +1,9 @@
 # Approved live Salesforce and Gemini integration results
 
+## November 19 separately approved retrieval benchmark
+
+[Exact executed result](APPROVED_VALIDATION_20261119.md): two actual gemini-embedding-001 query requests at 13:13 IST each returned HTTP 200 and one valid 3,072-dimensional vector. Reopened persisted hybrid retrieval placed both reviewed targets first (recall/MRR/NDCG 1; precision@3 0.3333333333333333). These are two exact-name queries over two reviewed facts, not broad semantic quality or business behavior. No metadata re-upload, retries, chat, Chroma, Salesforce calls, record writes or verified learning. Historical failed results below are preserved. Account 004's late consent could not renew its noon expiry, so it remains inactive; no fresh UI receipt exists. The new benchmark intent is complete/non-replayable. The connected local report remains PARTIAL.
+
 ## November 19 diagnostic fixes - continuation from 069e2f2
 
 This increment made **zero new Salesforce/Gemini/Chroma service calls**. All 15 responsibilities and cumulative P0/P1/P2 capabilities remain in scope. Live results below remain November 18 evidence; fresh scoped revalidation is prepared but inactive. [Detailed diagnostic report and operator steps](INTEGRATION_DIAGNOSTICS.md) records verified fixes, historical uncertainty and exact new reviews. Scopes 002/012 remain declined; 003 remains consumed/expired. No write package, record mutation or automatic retry/replay.

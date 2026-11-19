@@ -1,5 +1,11 @@
 # Current capability matrix
 
+## Approved November 19 two-query validation
+
+Fresh offline checks passed: 358/358 full unit/integration tests, 5/5 headless tests, typecheck, required demo and isolated local HTML inspection (zero external requests). This authorization-only follow-through changes no runtime implementation or assertions.
+
+[Actual results and limitations](APPROVED_VALIDATION_20261119.md) supersede the inactive status below for **GEMINI-RETRIEVAL-20261119-001 only**: two actual gemini-embedding-001 HTTP 200 responses with strict 3,072-dimensional vectors; persisted hybrid retrieval found each reviewed target at rank one, with recall/MRR/NDCG 1 and precision@3 0.3333333333333333. Both hits per query had compatible vectors. This two-document, exact-name benchmark is not broad semantic quality, business correctness, live Salesforce readiness or verified learning. No re-ingestion, retries, chat, Chroma or Salesforce calls; durable intent complete/non-replayable. Account 004 approval arrived after its original noon IST deadline: expired/inactive, no replacement prepared. All 15 responsibilities and cumulative P0/P1/P2 rows below remain unchanged; 002/012 stay declined and 003 consumed.
+
 ## November 19 diagnostic fixes - continuation from 069e2f2
 
 This increment made **zero new Salesforce/Gemini/Chroma service calls**. All 15 responsibilities and cumulative P0/P1/P2 capabilities remain in scope. Live results below remain November 18 evidence; fresh scoped revalidation is prepared but inactive. [Detailed diagnostic report and operator steps](INTEGRATION_DIAGNOSTICS.md) records verified fixes, historical uncertainty and exact new reviews. Scopes 002/012 remain declined; 003 remains consumed/expired. No write package, record mutation or automatic retry/replay.
