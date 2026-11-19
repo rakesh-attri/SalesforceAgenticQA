@@ -1,5 +1,21 @@
 # Current capability matrix
 
+## November 19 diagnostic fixes - continuation from 069e2f2
+
+This increment made **zero new Salesforce/Gemini/Chroma service calls**. All 15 responsibilities and cumulative P0/P1/P2 capabilities remain in scope. Live results below remain November 18 evidence; fresh scoped revalidation is prepared but inactive. [Detailed diagnostic report and operator steps](INTEGRATION_DIAGNOSTICS.md) records verified fixes, historical uncertainty and exact new reviews. Scopes 002/012 remain declined; 003 remains consumed/expired. No write package, record mutation or automatic retry/replay.
+
+| Area | Implemented and verified evidence | Still uncertain / gated |
+|---|---|---|
+| Historical browser input | Saved state bytes and parent definition match original 003 binding; existing validator deterministically rejects state-origin. Existing minimizer removes 34 cookies/one origin into a separate copy | Original first exception was discarded; another earlier failure cannot be excluded. Current native identity/build/page are unverified |
+| Browser diagnostic boundary | Durable hash/run-bound stage, timing, closed codes, page presence, safe request/response/console categories and visual availability; early state validation before launch; MCP/navigation/readiness/cleanup covered | No diagnostic grants permissions; unproved/auth pages cannot be captured, typed fixture evidence stays offline |
+| Independent comparison | Trusted host now performs exact approved post-check even when session initialization fails; missing/drifted reads remain unverified | No new live comparison occurred; stored 003 Name/modification equality remains historical |
+| Gemini contract | Official REST batch response is embeddings[].values in input order; existing envelope/task preserved. New safe reasons separate JSON/body timeout, envelope/count/type/dimension/nonfinite/zero/oversize failures | Original HTTP-200 body was not retained; exact historical cause is unrecoverable. No coercion, fallback endpoint, task switch or relaxed parsing |
+| Persistent retrieval | Per-hit lexical/semantic/remote/compatibility evidence, retained source-scoped benchmark cases, source/model/org/persona fixture persistence after reopen and no re-upload of unchanged facts | New actual Gemini benchmark requires separate two-call review; previous complete benchmark remains failed, not retroactively repaired |
+| Connected report | integration-results reads saved journals, historical comparison, vectors, citations, partial errors, transport counts and current local quota bookkeeping independently | Imported evidence is labeled; no configured key, stage attempt or old receipt implies a new live pass. Provider quota remains unqueried |
+
+Verified: **358/358 full unit/integration tests**, **46/46 final affected-feature tests**, **5/5 headless tests**, TypeScript typecheck and **all 11 demos** passed. The private exact benchmark recipe was separately typechecked but not executed. Logs: .state/integration-diagnostics-{verified-unit,final-46-focused,final-headless,final-typecheck}.log; demos .state/integration-diagnostics-demo-summary.json. One concurrent framework demo initially had an extra qa-AC3 timeout; an isolated rerun passed with unchanged assertions/timeouts. Its exclusive cause remains unconfirmed and both runs are retained. No live request was retried.
+
+
 ## Approved live validation - continuation from 10e74af
 
 The operator approved the exact Account-only scope and the separate two-fact Gemini review. These approvals were applied before their original expiry without renewal, rebinding or a new write package. This section supersedes earlier inactive-handoff wording for **003 and minimal-ai-20261118-001 only**. Scopes 002/012 remain declined/inactive. All 15 agent responsibilities and every P0/P1/P2 requirement remain cumulative.

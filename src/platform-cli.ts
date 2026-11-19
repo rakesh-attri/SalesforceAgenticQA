@@ -1,6 +1,7 @@
 import {verifyReviewedBundleSource} from './knowledge/reviewed.js';
 import 'dotenv/config';
 import {runIntegrationReadiness} from './core/integration-readiness.js';
+import {runIntegrationResults} from './core/integration-results.js';
 import {demonstrateIntegratedFramework} from './demos/integrated-framework.js';
 import {frameworkDoctor,importFrameworkRequirement,inspectFramework} from './core/framework-operator.js';
 import {demonstrateQAIntelligence} from './demos/qa-intelligence.js';
@@ -119,6 +120,7 @@ async function main() {
   if(mode==='demo-qa-intelligence'){console.log(JSON.stringify(await demonstrateQAIntelligence()));return;}
   if(mode==='demo-framework'){try{console.log(JSON.stringify(await demonstrateIntegratedFramework()));}catch(error){console.log(JSON.stringify({status:'integrated-fixture-failed',diagnostic:error instanceof Error?error.message:'Unknown local failure',salesforceRequests:0,liveModelRequests:0}));process.exitCode=1;}return;}
   if(mode==='integration-readiness'){try{const result=await runIntegrationReadiness(file);console.log(JSON.stringify(result));process.exitCode=result.status==='FAIL'?1:2;}catch{console.log(JSON.stringify({status:'BLOCKED',reason:'Readiness input unavailable or invalid; private details withheld.',liveRequests:0}));process.exitCode=2;}return;}
+  if(mode==='integration-results'){try{const result=await runIntegrationResults(file);console.log(JSON.stringify(result));process.exitCode=result.status==='PASS'?0:result.status==='FAIL'?1:2;}catch{console.log(JSON.stringify({status:'BLOCKED',reason:'Integration evidence is missing, inconsistent or outside its contained scope; private details withheld.',newServiceCalls:0}));process.exitCode=2;}return;}
   if(['framework-doctor','framework-import','framework-status','framework-approvals','framework-history'].includes(mode)){try{console.log(JSON.stringify(mode==='framework-doctor'?await frameworkDoctor():mode==='framework-import'?await importFrameworkRequirement(file):await inspectFramework(file,mode.replace('framework-',''))));}catch{console.log(JSON.stringify({status:'local-framework-command-failed',guidance:'Check the path and docs/FRAMEWORK_COMPLETE_GUIDE.md. Private content withheld.',liveRequests:0}));process.exitCode=1;}return;}
   if(mode==='qa-intelligence'){try{console.log(JSON.stringify(await runQAIntelligence(file)));}catch{console.log(JSON.stringify({status:'qa-intelligence-source-review-required',externalRequests:0,executionAuthorized:false}));process.exitCode=1;}return;}
   if(mode==='demo-test-design'){console.log(JSON.stringify(await demonstrateTestDesign()));return;}

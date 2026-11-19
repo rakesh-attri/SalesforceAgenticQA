@@ -9,6 +9,7 @@ import { verifyDedicatedSession, validateDedicatedState } from './dedicated-brow
 import { readPrivateSessionState } from '../integrations/session-gate.js';
 import { authorizeBrowserSession, browserDocument, browserPlanHash, digest, fingerprint, resourceRule, resolveBrowserRecords, reserveBrowserSession, type BrowserReview, type BrowserRecord } from './browser-policy.js';
 import type { BoundaryDenialReason } from './browser-diagnostics.js';
+import {withBrowserStage,type BrowserStageObserver} from './browser-diagnostics.js';
 import { parseBrowserBuild,proveReviewedBrowserBuild } from './browser-build.js';
 import { BrowserActionBroker } from './browser-actions.js';
 import {BrowserVisualDebug} from './browser-debug.js';
@@ -83,7 +84,7 @@ export function browserLocationClass(review:BrowserReview,url:string){
   try{const target=new URL(url);return{approvedOrigin:review.plan.origins.includes(target.origin),kind:target.protocol==='about:'?'not-loaded':/(?:^|\/)(?:login|Login)(?:\/|$)|^\/secur\//.test(target.pathname)?'authentication':target.pathname==='/lightning/page/home'?'lightning-home':/^\/lightning\/r\//.test(target.pathname)?'record-document':target.pathname.startsWith('/lightning')?'lightning-other':'other',query:!!target.search,fragment:!!target.hash};}catch{return{approvedOrigin:false,kind:'unavailable',query:false,fragment:false};}
 }
 
-export type ContextAttachmentInput={dedicatedChromeProfile?:unknown;normalNetworkingReceipt?:unknown;review:BrowserReview;parent:unknown;history:History;identity:EnvironmentIdentity;records:BrowserRecord[];statePath:string;apiOrigin:string;transport?:'native-reference'|'validated-cache';onBlocked?:Parameters<typeof installReviewedBrowserBoundary>[1]['onBlocked'];verifyContext?:typeof verifyActualContext;nativeBuild?:(context:BrowserContext)=>Promise<ReturnType<typeof parseBrowserBuild>>;resourceFetch?:typeof fetch;prepareContext?:(context:BrowserContext)=>Promise<void>};
+export type ContextAttachmentInput={onStage?:BrowserStageObserver;dedicatedChromeProfile?:unknown;normalNetworkingReceipt?:unknown;review:BrowserReview;parent:unknown;history:History;identity:EnvironmentIdentity;records:BrowserRecord[];statePath:string;apiOrigin:string;transport?:'native-reference'|'validated-cache';onBlocked?:Parameters<typeof installReviewedBrowserBoundary>[1]['onBlocked'];verifyContext?:typeof verifyActualContext;nativeBuild?:(context:BrowserContext)=>Promise<ReturnType<typeof parseBrowserBuild>>;resourceFetch?:typeof fetch;prepareContext?:(context:BrowserContext)=>Promise<void>};
 const attachedContexts=new WeakMap<BrowserContext,{hash:string;attachment:Promise<Awaited<ReturnType<typeof attachContext>>>}>();
 async function attachContext(context:BrowserContext,input:ContextAttachmentInput){
   const authority=authorizeBrowserSession(input.review,input.parent,input.identity,input.review.plan);
@@ -92,13 +93,13 @@ async function attachContext(context:BrowserContext,input:ContextAttachmentInput
   if(input.dedicatedChromeProfile&&!dedicatedNative||input.review.plan.profileHash&&!dedicatedNative||dedicatedNative&&input.normalNetworkingReceipt)throw Error('Browser transport grants cannot be mixed or inherited');
   if(input.normalNetworkingReceipt)authorizeNormalComparison(input.normalNetworkingReceipt,input.review,input.parent,input.identity);
   if(input.review.plan.engineProfileHash)verifyLightningEngine(input.review.plan.engineProfileHash);
-  await(input.verifyContext??verifyActualContext)(context,input.statePath,input.review,authority.policy,input.identity,input.apiOrigin);
+  await withBrowserStage(input.onStage,'context-identity',()=> (input.verifyContext??verifyActualContext)(context,input.statePath,input.review,authority.policy,input.identity,input.apiOrigin));
   await input.prepareContext?.(context);
-  const build=input.nativeBuild?await input.nativeBuild(context):await proveReviewedBrowserBuild(context,input.review,input.parent,input.identity);
+  const build=await withBrowserStage(input.onStage,'browser-build',async()=>{const build=input.nativeBuild?await input.nativeBuild(context):await proveReviewedBrowserBuild(context,input.review,input.parent,input.identity);if(!sameSalesforceIdentity(build.orgId,input.identity.Id)||!sameSalesforceIdentity(build.userId,input.identity.userId))throw Error('Native browser build identity mismatch');authorizeBrowserSession(input.review,input.parent,input.identity,build);return build;});
   if(!sameSalesforceIdentity(build.orgId,input.identity.Id)||!sameSalesforceIdentity(build.userId,input.identity.userId))throw Error('Native browser build identity mismatch');
   authorizeBrowserSession(input.review,input.parent,input.identity,build);
-  const sessionId=randomUUID();reserveBrowserSession(input.review,input.history,sessionId);
-  const boundary=input.normalNetworkingReceipt||dedicatedNative?observeNormalNetworking(context,input.review,dedicatedNative?'dedicated-native-execution':'normal-network-observation'):await installReviewedBrowserBoundary(context,{...input,build});
+  const sessionId=randomUUID();await withBrowserStage(input.onStage,'session-budget',async()=>reserveBrowserSession(input.review,input.history,sessionId));
+  const boundary=await withBrowserStage(input.onStage,'network-boundary',async()=>input.normalNetworkingReceipt||dedicatedNative?observeNormalNetworking(context,input.review,dedicatedNative?'dedicated-native-execution':'normal-network-observation'):await installReviewedBrowserBoundary(context,{...input,build}));
   const validation=input.verifyContext||input.nativeBuild||input.resourceFetch||input.prepareContext?'offline-mocked-salesforce' as const:'live-salesforce' as const;
   const documents=new WeakMap<Page,boolean>(),pendingDocuments=new Set<Promise<void>>();
   context.on('request',request=>{if(request.resourceType()==='document')try{const page=request.frame().page();if(request.frame()===page.mainFrame())documents.set(page,false);}catch{}});

@@ -15,6 +15,7 @@ import {readFile} from 'node:fs/promises';
 import {BrowserDebugPolicySchema} from '../src/execution/browser-debug-policy.js';
 import {relative,isAbsolute} from 'node:path';
 import {analyzeLightningCompatibility} from '../src/execution/compatibility-analyzer.js';
+import {readBrowserExecutionDiagnostics} from '../src/execution/browser-diagnostics.js';
 import {contractsFromBrowserPolicy} from '../src/execution/compatibility-policy-import.js';
 import type {BrowserTrace} from '../src/execution/browser-trace.js';
 
@@ -41,7 +42,7 @@ test('real Playwright MCP and direct observations share one verified guarded con
     assert.equal((await client.callTool({name:'sfqa_browser_observe_record',arguments:{object:'Account',url:'https://evil.example'}})).isError,true);
     assert.equal(session.status().validation,'offline-mocked-salesforce');assert.equal(session.status().nativeMcpConnected,true);assert.equal(bootstrapCalls,1);assert.equal(mutations,0);
     assert.equal(b.history.db.prepare('SELECT COUNT(*) AS count FROM browser_execution_sessions').get()?.count,1);
-    const report=await session.close() as {referenceUnchanged:boolean;metrics:{blocked:number;trace:BrowserTrace};readinessProof:{validation:string;mutationApprovalGranted:boolean}};assert.equal(report.referenceUnchanged,true);assert.ok(report.metrics.blocked>=2);assert.equal(report.readinessProof.validation,'offline-mocked-salesforce');assert.equal(report.readinessProof.mutationApprovalGranted,false);await assert.rejects(session.navigate('Account'),/closed/);
+    const report=await session.close() as {referenceUnchanged:boolean;metrics:{blocked:number;trace:BrowserTrace};readinessProof:{validation:string;mutationApprovalGranted:boolean}};assert.equal(report.referenceUnchanged,true);assert.ok(report.metrics.blocked>=2);assert.equal(report.readinessProof.validation,'offline-mocked-salesforce');assert.equal(report.readinessProof.mutationApprovalGranted,false);await assert.rejects(session.navigate('Account'),/closed/);const diagnostics=readBrowserExecutionDiagnostics(b.history,b.plan.runId,b.approve().approval.hash)[0];assert.equal(diagnostics.pageObserved,true);assert.ok(diagnostics.events.some(e=>e.stage==='mcp-connect'&&e.status==='passed'));assert.ok(diagnostics.events.some(e=>e.stage==='cleanup'&&e.status==='passed'));assert.ok(!JSON.stringify(diagnostics).includes('PRIVATE_'));
     // Fixture reference projection only, not a claimed live normal baseline.
     const reference={...report.metrics.trace,provenance:'framework-native-reference',sourceHash:digest('fixture-reference'),entries:report.metrics.trace.entries.filter(e=>e.status>0)},analysis=analyzeLightningCompatibility({scope:contractsFromBrowserPolicy(b.approve()).scope,normal:reference,guarded:report.metrics.trace});assert.equal(analysis.sequenceAvailable,true);assert.ok(analysis.findings.some(f=>f.classification==='high-risk'&&f.blocked));assert.equal(analysis.permissionsGranted,0);assert.equal(mutations,0);
   }finally{if(previousOrigins===undefined)delete process.env.PLAYWRIGHT_MCP_ALLOWED_ORIGINS;else process.env.PLAYWRIGHT_MCP_ALLOWED_ORIGINS=previousOrigins;await client.close();await server.close();await session.close();b.history.close();await rm(root,{recursive:true,force:true,maxRetries:8,retryDelay:100});}

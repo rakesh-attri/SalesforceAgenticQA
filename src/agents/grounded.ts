@@ -31,5 +31,5 @@ export async function groundedPlanning(bundle:ReviewBundle,review:unknown,index:
   }
   const scenarios=advice['test-planner'].scenarios.map(row=>({...row,expected:bundle.story.acceptanceCriteria.find(ac=>ac.id===row.criterionId)!.text,fields:row.factIds.map(id=>bundle.facts.find(f=>f.id===id)!),executable:false}));
   const mandatoryRegression=[...new Set(history.flatMap(h=>h.testIds))];
-  return {status:'proposed',executable:false,scenarios,mandatoryRegression,advice,retrieved:retrieved.map(d=>d.citation),evaluation:{criteriaCoverage:scenarios.length/bundle.story.acceptanceCriteria.length,unverifiedFieldReferences:0,expectedOutcomesPreserved:true,retrieval:retrievalMetrics(bundle.facts.map(f=>f.id),retrieved.map(d=>d.id))}};
+  return {status:'proposed',executable:false,scenarios,mandatoryRegression,advice,retrieved:retrieved.map(d=>d.citation),evaluation:{criteriaCoverage:scenarios.length/bundle.story.acceptanceCriteria.length,unverifiedFieldReferences:0,expectedOutcomesPreserved:true,retrieval:retrievalMetrics(bundle.facts.map(f=>f.id),retrieved.map(d=>d.id)),ranking:retrieved.map(d=>({citation:d.citation,...d.scoreParts}))}};
 }

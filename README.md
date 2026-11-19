@@ -1,5 +1,8 @@
 # SalesforceAgenticQA
 
+[November 19 integration diagnostics](docs/INTEGRATION_DIAGNOSTICS.md): confirmed state-origin input blocker, separate scoped import, stage-aware browser evidence and strict Gemini response subcodes. The original lost exceptions remain uncertain. Run `npm.cmd run platform -- integration-results .state/integration-diagnostics-results-input.json` for saved-evidence reporting only (expected PARTIAL/exit 2). Fresh reviews remain inactive.
+
+
 [Approved live integration results](docs/LIVE_INTEGRATION_RESULTS.md): current Salesforce API identity and unchanged Account reads passed; two reviewed Gemini vectors persisted and grounded planning passed. The browser attempt and full retrieval benchmark remain incomplete. Neither was retried; declined scopes 002/012 and all write restrictions remain. Earlier inactive-handoff statements are historical for the subsequently approved exact 003/AI scopes.
 
 

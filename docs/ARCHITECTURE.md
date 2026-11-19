@@ -1,5 +1,12 @@
 # Architecture
 
+## Focused integration diagnostics
+
+Existing LightningSession/context attachment now emit bounded hash/run-bound stage evidence through BrowserExecutionDiagnostics into the existing History. Local state validation precedes launch; the existing minimizer produces only a separately reviewed copy. The trusted observation host preserves approved independent post-checks on failed initialization. Live reports aggregate the latest diagnostics across every required object, never reclassifying attempts as rendered proof.
+
+Gemini keeps its existing REST envelope/model/task/cache space; ModelProviderError carries closed response-only stage/reason/count/dimension metadata. The existing benchmark retains valid prior cases and semantic compatibility evidence while stopping on failure. integration-results composes these artifacts, old exact comparison and current local storage/quota state without provider calls or execution rights. All four browser planes, 15 responsibilities and cumulative P0/P1/P2 roadmap remain unchanged.
+
+
 ## Connected framework execution composition
 
 The existing specs graph now optionally interrupts at exact execution review before its coordinator. PipelineRuntime host hooks preserve reviewed generation guards after owned data setup, perform post-execution checks/reviewed recovery and independently check cleanup absence. Existing callers retain their default graph behavior and all live mode restrictions. The original assertion is generated unchanged; QA checks add verification rather than authority.

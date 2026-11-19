@@ -70,11 +70,11 @@ export class KnowledgeIndex {
     }
     return catalog.map(doc=>{
       const words=tokens(doc.text),lexical=[...query].filter(t=>words.has(t)).length/Math.max(query.size,1);
-      let semantic=0;
+      let semantic=0,vectorCompatible=false;
       if(vector){const row=this.history.db.prepare('SELECT vector FROM knowledge WHERE org=? AND permission=? AND id=? AND version=?').get(doc.org,doc.permission,doc.id,doc.version);const stored=row?.vector?JSON.parse(String(row.vector)) as number[]:[];
         const space=this.history.db.prepare('SELECT space FROM knowledge_vector_spaces WHERE org=? AND permission=? AND id=? AND version=?').get(doc.org,doc.permission,doc.id,doc.version);
-        if(space?.space===this.embeddingSpace&&stored.length===vector.length){const norm=Math.hypot(...stored)*Math.hypot(...vector);semantic=norm?stored.reduce((s,v,i)=>s+v*vector[i],0)/norm:0;}}
-      return {...doc,score:lexical+Math.max(0,semantic)+(remoteHits.has(`${doc.id}@${doc.version}`)?1:0),citation:`${doc.id}@${doc.version}`};
+        if(space?.space===this.embeddingSpace&&stored.length===vector.length){const norm=Math.hypot(...stored)*Math.hypot(...vector);vectorCompatible=norm>0;semantic=norm?stored.reduce((s,v,i)=>s+v*vector[i],0)/norm:0;}}
+      const remote=remoteHits.has(`${doc.id}@${doc.version}`)?1:0;return {...doc,score:lexical+Math.max(0,semantic)+remote,scoreParts:{lexical,semantic:Math.max(0,semantic),remote,vectorCompatible},citation:`${doc.id}@${doc.version}`};
     }).filter(d=>d.score>0).sort((a,b)=>b.score-a.score||a.id.localeCompare(b.id)).slice(0,limit);
   }
   invalidate(scope:Scope,evidence:string) {for(const doc of this.all(scope).filter(d=>d.evidence.includes(evidence)))this.history.db.prepare('UPDATE knowledge SET payload=? WHERE org=? AND permission=? AND id=? AND version=?').run(JSON.stringify({...doc,status:'deprecated'}),doc.org,doc.permission,doc.id,doc.version);}
