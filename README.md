@@ -1,5 +1,7 @@
 # SalesforceAgenticQA
 
+[Latest live prerequisite result](docs/LIFECYCLE_READINESS_015.md): exact approved 015 passed API/native identity, app/build/state and real MCP navigation; Account readiness timed out, with unchanged pre/post fields and four local masked images. Contact/data lifecycle did not run. A locator-remount race is corrected and tested offline; exact live cause remains unresolved. The consumed attempt cannot replay, and no business-data or final lifecycle authority was granted.
+
 [New inactive Account/Contact lifecycle review](docs/LIVE_LIFECYCLE_REVIEW.md): package SFQA-E2E-20261119-013 contains separate business/native approvals, exact synthetic factories and generated proposals. Independent preparation PASS; execution BLOCKED pending fresh readiness/permissions and exact final consent. No live service call, activation or record mutation. Run `npm.cmd run platform -- lifecycle-review-check .state/lifecycle-013-prepare.json` for local saved-package verification only. 012 stays declined and 005 consumed.
 
 [Real Account observation passed](docs/ACCOUNT_OBSERVATION_REVIEW.md): exact operator-approved run 005 achieved the integrated goal-directed objective in one headless local Chrome/MCP session, with fresh identity/build/state proof, real name/heading/Related/Details, reviewed visible readiness, four masked local images and independent unchanged Account checks. No UI mutation, Gemini repeat or data-write package. The completed run cannot replay; the full generated synthetic lifecycle remains separately gated.

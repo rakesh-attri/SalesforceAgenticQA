@@ -27,17 +27,21 @@ export async function observeLightningView(page:Page,input:{review:BrowserReview
   const view=LightningViewSchema.parse(input.view),hash=lightningViewHash(view);
   if(hash!==review.plan.renderContractHash||view.object!==input.object||view.reviewer!==review.approval.operator||view.sourceVersion!==review.plan.sourceVersion||view.buildHash!==review.plan.buildHash||view.appHash!==review.plan.appHash)throw Error('Rendered-view contract differs from the approved source/build/operator');
   if(!input.nativeDocumentVerified)return{status:'not-rendered' as const,reason:'native-record-document-not-proven',viewHash:hash,assertionsChanged:false};
-  const unique=async(selector:z.infer<typeof Selector>,exactName=false)=>{
-    const locator=reviewedLocator(page,selector,input.name),count=await locator.count();
-    return count===1&&await locator.isVisible()&&(!exactName||await locator.textContent()===input.name);
+  // Snapshot matching elements once. Re-resolving a locator after count or
+  // visibility can auto-wait until the MCP action timeout if Lightning remounts
+  // that component. A detached snapshot is incomplete evidence, never a pass.
+  const snapshot=async(selector:z.infer<typeof Selector>)=>{
+    const handles=await reviewedLocator(page,selector,input.name).elementHandles();
+    if(handles.length===1)return handles[0];
+    await Promise.all(handles.map(handle=>handle.dispose()));return null;
   };
   const absent=async(selector:z.infer<typeof Selector>)=>{const locator=reviewedLocator(page,selector,input.name);for(let i=0;i<await locator.count();i++)if(await locator.nth(i).isVisible())return false;return true;};
   let stableSince:number|undefined,lastSignature:string|undefined,last={name:false,content:0,busyClear:false,faultsClear:false},busyEvidence={reviewedBusyClear:false,nativeProgressbars:0,nativeAriaBusy:0,nativeSpinners:0,nativeFaults:0,inspectionBound:1000},readinessEvidence:Awaited<ReturnType<typeof inspectLightningReadiness>>|undefined;
   while(budget.remaining()>Math.max(100,input.reserveMs??0)){
     budget.check();
-    const name=await unique(view.recordName,true),nameElement=name?await reviewedLocator(page,view.recordName,input.name).elementHandle({timeout:Math.min(250,budget.remaining())}):null;
-    let content:boolean[]=[];
-    try{content=await Promise.all(view.content.map(async selector=>await unique(selector)&&!!nameElement&&await reviewedLocator(page,selector,input.name).evaluate((node,recordName)=>node!==recordName&&!node.contains(recordName)&&!recordName.contains(node),nameElement)));}
+    const nameElement=await snapshot(view.recordName);
+    let name=false,content:boolean[]=[];
+    try{name=!!nameElement&&await nameElement.isVisible()&&await nameElement.textContent()===input.name&&await nameElement.evaluate(node=>node.isConnected);content=await Promise.all(view.content.map(async selector=>{const element=await snapshot(selector);try{return!!element&&!!nameElement&&await element.isVisible()&&await element.evaluate((node,recordName)=>node.isConnected&&recordName.isConnected&&node!==recordName&&!node.contains(recordName)&&!recordName.contains(node),nameElement);}finally{await element?.dispose();}}));}
     finally{await nameElement?.dispose();}
     last={name,content:content.filter(Boolean).length,busyClear:(await Promise.all(view.busy.map(absent))).every(Boolean),faultsClear:(await Promise.all(view.faults.map(absent))).every(Boolean)};
     // Native Lightning also uses spinners/alerts without the reviewed role DSL.
