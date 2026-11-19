@@ -1,5 +1,9 @@
 # Capability audit and agent ownership
 
+## November 19 real Account goal-directed exploration
+
+[Run 005 passed](ACCOUNT_OBSERVATION_REVIEW.md) using the existing Orchestrator/Application Explorer/Org evidence and native browser/MCP/report services: one real Account, exact current identity/app/build/state, actual name/heading/Related/Details, reviewed visible readiness, four local masked images and independent unchanged record verification. No new agent subsystem, permissions expansion, runtime/assertion change, factory, write, Contact traversal, Gemini call, generated test or verified lesson. All 15 responsibilities remain cumulative. Full business workflows, alternate-persona permissions, generated synthetic Account/Contact lifecycle/reportingLabs and broader autonomy remain partial; optional Chroma remains externally unverified. Existing 358-unit/5-headless baseline was freshly rerun and passed with typecheck and required demo.
+
 ## November 19 approved validation outcome
 
 The [actual two-query Gemini benchmark](APPROVED_VALIDATION_20261119.md) passed with two strict 3,072-dimensional responses and both reviewed targets ranked first from reopened scoped vectors. This advances live embedding/retrieval evidence only; broader relevance, Salesforce business correctness and current browser readiness remain partial. No chat, metadata upload, Chroma or Salesforce call; intent complete/non-replayable. Account 004's consent arrived after its original noon deadline and it stays inactive without replacement. All 15 ownership responsibilities and cumulative requirements below remain preserved.

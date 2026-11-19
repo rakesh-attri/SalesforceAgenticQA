@@ -1,5 +1,11 @@
 # Implementation report — 2026-11-13
 
+## Real Account observation PASS - continuation from 28fba7d
+
+[Complete scoped evidence](ACCOUNT_OBSERVATION_REVIEW.md): SFQA-OBS-20261119-005 achieved the integrated goal-directed Account objective at 14:48 IST November 19 after the refreshed export, separate minimized copy and exact named operator/source/native-risk/access authorization. Fresh API/native org/user/active-user/app/build and state checks passed. Actual private name/heading, Related/Details, unchanged reviewed visible-view stability and independent Id/Name/LastModifiedDate pre/post comparison passed. One actual isolated headless Chrome/MCP session, 163 browser requests, four local masked screenshots/142594 bytes, one OAuth/53 Node Salesforce API reads; no budget exhaustion. Structured launch/context/MCP/navigation/document/readiness/discovery/closure stages all passed. The retained blocked console category is not proof of a framework denial; no page-error category was reported.
+
+Fresh verification: 358/358 unit/integration, 5/5 headless, typecheck, required demo and separate private-script typecheck passed. The live HTML and all four image hashes were inspected locally with zero external requests/script errors/overflow; no images were uploaded to AI. No runtime code, assertion, locator, security limit, Production behavior, quota, ownership rule or existing user edit changed. No Gemini/Chroma call, factory, UI mutation, generated live test or verified lesson. The completed run cannot replay; its 15-minute readiness proof is time-limited evidence, not write authority. No data package was prepared; the full lifecycle remains separately gated.
+
 ## Approved validation follow-through
 
 Fresh checks: 358/358 full unit/integration tests, 5/5 headless tests, typecheck and required offline demo passed. Local HTML inspection passed with 12 component rows and zero external requests/script errors/overflow. The other ten historical demonstrations were not rerun; no runtime code or assertions changed. Evidence/log paths are in the linked report.

@@ -1,5 +1,11 @@
 # Current capability matrix
 
+## Live Account-only observation PASS - continuation from 28fba7d
+
+[Actual local and live evidence](ACCOUNT_OBSERVATION_REVIEW.md): the operator refreshed the export, the existing importer created a new isolated scoped copy (32 cookies/one origin excluded), and exact named native-risk/access/source consent activated only SFQA-OBS-20261119-005. At 14:47-14:48 IST November 19, the integrated goal-directed adapter achieved AC1 in one actual headless Chrome/MCP session. API/native identity, active user, app/build, scoped state, actual Account name/heading, Related/Details, reviewed visible-view readiness and unchanged exact Id/Name/LastModifiedDate checks passed. Main browser: 163 requests without budget exhaustion; four local masked images/142594 bytes, hashes verified. Node fetch counts: one OAuth/53 Salesforce API; no Gemini repeat, Chroma, factories, UI mutations, generated live tests or verified lessons. The original one-hour limit and 59-minute draft were unchanged; completed intent cannot replay. All previous rows/15 responsibilities/P0/P1/P2 remain cumulative; 002/012 declined, 003 consumed, 004 expired/inactive.
+
+Fresh offline checks: 358/358 full unit/integration, 5/5 headless, typecheck, required demo and separate private-script typecheck passed. Actual live report/images were locally inspected without network/AI uploads. This verifies one reviewed visible Account view, not all business workflows, current full metadata, offscreen-list completion or backend quiescence. The full synthetic Account/Contact Playwright/reportingLabs lifecycle remains unexecuted and needs its own explicit preparation request and factory/UI/run/cleanup approvals.
+
 ## Approved November 19 two-query validation
 
 Fresh offline checks passed: 358/358 full unit/integration tests, 5/5 headless tests, typecheck, required demo and isolated local HTML inspection (zero external requests). This authorization-only follow-through changes no runtime implementation or assertions.
