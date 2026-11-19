@@ -1,5 +1,11 @@
 # Current capability matrix
 
+## Refreshed input and inactive 019 review
+
+Final local verification passed: 368/368 unit/integration (896876 ms), five headless tests (41.2 seconds), typecheck, required demo, private recipe typecheck and source/input/state/expiry integrity checks. Source-bound `.state/lifecycle-readiness-20261119-019/required-checks.json` and readable `REVIEW.html` accompany the unchanged exact review. No runtime source change or live validation; no authority follows from passing offline checks.
+
+[Current input, exact review and scope](LIFECYCLE_READINESS_019.md): user-confirmed normal-login export refreshed November 19 20:52 IST; separate scoped019 copy excludes 34 cookies/one origin, original unchanged. Local scope/policy checks pass; live API/browser identity remains unknown. New source/provenance/state-bound read-only019 is inactive: activation `eae7a11ce93925267f67632689d657547308608603800edd26d5ab47ed92a7d4`, original expiry **November 19 22:01:46 IST**. Same scopes/budgets and original assertions, no permission widening. Preparation/integrity/recipe typecheck passed; no approved file, intent, live call, browser session, write or final factory package. 017 remains expired/unexecuted; 002/012 declined. All cumulative requirements and 15 responsibilities below are preserved; live readiness/E2E remain blocked pending separate exact consent and actual execution.
+
 ## 017 authorization follow-through: expired before execution
 
 The operator approved exact read-only/native-risk 017; the execution-time recheck at November 19 20:42 IST was after its unchanged 19:21:44 IST deadline. No activation, approved files, intent, Salesforce call, browser session or write. Source/state hashes remain unchanged. No automatic renewal/replacement or final factory package. Fresh typecheck, 368/368 unit/integration, five headless tests and required demo passed; no runtime code changed. [Current evidence and input gate](LIFECYCLE_READINESS_015.md#single-next-operator-decision-inactive-source-bound-review-017). The next input is a fresh approved QA export or an explicit choice to use the existing copy for a new inactive review. All 15/P0/P1/P2 and prior verified integrations remain cumulative; live readiness/E2E remain blocked.
