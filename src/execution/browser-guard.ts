@@ -16,12 +16,14 @@ import { verifyActualContext, attachReviewedBrowserContext } from './browser-run
 import { proveReviewedBrowserBuild } from './browser-build.js';
 import {attachBrowserDebug,type DebugReason} from './browser-debug.js';
 import {loadPreferredChromeProfile} from './dedicated-chrome-profile.js';
+import {withBrowserStage,type BrowserStageObserver} from './browser-diagnostics.js';
 export { proveReviewedBrowserBuild } from './browser-build.js';
-export async function preflightReviewedBrowser(raw: unknown, parent: unknown, identity: EnvironmentIdentity, statePath: string, apiOrigin: string) {
-  const review = BrowserReviewSchema.parse(raw), authority = authorizeBrowserSession(review, parent, identity, review.plan), browser = await launchLocalBrowser();
+export async function preflightReviewedBrowser(raw: unknown, parent: unknown, identity: EnvironmentIdentity, statePath: string, apiOrigin: string, observer?:BrowserStageObserver) {
+  const review = BrowserReviewSchema.parse(raw), authority = authorizeBrowserSession(review, parent, identity, review.plan), browser = await withBrowserStage(observer,'browser-launch',()=>launchLocalBrowser());
   try { const source = await readPrivateSessionState(statePath); if (source.hash !== review.plan.sessionStateHash) throw Error('Reviewed state changed');
-    const context = await browser.newContext({ storageState: source.statePath, javaScriptEnabled: false, serviceWorkers: 'block', acceptDownloads: false });
-    await verifyActualContext(context, statePath, review, authority.policy, identity, apiOrigin); return await proveReviewedBrowserBuild(context, review, parent, identity);
+    const context = await withBrowserStage(observer,'context-create',()=>browser.newContext({ storageState: source.statePath, javaScriptEnabled: false, serviceWorkers: 'block', acceptDownloads: false }));
+    await withBrowserStage(observer,'context-identity',()=>verifyActualContext(context, statePath, review, authority.policy, identity, apiOrigin));
+    return await withBrowserStage(observer,'browser-build',()=>proveReviewedBrowserBuild(context, review, parent, identity));
   } finally { await browser.close(); }
 }
 export async function openBrowserJournal(path: string) {

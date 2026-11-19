@@ -6,6 +6,8 @@ execution/lifecycle-review composes the existing dedicated factory, schemas, hos
 
 ## Focused integration diagnostics
 
+The dedicated lifecycle preflight also uses this existing observer for API preflight, browser launch, context creation, native identity and build verification. Its report/journal preserves closed stage/reason/timing evidence when initialization fails before factory reservation. Unknown errors remain unknown; provider messages and credential-bearing data are withheld. This is offline verified after the actual018 attempt lost its inner exception; it does not retroactively diagnose that failure or authorize another run. See [actual021/018 results](LIFECYCLE_018_RESULTS.md).
+
 Existing LightningSession/context attachment now emit bounded hash/run-bound stage evidence through BrowserExecutionDiagnostics into the existing History. Local state validation precedes launch; the existing minimizer produces only a separately reviewed copy. The trusted observation host preserves approved independent post-checks on failed initialization. Live reports aggregate the latest diagnostics across every required object, never reclassifying attempts as rendered proof.
 
 Gemini keeps its existing REST envelope/model/task/cache space; ModelProviderError carries closed response-only stage/reason/count/dimension metadata. The existing benchmark retains valid prior cases and semantic compatibility evidence while stopping on failure. integration-results composes these artifacts, old exact comparison and current local storage/quota state without provider calls or execution rights. All four browser planes, 15 responsibilities and cumulative P0/P1/P2 roadmap remain unchanged.

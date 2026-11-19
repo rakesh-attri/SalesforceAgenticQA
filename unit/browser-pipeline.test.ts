@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir,mkdtemp,writeFile,readFile,rm } from 'node:fs/promises';
-import { join,resolve } from 'node:path';
+import { join,resolve,relative,isAbsolute } from 'node:path';
 import { History } from '../src/core/history.js';
 import { KnowledgeIndex } from '../src/knowledge/index.js';
 import { browserFixture } from './support/browser-policy.js';
@@ -15,6 +15,29 @@ import { parseBrowserBuild } from '../src/execution/browser-build.js';
 import { BrowserActionBroker } from '../src/execution/browser-actions.js';
 import { BrowserBudget } from '../src/execution/browser-resources.js';
 import { WorkflowSchema } from '../src/agents/workflows.js';
+import {withBrowserStage,BrowserExecutionDiagnosticSchema,readBrowserExecutionDiagnostics} from '../src/execution/browser-diagnostics.js';
+import {DedicatedSessionError} from '../src/execution/dedicated-browser.js';
+
+test('lifecycle preflight retains closed stage evidence before factory dispatch without leaking provider errors',async t=>{
+  for(const kind of ['identity','timeout','unknown'] as const)await t.test(kind,async()=>{
+    await mkdir('.state',{recursive:true});const root=await mkdtemp(resolve('.state/lifecycle-preflight-diagnostic-')),history=new History(':memory:'),b=browserFixture(history),f=b.f;
+    b.plan.records=[];b.plan.objects=['Account','Contact'];b.plan.runId=f.input.data.plan.runId;b.plan.ownedDataPlanHash=dedicatedPlanHash(f.input.data.plan);b.plan.sourceVersion=f.input.spec.version;b.plan.budgets.maxMs=f.input.ui.plan.maxMs;
+    const review=b.approve();f.input.ui.plan.browserSessionPolicyHash=browserPlanHash(review.plan);f.input.ui.approval.hash=dedicatedUiHash(f.input.ui.plan);
+    try{
+      const error=kind==='identity'?new DedicatedSessionError('identity-http'):new Error('PRIVATE_PROVIDER_TOKEN_AND_RECORD_BODY');
+      if(kind==='timeout')error.name='TimeoutError';if(kind==='unknown')Object.assign(error,{code:'PRIVATE_PROVIDER_TOKEN_AND_RECORD_BODY'});
+      const report=await runDedicatedWorkflow(f.input,{history,knowledge:new KnowledgeIndex(history),data:f.data,root,apiOrigin:f.origin,identity:async()=>f.identity,policy:async()=>f.policy,discover:async()=>f.org,session:async()=>({statePath:'.auth/unopened-fixture.json'}),browserReview:review,browserPreflight:async(_r,_p,_i,_s,_a,observer)=>withBrowserStage(observer,'context-identity',async()=>{throw error;}),validation:'offline-mocked-salesforce'});
+      assert.equal(report.status,'failed');assert.equal(report.created,0);assert.equal(report.cleaned,0);assert.equal(f.writes.length,0);assert.equal(f.records.size,0);assert.equal(history.results().length,0);assert.equal(report.learning.verifiedLessonPublished,false);
+      const diagnostic=BrowserExecutionDiagnosticSchema.parse(report.preflightDiagnostics),first=diagnostic.events.find(event=>event.status==='failed');
+      assert.equal(first?.stage,'context-identity');assert.equal(first?.code,kind==='identity'?'identity-http':kind==='timeout'?'timeout':'unknown');
+      assert.equal(diagnostic.validation,'offline-mocked-salesforce');assert.equal(diagnostic.rawValuesRetained,false);
+      assert.deepEqual(readBrowserExecutionDiagnostics(history,f.input.data.plan.runId,browserPlanHash(review.plan))[0],JSON.parse(JSON.stringify(diagnostic)));
+      assert.ok(!(await readFile(report.reportPath,'utf8')).includes('PRIVATE_PROVIDER_TOKEN_AND_RECORD_BODY'));
+      assert.equal(history.db.prepare('SELECT COUNT(*) AS n FROM dedicated_runs').get()?.n,0);
+      await assert.rejects(runDedicatedWorkflow(f.input,{history,knowledge:new KnowledgeIndex(history),data:f.data,root,apiOrigin:f.origin,identity:async()=>f.identity,policy:async()=>f.policy,discover:async()=>f.org,browserReview:review,browserPreflight:async()=>{throw Error('must not replay');},validation:'offline-mocked-salesforce'}),/UNIQUE/);assert.equal(f.writes.length,0);
+    }finally{history.close();const rel=relative(resolve('.state'),root);assert.ok(rel&&!rel.startsWith('..')&&!isAbsolute(rel));await rm(root,{recursive:true,force:true,maxRetries:8,retryDelay:100});}
+  });
+});
 
 test('reviewed browser profile connects existing full lifecycle to actual generated headless tests, SOQL, owned cleanup and reportingLabs offline',{timeout:90000},async()=>{
   await mkdir('.state',{recursive:true});await mkdir('.auth',{recursive:true});const root=await mkdtemp(resolve('.state/browser-pipeline-')),auth=await mkdtemp(resolve('.auth/browser-pipeline-')),state=join(auth,'state.json'),journal=join(root,'history.sqlite'),history=new History(journal),b=browserFixture(history),f=b.f;
