@@ -1,8 +1,12 @@
 # Current capability matrix
 
+## 017 authorization follow-through: expired before execution
+
+The operator approved exact read-only/native-risk 017; the execution-time recheck at November 19 20:42 IST was after its unchanged 19:21:44 IST deadline. No activation, approved files, intent, Salesforce call, browser session or write. Source/state hashes remain unchanged. No automatic renewal/replacement or final factory package. Fresh typecheck, 368/368 unit/integration, five headless tests and required demo passed; no runtime code changed. [Current evidence and input gate](LIFECYCLE_READINESS_015.md#single-next-operator-decision-inactive-source-bound-review-017). The next input is a fresh approved QA export or an explicit choice to use the existing copy for a new inactive review. All 15/P0/P1/P2 and prior verified integrations remain cumulative; live readiness/E2E remain blocked.
+
 ## Read-only preflight 015 and snapshot-based readiness - continuation from 236b157
 
-Current operator decision: independent read-only 017 is prepared/inactive, source-hash-bound to the tested fix, original November 19 **19:21:44 IST** expiry; activation `3c23e6e4f11b9ea13d2100a9bfdeb2bba66ba55095180ac044cee3e47b7f75d2`. No approved file, session, service call or factory authority. [Exact scope and implementation hashes](LIFECYCLE_READINESS_015.md#single-next-operator-decision-inactive-source-bound-review-017). Old deadlines and consumed/declined packages remain unchanged.
+Historical preparation, superseded by the expiry audit above: independent read-only 017 was prepared/inactive, source-hash-bound to the tested fix, original November 19 **19:21:44 IST** expiry; activation `3c23e6e4f11b9ea13d2100a9bfdeb2bba66ba55095180ac044cee3e47b7f75d2`. No approved file, session, service call or factory authority. [Exact scope and implementation hashes](LIFECYCLE_READINESS_015.md#single-next-operator-decision-inactive-source-bound-review-017). Old deadlines and consumed/declined packages remain unchanged.
 
 [Actual live evidence and limitations](LIFECYCLE_READINESS_015.md): exact consent executed 015 once at November 19 17:55-17:56 IST, before its unchanged 18:24:41 IST expiry. API/native identity, state/build/app/engine, MCP connection/navigation, current schema/permission flags, cleanup reads and bounded metadata passed. Readiness timed out after 3,991 ms; exact locator call is unknown. Main native requests191/denials0/no budget closure; Account unchanged; four local masked PNGs/124252 bytes, hashes verified; Contact not attempted. Actual Node140 GET/two JWT, business writes0, active/uncertain/open owned effects0. No live readiness receipt, generated tests, reportingLabs run or lesson. 015 cannot replay; no final data package was prepared or approved.
 
