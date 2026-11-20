@@ -1,5 +1,13 @@
 # SalesforceAgenticQA: the complete framework guide
 
+## Milestone 1: reuse the confirmed session input
+
+**AUTH BLOCKED** — see [the authentication audit](MILESTONE_1_AUTH_AUDIT.md). Diagnostic027 is consumed and already recorded INVALID_SESSION_ID for the older API-origin browser cookie. A new independently approved normal-login export, saved November20 at5:52:40 p.m. IST, has now been confirmed by the operator. Its separate scoped028 copy imports exactly offline with zero requests. No fresh server proof or E2E pass is claimed. The historical “input unavailable” sections below no longer describe input availability.
+
+The next concrete operator decision is the inactive read-only Account/Contact review in `.state/lifecycle-readiness-20261120-028/REVIEW.html` or `REVIEW.md`. It uses the existing headless local Chrome/MCP services, unchanged approved visible-view contracts and independent record comparisons, followed only on success by bounded metadata/permission/cleanup-access reads. Exact original expiry, latest-start time and final hashes are in that local review. Approval must cover scoped input/read-only execution and separately native background-effects/access risk. Nothing activates from an export confirmation or this guide. No factory/create/delete/cleanup/final-run authority is granted. Do not run activation/execution recipes without the exact explicit operator decision.
+
+No browser identity assertion was removed: both origin cookies must independently prove the exact org/user, actual cookies must match, and engine/app/build/source gates remain. SOAP is a conditional fixed identity fallback, not ordinary business write access. After live AUTH VERIFIED, the existing synthetic factory/generated-test/SOQL/owned-cleanup/reportingLabs pipeline needs fresh separate business/native/final consent and current pre-creation readiness. Waiting for approval cannot renew a consumed run or extend a stale15-minute receipt.
+
 ## Executed 027: INVALID_SESSION_ID confirmed; fresh browser input unavailable
 
 [Actual result and next prerequisite](PREFLIGHT_027_RESULTS.md): exact retained-input/content/read-only/native-risk consent ran027 once on November20 at17:47:21-17:47:27IST within original deadlines. One JWT/six GETs returned HTTP200; exact API identity, active user and selected app passed with no framework denial. Native API-origin SOAP getUserInfo returned HTTP500, and the bounded parser retained recognized code INVALID_SESSION_ID. This classifier path is LIVE verified; other codes/hints/adversarial cases remain offline verified. No narrower hint was recorded, so expiry, malformed input, API-use restrictions or app configuration are not established as the specific cause.

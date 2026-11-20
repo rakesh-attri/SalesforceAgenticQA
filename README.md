@@ -1,5 +1,7 @@
 # SalesforceAgenticQA
 
+[Milestone 1 auth audit](docs/MILESTONE_1_AUTH_AUDIT.md): **AUTH BLOCKED** pending fresh exact read-only execution consent. The operator confirmed the existing November20 5:52 p.m. normal-login export; a separate scoped copy imports exactly with zero network requests. Saved027 already identifies INVALID_SESSION_ID for the older cookie. No request-construction defect was demonstrated, so existing native identity checks remain unchanged. One inactive Account/Contact readiness review reuses021; no new diagnostic-only scope or live data package. Historical input-unavailable notes below are superseded by this confirmed export, not by a live authentication pass.
+
 [Latest executed diagnostic027](docs/PREFLIGHT_027_RESULTS.md): JWT/API/user/app checks passed; API-origin browser SOAP identity proof returned HTTP500 with recognized INVALID_SESSION_ID. Its specific server-side cause remains unknown.027 is consumed, with no record operations or UI tests. A fresh independently approved browser export is currently unavailable; no replacement grant or data package is prepared.
 
 [Latest executed diagnostic026](docs/PREFLIGHT_026_RESULTS.md): API/user/app gates passed; the browser-session SOAP getUserInfo proof returned HTTP500. Closed operation/origin/status telemetry is live verified; its SOAP fault code and server cause remain unknown. A bounded closed-code parser is tested offline, without accepting failed identity, changing permissions or adding requests.026 is consumed; the full data lifecycle remains separately gated.
