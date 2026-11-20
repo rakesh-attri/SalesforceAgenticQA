@@ -1,5 +1,7 @@
 # Lifecycle 018 preflight investigation
 
+**Later executed evidence:** [diagnostic022 result](PREFLIGHT_022_RESULTS.md) confirms a separate exact-URL serialization defect in its review generator.022 is consumed and cannot replay. This does not establish018's discarded historical cause; use the linked latest result for current status.
+
 November 20, 2026; continuation from c834307. No fresh Salesforce or external-model call has been made during this investigation. Lifecycle018 remains consumed and its original package, consent receipts, report and deadlines are unchanged.
 
 ## What the saved evidence establishes

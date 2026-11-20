@@ -13,6 +13,13 @@ import { authorizeBrowserSession, BrowserReviewSchema, resolveBrowserRecords, di
 import { sameSalesforceIdentity } from '../execution/lightning-identity.js';
 import {readObservationRecords} from './observation-read.js';
 import {withBrowserStage,preserveBrowserDiagnostic,type BrowserStageObserver} from '../execution/browser-diagnostics.js';
+// Propose exact preflight request paths using the same WHATWG serialization as
+// readRequest. encodeURIComponent alone leaves apostrophes that URL escapes.
+// This builder grants no authority and accepts no caller-supplied SOQL.
+export function browserPreflightApiPaths(version:string,userId:string){
+  if(!/^v\d+\.\d+$/.test(version)||!/^005[A-Za-z0-9]{12}(?:[A-Za-z0-9]{3})?$/.test(userId))throw Error('Invalid exact browser preflight API scope');
+  return ['/services/oauth2/userinfo',`/services/data/${version}/query?q=${encodeURIComponent('SELECT Id,IsSandbox FROM Organization LIMIT 1')}`,`/services/data/${version}/query?q=${encodeURIComponent(`SELECT Id,IsActive FROM User WHERE Id='${userId}' LIMIT 1`)}`,`/services/data/${version}/ui-api/apps/selected?formFactor=Large`].map(path=>{const url=new URL(path,'https://scope.invalid');return url.pathname+url.search;});
+}
 export class SalesforceClient {
   private environment?:{policy:EnvironmentPolicy;identity:{Id:string;IsSandbox:boolean;userId:string};policyPath?:string};
   private constructor(private instance:string,private token:string, private version:string) {}

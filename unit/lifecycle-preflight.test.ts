@@ -6,7 +6,7 @@ import {chromium} from '@playwright/test';
 import {browserFixture} from './support/browser-policy.js';
 import {preflightReviewedBrowser} from '../src/execution/browser-guard.js';
 import {verifyDedicatedSession} from '../src/execution/dedicated-browser.js';
-import {SalesforceClient} from '../src/salesforce/client.js';
+import {SalesforceClient,browserPreflightApiPaths} from '../src/salesforce/client.js';
 import {digest} from '../src/execution/browser-policy.js';
 import {BrowserExecutionDiagnostics,browserFailureSummary,browserFailureCode,browserErrorDiagnostic,withBrowserStage} from '../src/execution/browser-diagnostics.js';
 import {liveObservationFailure} from '../src/agents/live-exploration-runtime.js';
@@ -110,4 +110,23 @@ test('closed error codes cannot inherit object properties and survive wrapping w
   for(const text of['constructor','__proto__','toString','PRIVATE_UNKNOWN_PROVIDER'])assert.equal(browserFailureCode(Error(text)),'unknown');
   const error=Object.assign(Error('PRIVATE_TIMEOUT_VALUE'),{name:'TimeoutError'});await assert.rejects(withBrowserStage(undefined,'browser-build',async()=>{throw error;}));
   assert.deepEqual(browserFailureSummary(error),{stage:'browser-build',reason:'timeout',category:'transport'});assert.ok(!JSON.stringify(browserFailureSummary(error)).includes('PRIVATE_'));
+});
+
+test('canonical exact API paths admit actual preflight requests and reject altered user/query/origin/parameters',async()=>{
+  const f=await fixture(),original=globalThis.fetch,authenticate=Reflect.get(SalesforceClient,'authenticate'),client:SalesforceClient=Reflect.construct(SalesforceClient,[f.b.f.origin,'PRIVATE_FIXTURE_TOKEN','v62.0']);
+  client.identity=async()=>f.b.f.identity;Reflect.set(SalesforceClient,'authenticate',async()=>client);
+  const paths=browserPreflightApiPaths('v62.0',f.b.f.identity.userId),allowed=new Set(paths),permitted=(url:URL)=>url.origin===f.b.f.origin&&!url.hash&&!url.username&&!url.password&&allowed.has(url.pathname+url.search);
+  const oldActorPath=`/services/data/v62.0/query?q=${encodeURIComponent(`SELECT Id,IsActive FROM User WHERE Id='${f.b.f.identity.userId}' LIMIT 1`)}`;
+  assert.notEqual(oldActorPath,paths[2]);assert.ok(paths[2].includes('%27'));assert.equal(new URL(paths[2],f.b.f.origin).searchParams.get('q'),new URL(oldActorPath,f.b.f.origin).searchParams.get('q'));
+  let requests=0;globalThis.fetch=async(input,init)=>{const url=new URL(String(input));assert.equal(init?.method,'GET');assert.equal(init?.redirect,'error');assert.ok(permitted(url));requests++;return new Response(JSON.stringify(url.pathname.endsWith('/ui-api/apps/selected')?{appId:f.b.appId,developerName:'FixtureApp'}:{records:[{Id:f.b.f.identity.userId,IsActive:true}]}));};
+  try{const api=await SalesforceClient.connectReviewedBrowser(f.b.f.policy,f.b.approve());await api.preflight(f.diagnostics.observe);assert.equal(requests,2);assert.equal(f.b.f.writes.length,0);
+    for(const path of paths)assert.equal(new URL(path,f.b.f.origin).pathname+new URL(path,f.b.f.origin).search,path);
+    const actor=new URL(paths[2],f.b.f.origin),extra=new URL(actor);extra.searchParams.append('extra','value');assert.equal(permitted(extra),false);
+    const duplicate=new URL(actor);duplicate.searchParams.append('q',actor.searchParams.get('q')!);assert.equal(permitted(duplicate),false);
+    const otherUser=new URL(browserPreflightApiPaths('v62.0','005999999999999')[2],f.b.f.origin);assert.equal(permitted(otherUser),false);
+    const otherQuery=new URL(actor);otherQuery.searchParams.set('q','SELECT Id FROM Account');assert.equal(permitted(otherQuery),false);
+    const otherOrigin=new URL(actor);otherOrigin.hostname='foreign.example';assert.equal(permitted(otherOrigin),false);
+    const fragment=new URL(actor);fragment.hash='unexpected';assert.equal(permitted(fragment),false);
+    for(const [version,userId]of[['v62.0?unexpected','005000000000001'],['v62.0',"005000000000001' OR IsActive=true"],['v62.0','001000000000001']])assert.throws(()=>browserPreflightApiPaths(version,userId));
+  }finally{globalThis.fetch=original;Reflect.set(SalesforceClient,'authenticate',authenticate);await f.dispose();}
 });

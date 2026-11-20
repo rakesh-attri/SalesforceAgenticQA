@@ -1,5 +1,7 @@
 # SalesforceAgenticQA
 
+[Latest actual diagnostic](docs/PREFLIGHT_022_RESULTS.md): approved022 passed fresh Salesforce API identity, then its framework guard blocked the active-user request before dispatch. The confirmed cause is differing apostrophe serialization in the generated exact URL allowlist. A shared canonical path helper is offline tested without widening scope. No browser/data execution;022 is consumed and018's older cause remains unresolved.
+
 [Current preflight investigation](docs/PREFLIGHT_018_INVESTIGATION.md): confirmed offline diagnostic defects are corrected in the existing services, including disposal masking and loss through error wrapping. Lifecycle018's exact historical cause remains unresolved. No new live call or replay; fresh verification requires the separately reviewed minimal read-only scope after all offline checks.
 
 [Latest actual execution](docs/LIFECYCLE_018_RESULTS.md): separately approved 021 passed both real Account and Contact visible-view readiness with unchanged records and four local masked images. Final lifecycle 018 was separately approved and executed once, but failed before creation at the browser preflight boundary. Local reconciliation confirms zero created/active/uncertain effects; generated tests, cleanup and live reportingLabs did not execute. The exact inner cause was discarded by the original catch and remains unresolved. Sanitized stage diagnostics are now tested offline; 018 cannot replay.
