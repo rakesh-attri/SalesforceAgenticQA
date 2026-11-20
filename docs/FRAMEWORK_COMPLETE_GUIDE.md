@@ -1,5 +1,9 @@
 # SalesforceAgenticQA: the complete framework guide
 
+## Current inactive preflight review
+
+[Lifecycle018 investigation](PREFLIGHT_018_INVESTIGATION.md) records the confirmed offline diagnostic corrections and391/five-headless/typecheck/demo results. The refreshed export is now separately scoped and bound to inactive `SFQA-DIAG-20261120-022`: `.state/lifecycle-preflight-SFQA-DIAG-20261120-022/REVIEW.html`. Activation hash `35777c0259b8673e37e6642cdd2f504818c3db6ad6373a3a59f399301c2b6214`; original November20 expiry **11:29:59IST**, latest start **11:24:59IST**. Exact read-only/native-risk consent is required; no live call, factory or approval has occurred. The minimum scope verifies identity/actor/app/native cookies/build without business-record reads or UI execution. It grants no lifecycle authority and cannot replay018 or renew old readiness.
+
 ## Latest live boundary: readiness passes; final data lifecycle still incomplete
 
 [November19 actual outcomes](LIFECYCLE_018_RESULTS.md): separately authorized021 passed both real Account and Contact reviewed visible readiness, real Chrome/MCP and unchanged-record comparisons. Separately business/native/final-approved018 executed once but failed before factory reservation or creation. Journal reconciliation confirms zero created/active/uncertain effects. Its exact preflight exception was not retained, so the cause remains unresolved. No generated live test, post-creation SOQL, cleanup or live reportingLabs result may be inferred.
