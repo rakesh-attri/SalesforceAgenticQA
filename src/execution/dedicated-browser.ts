@@ -10,15 +10,41 @@ import { authorizeEnvironment,EnvironmentPolicySchema,environmentHash,type Envir
 import { readPrivateSessionState,writePrivateSessionReceipt,checkSessionReceipt } from '../integrations/session-gate.js';
 import type { StructuredChat } from '../ai/types.js';
 import { authorizeAuthHandoffs,allowAuthHandoff } from './dedicated-auth-review.js';
-import { XMLParser } from 'fast-xml-parser';
+import { XMLParser,XMLValidator } from 'fast-xml-parser';
 import { parseLightningIdentity,sameSalesforceIdentity } from './lightning-identity.js';
 import { DedicatedStaticReviewSchema,authorizeStaticReview,matchesStaticReview } from './dedicated-static.js';
 import { fetchReviewedStatic,StaticTransportError } from './static-transport.js';
 import type { BoundaryDenialReason } from './browser-diagnostics.js';
-import {withBrowserStage,preserveBrowserDiagnostic,type BrowserStageObserver,type NativeIdentityProof} from './browser-diagnostics.js';
+import {withBrowserStage,preserveBrowserDiagnostic,NativeSoapFaultCodeSchema,type NativeSoapFault,type BrowserStageObserver,type NativeIdentityProof} from './browser-diagnostics.js';
 const Id=z.string().regex(/^[A-Za-z0-9]{15}(?:[A-Za-z0-9]{3})?$/);
 export class DedicatedSessionError extends Error {
   constructor(readonly code:'private-state'|'state-origin'|'session-cookie'|'identity-http'|'identity-redirect'|'identity-mismatch'|'state-changed'|'verification-unavailable'|'receipt') {super(`Dedicated browser session denied: ${code}. ${code==='identity-redirect'?'The identity proof redirected and was not followed. Refresh the independently approved state through the dedicated user normal login; no receipt can be issued from a redirect.':'Private session/provider details withheld; review the approved state, current user/org and origins.'}`);this.name='DedicatedSessionError';}
+}
+// Diagnostic only. Never accept identity, retry, change permissions or retain
+// provider text based on a fault. Parse at most 16KiB/128 tags/24 levels.
+export function classifyNativeSoapFault(raw:unknown):NativeSoapFault {
+  const rejected={classification:'rejected-input'}as const;
+  if(typeof raw!=='string'||Buffer.byteLength(raw,'utf8')>16384||/<!DOCTYPE|<!ENTITY/i.test(raw))return rejected;
+  const tags=raw.match(/<\/?[A-Za-z_][^>]*>/g)??[];if(tags.length>128)return rejected;let depth=0;
+  for(const tag of tags){if(tag.startsWith('</'))depth--;else if(!tag.endsWith('/>'))depth++;if(depth<0||depth>24)return rejected;}
+  try{
+    if(XMLValidator.validate(raw)!==true)return rejected;
+    const parsed=new XMLParser({removeNSPrefix:true,ignoreAttributes:true,parseTagValue:false,processEntities:false}).parse(raw),record=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==='object'&&!Array.isArray(v);
+    const envelope=parsed?.Envelope,body=record(envelope)?envelope.Body:undefined,fault=record(body)?body.Fault:undefined;
+    if(!record(body)||fault===undefined)return{classification:'not-soap'};if(!record(fault))return rejected;
+    if(Object.keys(body).some(k=>k!=='Fault'&&k!=='#text'))return rejected;
+    const values:unknown[]=[fault.faultcode];if(fault.detail!==undefined){if(!record(fault.detail))return rejected;for(const value of Object.values(fault.detail)){if(Array.isArray(value))return rejected;if(record(value)&&value.exceptionCode!==undefined)values.push(value.exceptionCode);}}
+    const tokens=new Set<string>();for(const value of values){if(Array.isArray(value)||record(value))return rejected;if(typeof value==='string'&&value.length<=100){const token=/^(?:[A-Za-z_][A-Za-z0-9_.-]*:)?([A-Z][A-Z0-9_]{1,79})$/.exec(value.trim());if(token)tokens.add(token[1]);}}
+    if(tokens.size>1)return rejected;const code=NativeSoapFaultCodeSchema.safeParse([...tokens][0]);if(!code.success)return{classification:'other-fault'};
+    const message=typeof fault.faultstring==='string'&&fault.faultstring.length<=2048?fault.faultstring.toLowerCase():'';
+    const sessionHint=code.data==='INVALID_SESSION_ID'?(message.includes('this session is not valid for use with the api')?'api-use-not-permitted':message.includes('session expired or invalid')?'expired-or-invalid':undefined):undefined;
+    return{classification:'recognized',code:code.data,...(sessionHint?{sessionHint}:{})};
+  }catch{return rejected;}
+}
+export async function readNativeSoapFault(read:()=>Promise<string>):Promise<NativeSoapFault>{
+  let timer:ReturnType<typeof setTimeout>|undefined;
+  try{return classifyNativeSoapFault(await Promise.race([Promise.resolve().then(read),new Promise<string>((_resolve,reject)=>{timer=setTimeout(()=>reject(Error('SOAP diagnostic body unavailable')),1000);})]));}
+  catch{return{classification:'unavailable'};}finally{clearTimeout(timer);}
 }
 export function validateDedicatedState(raw:unknown,policy:EnvironmentPolicy,now=Date.now()) {
   const parsed=z.object({cookies:z.array(z.object({name:z.string(),value:z.string(),domain:z.string(),path:z.string(),expires:z.number(),secure:z.boolean(),httpOnly:z.boolean()}).passthrough()).max(1000),origins:z.array(z.object({origin:z.string().url()}).passthrough()).max(20)}).safeParse(raw);
@@ -153,7 +179,7 @@ export async function verifyDedicatedSession(statePath:string,policy:unknown,ide
         const version=process.env.SF_API_VERSION||'v62.0';if(!/^v\d+\.\d+$/.test(version))throw new DedicatedSessionError('verification-unavailable');
         const escaped=session.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');await verifier.clearCookies();
         nativeProof={operation:'soap-get-user-info',sessionOrigin:'api'};const proof=await verifier.request.post(`${apiOrigin}/services/Soap/u/${version.slice(1)}`,{headers:{'Content-Type':'text/xml; charset=utf-8',SOAPAction:'getUserInfo'},data:`<env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:p="urn:partner.soap.sforce.com"><env:Header><p:SessionHeader><p:sessionId>${escaped}</p:sessionId></p:SessionHeader></env:Header><env:Body><p:getUserInfo/></env:Body></env:Envelope>`,maxRedirects:0,timeout:15000});nativeProof.httpStatus=proof.status();
-        if(!proof.ok())throw new DedicatedSessionError(proof.status()>=300&&proof.status()<400?'identity-redirect':'identity-http');const xml=await proof.text();if(xml.length>1000000||/<!DOCTYPE|<!ENTITY/i.test(xml))throw new DedicatedSessionError('identity-mismatch');
+        if(!proof.ok()){if(proof.status()>=400&&proof.status()<600)nativeProof.soapFault=await readNativeSoapFault(()=>proof.text());throw new DedicatedSessionError(proof.status()>=300&&proof.status()<400?'identity-redirect':'identity-http');}const xml=await proof.text();if(xml.length>1000000||/<!DOCTYPE|<!ENTITY/i.test(xml))throw new DedicatedSessionError('identity-mismatch');
         const parsed=new XMLParser({removeNSPrefix:true,ignoreAttributes:true,parseTagValue:false}).parse(xml),result=z.object({organizationId:Id,userId:Id}).safeParse(parsed?.Envelope?.Body?.getUserInfoResponse?.result);if(!result.success)throw new DedicatedSessionError('identity-mismatch');observed={organization_id:result.data.organizationId,user_id:result.data.userId};
         }
       }

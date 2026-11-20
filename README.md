@@ -1,5 +1,7 @@
 # SalesforceAgenticQA
 
+[Latest executed diagnostic026](docs/PREFLIGHT_026_RESULTS.md): API/user/app gates passed; the browser-session SOAP getUserInfo proof returned HTTP500. Closed operation/origin/status telemetry is live verified; its SOAP fault code and server cause remain unknown. A bounded closed-code parser is tested offline, without accepting failed identity, changing permissions or adding requests.026 is consumed; the full data lifecycle remains separately gated.
+
 [Latest executed diagnostic025](docs/PREFLIGHT_025_RESULTS.md): API/user/app checks passed, then native identity failed with identity-http. The original operation/status are unknown. Closed proof telemetry is added and tested offline without changing authentication or request permissions;025 is consumed and live cookie/build/E2E verification remains incomplete.
 
 [Latest executed diagnostic 024](docs/PREFLIGHT_024_RESULTS.md): API identity/active-user/selected-app passed live, then native identity proof returned a redirect and stopped.024 is consumed. Build proof and the final cookie comparison did not execute; no business records or live tests ran. The next input is a fresh approved dedicated-user export for a new inactive review; no retry, rebinding or new permission is granted.
