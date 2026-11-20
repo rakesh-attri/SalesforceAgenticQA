@@ -1,5 +1,15 @@
 # SalesforceAgenticQA: the complete framework guide
 
+## AUTH VERIFIED:029 metadata preflight stop and new inactive030 review
+
+[029 results](LIFECYCLE_029_RESULTS.md) distinguish successful fresh browser readiness from an unexecuted data lifecycle. Both pages and independent fields passed; no data was reserved/created/deleted. The known offline defect is using the dedicated factory reader for record-shaped Flow metadata reads. Reuse the separately scoped normal Production read-only metadata client; do not weaken the owned-record guard. The corrected030 composition and per-item sanitized diagnostics are offline verified, not live proved.029 cannot replay even while its original time window remains open.
+
+The single next review is `.state/live-lifecycle-SFQA-E2E-20261120-030/REVIEW.html` or `REVIEW.md`, with exact hashes/original deadline and separate business, native-risk/access and final-run/receipt-binding decisions. `metadata-policy.review.json` explicitly grants metadata/soql reads only; the full factory policy remains separate. New proofs must be measured after the new final intent starts; old029/028 receipts cannot be copied or extended. No speculative browser refresh is requested after the genuine7:47p.m. identity pass; failed future proof still stops. No activation from historical consent, a mocked pass or reading this guide.
+
+Offline validation includes all22 reviewed metadata items through the actual read-only client, retained mutation/factory denial,13 metadata cases,37 receipt/scope cases and seven real generated tests in the connected mocked Salesforce/Gemini fixture with local MCP/reportingLabs. Those fixture-created/cleaned records are not Salesforce org records. Actual generated Salesforce tests and owned data cleanup remain unexecuted. Earlier inactive029 instructions below are historical, superseded by its consumed result.
+
+The shared [metadata-preflight helper](../src/execution/metadata-preflight.ts) compares already reviewed responses and preserves closed failure evidence. It grants no endpoint or execution authority and does not establish safety from the GET method. The trusted caller must supply the separately authorized reader and existing exact path/actor restrictions; mutation and browser permission planes remain separate. [Focused regressions](../unit/metadata-preflight.test.ts) cover the client boundary, drift, redaction, first-failure stop and evidence-I/O errors.
+
 ## AUTH VERIFIED:028 succeeded; separate final lifecycle decision required
 
 [Executed028](LIFECYCLE_READINESS_028_RESULTS.md) passed real native/API identity, Account/Contact visible readiness, MCP and independent unchanged-record checks using the confirmed export in isolated installed headless Chrome157. Seven local masked PNGs and all source/result hashes were verified. No business records or generated Salesforce tests ran.028 is consumed; its read-only-policy receipts expire unchanged and cannot authorize factories.
