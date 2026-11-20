@@ -1,5 +1,7 @@
 # Milestone 1 authentication audit
 
+**Superseded handoff:** separately approved028 subsequently proved real native identity and Account/Contact readiness with unchanged records. See [the actual result](LIFECYCLE_READINESS_028_RESULTS.md). The AUTH BLOCKED status below describes this earlier audit, not the executed028 outcome. No full synthetic E2E pass is implied.
+
 **AUTH BLOCKED** — the confirmed replacement export is locally valid; its current Salesforce session has not been proved. No new Salesforce, Gemini or Chroma call was made in this audit. No live data lifecycle or generated Salesforce test ran.
 
 ## What the saved evidence establishes

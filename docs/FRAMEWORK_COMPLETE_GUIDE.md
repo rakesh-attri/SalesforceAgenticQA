@@ -1,5 +1,13 @@
 # SalesforceAgenticQA: the complete framework guide
 
+## AUTH VERIFIED:028 succeeded; separate final lifecycle decision required
+
+[Executed028](LIFECYCLE_READINESS_028_RESULTS.md) passed real native/API identity, Account/Contact visible readiness, MCP and independent unchanged-record checks using the confirmed export in isolated installed headless Chrome157. Seven local masked PNGs and all source/result hashes were verified. No business records or generated Salesforce tests ran.028 is consumed; its read-only-policy receipts expire unchanged and cannot authorize factories.
+
+The new inactive final review is local at `.state/live-lifecycle-SFQA-E2E-20261120-029/REVIEW.html` or `REVIEW.md`. Its exact hashes/deadlines govern three separate decisions: business/nonfinancial automation/owned cleanup; native-effects/dedicated-user access; final execution plus the specifically enumerated fresh-receipt materialization rule. That rule is proposed and offline verified, not a default permission change. It permits two new same-policy Account/Contact readiness observations at the start of this run, then only the proof reference/dependent browser/UI hashes can be derived from fresh host receipts. No old receipt is reused or extended. All expected outcomes, source/policy/state, six per-context budgets, data fields and original expiry remain fixed; all ordinary Production protections remain. No activation follows from an export confirmation, reading the review or historical consent.
+
+Only after all three exact decisions and fresh runtime gates may the existing two-record factory, generated tests, independent SOQL, owned-only cleanup/absence and actual reportingLabs run. No automatic verified business lesson is published. A failed proof or uncertain effect stops unsafe follow-on work and preserves the journal; no blind retry/rebinding/renewal. Earlier AUTH BLOCKED sections below retain historical handoff status.
+
 ## Milestone 1: reuse the confirmed session input
 
 **AUTH BLOCKED** — see [the authentication audit](MILESTONE_1_AUTH_AUDIT.md). Diagnostic027 is consumed and already recorded INVALID_SESSION_ID for the older API-origin browser cookie. A new independently approved normal-login export, saved November20 at5:52:40 p.m. IST, has now been confirmed by the operator. Its separate scoped028 copy imports exactly offline with zero requests. No fresh server proof or E2E pass is claimed. The historical “input unavailable” sections below no longer describe input availability.
