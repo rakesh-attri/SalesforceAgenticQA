@@ -44,6 +44,24 @@ export async function minimizeDedicatedImport(statePath:string,outputPath:string
   if((await readPrivateSessionState(statePath)).hash!==source.hash)throw new DedicatedSessionError('state-changed');
   return {statePath:file,removed:result.removed,originalUnchanged:true};
 }
+// Proposal only: Chrome omits expired cookies on import. Do not weaken the
+// runtime comparison or remove an expired mandatory sid to make it pass.
+export function pruneExpiredDedicatedState(raw:unknown,policy:EnvironmentPolicy,now=Date.now()){
+  const p=EnvironmentPolicySchema.parse(policy);if(p.mode!=='DEDICATED_QA_ORG')throw Error('Dedicated QA import proposal required');
+  const state=validateDedicatedState(raw,p,now);
+  for(const origin of p.allowedOrigins)if(state.cookies.filter(c=>c.name==='sid'&&c.domain.replace(/^\./,'')===new URL(origin).hostname&&c.path==='/').length!==1)throw new DedicatedSessionError('session-cookie');
+  const expired=state.cookies.filter(c=>c.name!=='sid'&&c.expires!==-1&&c.expires*1000<=now),cookies=state.cookies.filter(c=>!expired.includes(c)),finite=cookies.filter(c=>c.expires!==-1).map(c=>c.expires*1000);
+  return{state:{cookies,origins:state.origins},reviewRequired:true as const,removed:expired.map(c=>({nameHash:createHash('sha256').update(c.name).digest('hex'),expiry:new Date(c.expires*1000).toISOString()})),stableUntil:finite.length?new Date(Math.min(...finite)).toISOString():null};
+}
+export async function pruneExpiredDedicatedImport(statePath:string,outputPath:string,policy:EnvironmentPolicy){
+  const source=await readPrivateSessionState(statePath),file=resolve(outputPath),root=await realpath('.auth'),rel=relative(root,file),parent=relative(root,await realpath(dirname(file)));
+  if(file===source.statePath||!rel||rel.startsWith('..')||isAbsolute(rel)||parent.startsWith('..')||isAbsolute(parent))throw new DedicatedSessionError('private-state');
+  let raw:unknown;try{raw=JSON.parse(await readFile(source.statePath,'utf8'));}catch{throw new DedicatedSessionError('private-state');}
+  const result=pruneExpiredDedicatedState(raw,policy);
+  await writeFile(file,JSON.stringify(result.state),{flag:'wx',mode:0o600});await chmod(file,0o600);
+  if((await readPrivateSessionState(statePath)).hash!==source.hash)throw new DedicatedSessionError('state-changed');
+  return{statePath:file,sourceHash:source.hash,reviewRequired:result.reviewRequired,removed:result.removed,stableUntil:result.stableUntil,originalUnchanged:true};
+}
 export const DedicatedGuardSchema=z.object({policy:EnvironmentPolicySchema,identity:z.object({Id,userId:Id,IsSandbox:z.boolean()}),origins:z.array(z.string().url()).min(1),documents:z.array(z.string().url()).max(20),owned:z.array(z.object({object:z.enum(['Account','Contact']),id:Id,display:z.string().optional()})).max(2),expiresAt:z.string().datetime(),staticReview:DedicatedStaticReviewSchema.optional()}).strict();
 export type DedicatedGuard=z.infer<typeof DedicatedGuardSchema>;
 const readActions=new Set(['aura://RecordUiController/ACTION$getRecord','aura://RecordUiController/ACTION$getRecordWithFields','aura://RecordUiController/ACTION$getObjectInfo','aura://RecordUiController/ACTION$getLayout','aura://RecordUiController/ACTION$getRecordLayout','serviceComponent://ui.force.components.controllers.recordGlobalValueProvider.RecordGvpController/ACTION$getRecord']);

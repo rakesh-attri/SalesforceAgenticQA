@@ -1,5 +1,7 @@
 # SalesforceAgenticQA
 
+[Current diagnostic 023](docs/PREFLIGHT_023_RESULTS.md): API/active-user/app and native session identity passed live. Exact context-state verification then failed because Chrome omitted one expired non-session cookie. A separate review-required input proposal is offline verified; runtime checks remain strict.023 is consumed, build/UI/data/E2E did not execute. Historical handoffs below grant no current authority.
+
 [Latest actual diagnostic](docs/PREFLIGHT_022_RESULTS.md): approved022 passed fresh Salesforce API identity, then its framework guard blocked the active-user request before dispatch. The confirmed cause is differing apostrophe serialization in the generated exact URL allowlist. A shared canonical path helper is offline tested without widening scope. No browser/data execution;022 is consumed and018's older cause remains unresolved.
 
 [Current preflight investigation](docs/PREFLIGHT_018_INVESTIGATION.md): confirmed offline diagnostic defects are corrected in the existing services, including disposal masking and loss through error wrapping. Lifecycle018's exact historical cause remains unresolved. No new live call or replay; fresh verification requires the separately reviewed minimal read-only scope after all offline checks.

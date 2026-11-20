@@ -5,7 +5,8 @@ import {resolve,join,relative,isAbsolute} from 'node:path';
 import {chromium} from '@playwright/test';
 import {browserFixture} from './support/browser-policy.js';
 import {preflightReviewedBrowser} from '../src/execution/browser-guard.js';
-import {verifyDedicatedSession} from '../src/execution/dedicated-browser.js';
+import {verifyDedicatedSession,pruneExpiredDedicatedState,pruneExpiredDedicatedImport} from '../src/execution/dedicated-browser.js';
+import {launchLocalBrowser} from '../src/execution/local-browser.js';
 import {SalesforceClient,browserPreflightApiPaths} from '../src/salesforce/client.js';
 import {digest} from '../src/execution/browser-policy.js';
 import {BrowserExecutionDiagnostics,browserFailureSummary,browserFailureCode,browserErrorDiagnostic,withBrowserStage} from '../src/execution/browser-diagnostics.js';
@@ -129,4 +130,33 @@ test('canonical exact API paths admit actual preflight requests and reject alter
     const fragment=new URL(actor);fragment.hash='unexpected';assert.equal(permitted(fragment),false);
     for(const [version,userId]of[['v62.0?unexpected','005000000000001'],['v62.0',"005000000000001' OR IsActive=true"],['v62.0','001000000000001']])assert.throws(()=>browserPreflightApiPaths(version,userId));
   }finally{globalThis.fetch=original;Reflect.set(SalesforceClient,'authenticate',authenticate);await f.dispose();}
+});
+
+test('review-required expiry pruning preserves every mandatory session and future cookie without changing origins or flags',async()=>{
+  const f=await fixture(),now=Date.now(),state={cookies:[...f.cookies,{name:'expired-fixture',value:'PRIVATE_EXPIRED',domain:new URL(f.b.f.origin).hostname,path:'/',expires:now/1000-60,secure:true,httpOnly:false,sameSite:'Lax'},{name:'future-fixture',value:'PRIVATE_FUTURE',domain:new URL(f.b.f.origin).hostname,path:'/',expires:now/1000+7200,secure:true,httpOnly:true,sameSite:'Lax'}],origins:[{origin:f.b.f.origin,localStorage:[{name:'fixture',value:'PRIVATE_LOCAL_STORAGE'}]}]},before=JSON.stringify(state);
+  try{const proposed=pruneExpiredDedicatedState(state,f.b.f.policy,now);assert.equal(proposed.reviewRequired,true);assert.equal(proposed.removed.length,1);assert.deepEqual(proposed.state.cookies,state.cookies.filter(c=>c.name!=='expired-fixture'));assert.deepEqual(proposed.state.origins,state.origins);assert.equal(proposed.stableUntil,new Date(now+7200000).toISOString());assert.equal(JSON.stringify(state),before);assert.ok(!JSON.stringify(proposed.removed).includes('PRIVATE_'));assert.equal(proposed.state.cookies.filter(c=>c.name==='sid').length,2);}finally{await f.dispose();}
+});
+
+test('expiry proposals reject expired or missing mandatory sessions, foreign cookies and ordinary modes',async()=>{
+  const f=await fixture(),now=Date.now();try{
+    assert.throws(()=>pruneExpiredDedicatedState({cookies:f.cookies.map(c=>({...c,expires:now/1000-1})),origins:[]},f.b.f.policy,now),/session-cookie/);
+    assert.throws(()=>pruneExpiredDedicatedState({cookies:f.cookies.slice(1),origins:[]},f.b.f.policy,now),/session-cookie/);
+    assert.throws(()=>pruneExpiredDedicatedState({cookies:[...f.cookies,{...f.cookies[0],name:'expired-foreign',domain:'foreign.example',expires:now/1000-1}],origins:[]},f.b.f.policy,now),/state-origin/);
+    for(const mode of['SANDBOX_QA','PRODUCTION_READ_ONLY_QA','PRODUCTION_CONTROLLED_QA']as const)assert.throws(()=>pruneExpiredDedicatedState({cookies:f.cookies,origins:[]},{...f.b.f.policy,mode},now),/Dedicated QA import proposal/);
+  }finally{await f.dispose();}
+});
+
+test('expiry import writes a separate inactive proposal and cannot overwrite its source or escape auth storage',async()=>{
+  const f=await fixture(),source=JSON.stringify({cookies:[...f.cookies,{...f.cookies[0],name:'expired-fixture',expires:Date.now()/1000-60}],origins:[]}),output=join(f.root,'normalized.json');await writeFile(f.statePath,source);
+  try{const proposal=await pruneExpiredDedicatedImport(f.statePath,output,f.b.f.policy);assert.equal(proposal.reviewRequired,true);assert.equal(proposal.originalUnchanged,true);assert.equal(proposal.sourceHash,digest(source));assert.equal(await readFile(f.statePath,'utf8'),source);assert.equal(JSON.parse(await readFile(output,'utf8')).cookies.length,2);assert.equal(f.b.f.writes.length,0);
+    await assert.rejects(pruneExpiredDedicatedImport(f.statePath,f.statePath,f.b.f.policy),/private-state/);await assert.rejects(pruneExpiredDedicatedImport(f.statePath,resolve('.state/not-authorized-state.json'),f.b.f.policy),/private-state/);await assert.rejects(pruneExpiredDedicatedImport(f.statePath,output,f.b.f.policy),/EEXIST/);
+  }finally{await f.dispose();}
+});
+
+test('installed headless Chrome drops only the expired fixture entry and exactly imports its reviewed proposal offline',async()=>{
+  const f=await fixture(),state={cookies:[...f.cookies,{...f.cookies[0],name:'expired-fixture',expires:Date.now()/1000-60},{...f.cookies[0],name:'future-fixture',expires:Date.now()/1000+7200}],origins:[]},output=join(f.root,'normalized.json'),originalFetch=globalThis.fetch;await writeFile(f.statePath,JSON.stringify(state));globalThis.fetch=async()=>{throw Error('Offline import must never authenticate');};const browser=await launchLocalBrowser();let requests=0;
+  const keys=(cookies:Array<{name:string;domain:string;path:string;value:string;secure:boolean;httpOnly:boolean}>)=>cookies.map(c=>digest(JSON.stringify([c.name,c.domain,c.path,c.value,c.secure,c.httpOnly]))).sort();
+  try{const source=await browser.newContext({storageState:f.statePath,javaScriptEnabled:false,serviceWorkers:'block',acceptDownloads:false});source.on('request',()=>{requests++;});await source.route('**/*',r=>r.abort());assert.notDeepEqual(keys(await source.cookies()),keys(state.cookies));await source.close();
+    const proposal=await pruneExpiredDedicatedImport(f.statePath,output,f.b.f.policy),expected=JSON.parse(await readFile(proposal.statePath,'utf8')),context=await browser.newContext({storageState:proposal.statePath,javaScriptEnabled:false,serviceWorkers:'block',acceptDownloads:false});context.on('request',()=>{requests++;});await context.route('**/*',r=>r.abort());assert.deepEqual(keys(await context.cookies()),keys(expected.cookies));assert.equal(proposal.removed.length,1);assert.deepEqual(expected.cookies.filter((c:{name:string})=>c.name==='sid'),f.cookies);assert.equal(requests,0);assert.equal(f.b.f.writes.length,0);await context.close();
+  }finally{await browser.close();globalThis.fetch=originalFetch;await f.dispose();}
 });
