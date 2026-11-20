@@ -1,5 +1,16 @@
 # SalesforceAgenticQA: the complete framework guide
 
+## Executed 027: INVALID_SESSION_ID confirmed; fresh browser input unavailable
+
+[Actual result and next prerequisite](PREFLIGHT_027_RESULTS.md): exact retained-input/content/read-only/native-risk consent ran027 once on November20 at17:47:21-17:47:27IST within original deadlines. One JWT/six GETs returned HTTP200; exact API identity, active user and selected app passed with no framework denial. Native API-origin SOAP getUserInfo returned HTTP500, and the bounded parser retained recognized code INVALID_SESSION_ID. This classifier path is LIVE verified; other codes/hints/adversarial cases remain offline verified. No narrower hint was recorded, so expiry, malformed input, API-use restrictions or app configuration are not established as the specific cause.
+
+The current blocker is rejection of the API-origin browser cookie for SOAP identity proof. Both browser-disposal stages passed and preserved primary evidence. No remaining native identity completion, final actual-cookie/build proof, Page/JavaScript/Aura/MCP/images, business-record reads/writes, generated live tests/factory/owned cleanup/reportingLabs or verified lesson.027 is consumed and cannot replay, rebind or renew. No raw XML/messages/credentials/identity values were retained in diagnostic output. Historical026 and earlier missing details are not retroactively inferred.
+
+The user answered **Not available** to a fresh independently approved normal-login export. This is the external blocker. No replacement review, browser grant or data package is prepared. Resume only when a new dedicated-user export is available for local validation and a new exact source/input/content/read-only/native-risk review. Confirmation of an export grants preparation only, never execution. Existing gates and app permissions stay unchanged.
+
+No runtime code changed in this result-recording turn. Reuse exact source-pinned402/402 unit/integration,46 focused,five headless,typecheck/demo/private recipe results from before027; no new suite is claimed or repeated after consent. Local result integrity, protected-value and diff checks cover this delivery. The user discovery edit remains unchanged/excluded. All 15 responsibilities and cumulative P0/P1/P2/integrations/normal-Production/ownership/learning requirements remain preserved. Older sections retain historical status.
+
+
 ## Inactive 027: bounded SOAP fault classification requires new consent
 
 Source-bound `SFQA-DIAG-20261120-027` is **INACTIVE** after all offline checks. It explicitly reuses unchanged `.auth/qa-user-scoped-20261120-025.json` from the **November 20, 1:22:30 p.m. IST** export. This is not a new login or working-session claim.026 identified API-origin SOAP getUserInfo HTTP500 at4:54p.m.IST; its actual fault code remains unknown. The new purpose is bounded local classification of a failed SOAP response, with no historical body recovery.

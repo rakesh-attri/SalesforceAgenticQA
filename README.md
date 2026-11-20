@@ -1,5 +1,7 @@
 # SalesforceAgenticQA
 
+[Latest executed diagnostic027](docs/PREFLIGHT_027_RESULTS.md): JWT/API/user/app checks passed; API-origin browser SOAP identity proof returned HTTP500 with recognized INVALID_SESSION_ID. Its specific server-side cause remains unknown.027 is consumed, with no record operations or UI tests. A fresh independently approved browser export is currently unavailable; no replacement grant or data package is prepared.
+
 [Latest executed diagnostic026](docs/PREFLIGHT_026_RESULTS.md): API/user/app gates passed; the browser-session SOAP getUserInfo proof returned HTTP500. Closed operation/origin/status telemetry is live verified; its SOAP fault code and server cause remain unknown. A bounded closed-code parser is tested offline, without accepting failed identity, changing permissions or adding requests.026 is consumed; the full data lifecycle remains separately gated.
 
 [Latest executed diagnostic025](docs/PREFLIGHT_025_RESULTS.md): API/user/app checks passed, then native identity failed with identity-http. The original operation/status are unknown. Closed proof telemetry is added and tested offline without changing authentication or request permissions;025 is consumed and live cookie/build/E2E verification remains incomplete.
