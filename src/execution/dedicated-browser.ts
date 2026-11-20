@@ -15,7 +15,7 @@ import { parseLightningIdentity,sameSalesforceIdentity } from './lightning-ident
 import { DedicatedStaticReviewSchema,authorizeStaticReview,matchesStaticReview } from './dedicated-static.js';
 import { fetchReviewedStatic,StaticTransportError } from './static-transport.js';
 import type { BoundaryDenialReason } from './browser-diagnostics.js';
-import {withBrowserStage,preserveBrowserDiagnostic,type BrowserStageObserver} from './browser-diagnostics.js';
+import {withBrowserStage,preserveBrowserDiagnostic,type BrowserStageObserver,type NativeIdentityProof} from './browser-diagnostics.js';
 const Id=z.string().regex(/^[A-Za-z0-9]{15}(?:[A-Za-z0-9]{3})?$/);
 export class DedicatedSessionError extends Error {
   constructor(readonly code:'private-state'|'state-origin'|'session-cookie'|'identity-http'|'identity-redirect'|'identity-mismatch'|'state-changed'|'verification-unavailable'|'receipt') {super(`Dedicated browser session denied: ${code}. ${code==='identity-redirect'?'The identity proof redirected and was not followed. Refresh the independently approved state through the dedicated user normal login; no receipt can be issued from a redirect.':'Private session/provider details withheld; review the approved state, current user/org and origins.'}`);this.name='DedicatedSessionError';}
@@ -128,7 +128,7 @@ export function reviewDedicatedUi(raw:unknown,policy:unknown,identity:Environmen
 }
 export async function verifyDedicatedSession(statePath:string,policy:unknown,identity:EnvironmentIdentity,apiOrigin:string,receiptPath?:string,deps?:{launch?:()=>Promise<Browser>;onStage?:BrowserStageObserver}) {
   const p=EnvironmentPolicySchema.parse(policy);if(p.mode!=='DEDICATED_QA_ORG')throw Error('Dedicated browser session mode required');authorizeEnvironment(p,identity,'dedicated-ui',apiOrigin);
-  let browser:Browser|undefined,failed=false;
+  let browser:Browser|undefined,failed=false,nativeProof:NativeIdentityProof|undefined;
   try {return await withBrowserStage(deps?.onStage,'context-identity',async()=>{const before=await readPrivateSessionState(statePath);validateDedicatedState(JSON.parse(await readFile(before.statePath,'utf8')),p);
     browser=await (deps?.launch?.()??launchLocalBrowser());
     const context=await browser.newContext({storageState:before.statePath,javaScriptEnabled:false,serviceWorkers:'block',acceptDownloads:false}),sessions:Array<{origin:string;session:string}>=[];
@@ -136,7 +136,7 @@ export async function verifyDedicatedSession(statePath:string,policy:unknown,ide
     // Prove every approved origin's actual browser session, never the API JWT. An empty
     // verifier context avoids an unrelated cookie authenticating a rejected Bearer token.
     const verifier=await browser.newContext({serviceWorkers:'block',acceptDownloads:false});
-    for(const {origin,session} of sessions){await verifier.clearCookies();const response=await verifier.request.get(`${apiOrigin}/services/oauth2/userinfo`,{headers:{Authorization:`Bearer ${session}`},maxRedirects:0,timeout:15000});
+    for(const {origin,session} of sessions){await verifier.clearCookies();nativeProof={operation:'oauth-userinfo',sessionOrigin:new URL(origin).hostname.endsWith('.lightning.force.com')?'lightning':'api'};const response=await verifier.request.get(`${apiOrigin}/services/oauth2/userinfo`,{headers:{Authorization:`Bearer ${session}`},maxRedirects:0,timeout:15000});nativeProof.httpStatus=response.status();
       let observed:unknown;
       if(response.ok())observed=await response.json();
       else {
@@ -145,14 +145,14 @@ export async function verifyDedicatedSession(statePath:string,policy:unknown,ide
         // it never substitutes the JWT/API token or calls login/create/update.
         if(![400,401,403,404].includes(response.status()))throw new DedicatedSessionError(response.status()>=300&&response.status()<400?'identity-redirect':'identity-http');
         if(new URL(origin).hostname.endsWith('.lightning.force.com')){
-          const document=await context.request.get(`${origin}/lightning/page/home`,{maxRedirects:0,timeout:15000});
+          nativeProof={operation:'lightning-home-html',sessionOrigin:'lightning'};const document=await context.request.get(`${origin}/lightning/page/home`,{maxRedirects:0,timeout:15000});nativeProof.httpStatus=document.status();
           if(!document.ok())throw new DedicatedSessionError(document.status()>=300&&document.status()<400?'identity-redirect':'identity-http');
           if(!document.headers()['content-type']?.includes('text/html'))throw new DedicatedSessionError('identity-http');
           try{observed=parseLightningIdentity(await document.text());}catch{throw new DedicatedSessionError('identity-mismatch');}
         }else {
         const version=process.env.SF_API_VERSION||'v62.0';if(!/^v\d+\.\d+$/.test(version))throw new DedicatedSessionError('verification-unavailable');
         const escaped=session.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');await verifier.clearCookies();
-        const proof=await verifier.request.post(`${apiOrigin}/services/Soap/u/${version.slice(1)}`,{headers:{'Content-Type':'text/xml; charset=utf-8',SOAPAction:'getUserInfo'},data:`<env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:p="urn:partner.soap.sforce.com"><env:Header><p:SessionHeader><p:sessionId>${escaped}</p:sessionId></p:SessionHeader></env:Header><env:Body><p:getUserInfo/></env:Body></env:Envelope>`,maxRedirects:0,timeout:15000});
+        nativeProof={operation:'soap-get-user-info',sessionOrigin:'api'};const proof=await verifier.request.post(`${apiOrigin}/services/Soap/u/${version.slice(1)}`,{headers:{'Content-Type':'text/xml; charset=utf-8',SOAPAction:'getUserInfo'},data:`<env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:p="urn:partner.soap.sforce.com"><env:Header><p:SessionHeader><p:sessionId>${escaped}</p:sessionId></p:SessionHeader></env:Header><env:Body><p:getUserInfo/></env:Body></env:Envelope>`,maxRedirects:0,timeout:15000});nativeProof.httpStatus=proof.status();
         if(!proof.ok())throw new DedicatedSessionError(proof.status()>=300&&proof.status()<400?'identity-redirect':'identity-http');const xml=await proof.text();if(xml.length>1000000||/<!DOCTYPE|<!ENTITY/i.test(xml))throw new DedicatedSessionError('identity-mismatch');
         const parsed=new XMLParser({removeNSPrefix:true,ignoreAttributes:true,parseTagValue:false}).parse(xml),result=z.object({organizationId:Id,userId:Id}).safeParse(parsed?.Envelope?.Body?.getUserInfoResponse?.result);if(!result.success)throw new DedicatedSessionError('identity-mismatch');observed={organization_id:result.data.organizationId,user_id:result.data.userId};
         }
@@ -160,7 +160,7 @@ export async function verifyDedicatedSession(statePath:string,policy:unknown,ide
       const user=z.object({organization_id:z.string(),user_id:z.string()}).safeParse(observed);if(!user.success||!sameSalesforceIdentity(user.data.organization_id,identity.Id)||!sameSalesforceIdentity(user.data.user_id,identity.userId))throw new DedicatedSessionError('identity-mismatch');}
     if((await readPrivateSessionState(statePath)).hash!==before.hash)throw new DedicatedSessionError('state-changed');
     if(receiptPath){const now=Date.now();try{await writePrivateSessionReceipt(receiptPath,{orgId:identity.Id,userId:identity.userId,persona:p.dedicatedQa!.persona,statePath:before.statePath,hash:before.hash,origins:p.allowedOrigins,reviewer:p.approval.operator,verifiedAt:new Date(now).toISOString(),expiresAt:new Date(Math.min(now+900000,Date.parse(p.approval.expiresAt))).toISOString()});}catch{throw new DedicatedSessionError('receipt');}}
-    return {statePath:before.statePath,orgId:identity.Id,userId:identity.userId,persona:p.dedicatedQa!.persona};});
+    return {statePath:before.statePath,orgId:identity.Id,userId:identity.userId,persona:p.dedicatedQa!.persona};},()=>nativeProof);
   }catch(error){failed=true;if(error instanceof DedicatedSessionError)throw error;throw preserveBrowserDiagnostic(error,new DedicatedSessionError('verification-unavailable'));}finally{
     try{await withBrowserStage(deps?.onStage,'cleanup',async()=>{await browser?.close();});}catch(error){if(!failed)throw preserveBrowserDiagnostic(error,new DedicatedSessionError('verification-unavailable'));}
   }

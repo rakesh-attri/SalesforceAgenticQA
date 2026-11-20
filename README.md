@@ -1,5 +1,7 @@
 # SalesforceAgenticQA
 
+[Latest executed diagnostic025](docs/PREFLIGHT_025_RESULTS.md): API/user/app checks passed, then native identity failed with identity-http. The original operation/status are unknown. Closed proof telemetry is added and tested offline without changing authentication or request permissions;025 is consumed and live cookie/build/E2E verification remains incomplete.
+
 [Latest executed diagnostic 024](docs/PREFLIGHT_024_RESULTS.md): API identity/active-user/selected-app passed live, then native identity proof returned a redirect and stopped.024 is consumed. Build proof and the final cookie comparison did not execute; no business records or live tests ran. The next input is a fresh approved dedicated-user export for a new inactive review; no retry, rebinding or new permission is granted.
 
 [Current diagnostic 023](docs/PREFLIGHT_023_RESULTS.md): API/active-user/app and native session identity passed live. Exact context-state verification then failed because Chrome omitted one expired non-session cookie. A separate review-required input proposal is offline verified; runtime checks remain strict.023 is consumed, build/UI/data/E2E did not execute. Historical handoffs below grant no current authority.
