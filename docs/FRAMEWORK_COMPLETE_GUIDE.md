@@ -1,5 +1,13 @@
 # SalesforceAgenticQA: the complete framework guide
 
+## AUTH BLOCKED:030 consumed; refresh input before a new exact review
+
+[Actual030](LIFECYCLE_030_RESULTS.md) ran once within the original approved window. API/reference/authorization/storage/engine and isolated installed headless Chrome context creation passed, then native Lightning-home identity proof returned HTTP302. Its underlying cause is unknown. The independent nominated Account comparison remained unchanged. Zero records, mutations, reservations or pending business effects exist; no page, new image, generated Salesforce test, cleanup or live reportingLabs ran. The metadata correction remains offline verified because execution stopped before that stage.
+
+Do not run030's activation/execution recipe again or reuse its consent/receipts. Its remaining original clock time does not undo once-only consumption. Do not follow the redirect to bypass identity, substitute JWT, relax native proof or silently change state. Preserve `.auth/qa-user-scoped-20261120-028.json` and all historical grants. No replacement is prepared.
+
+Minimum next input: after a NEW normal login as the same dedicated QA user with the nominated Account authenticated, export independently approved Playwright storage state under `.auth`. Confirm only the path or that `qa-user.json` was refreshed; never paste its contents. That confirms local preparation input only. Validate the exact origin/scope/import locally, then present a new inactive source/state-bound review with separate exact consent before any Salesforce call. Keep the existing factory/Playwright/SOQL/owned-cleanup/reportingLabs pipeline. Runtime source and pre-consent406/five-headless/typecheck/demo evidence are unchanged; the recorded seven-test connected fixture uses mocked Salesforce and is not live E2E. Earlier inactive030 instructions below are historical.
+
 ## AUTH VERIFIED:029 metadata preflight stop and new inactive030 review
 
 [029 results](LIFECYCLE_029_RESULTS.md) distinguish successful fresh browser readiness from an unexecuted data lifecycle. Both pages and independent fields passed; no data was reserved/created/deleted. The known offline defect is using the dedicated factory reader for record-shaped Flow metadata reads. Reuse the separately scoped normal Production read-only metadata client; do not weaken the owned-record guard. The corrected030 composition and per-item sanitized diagnostics are offline verified, not live proved.029 cannot replay even while its original time window remains open.
