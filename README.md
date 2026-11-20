@@ -1,5 +1,7 @@
 # SalesforceAgenticQA
 
+[Latest executed diagnostic 024](docs/PREFLIGHT_024_RESULTS.md): API identity/active-user/selected-app passed live, then native identity proof returned a redirect and stopped.024 is consumed. Build proof and the final cookie comparison did not execute; no business records or live tests ran. The next input is a fresh approved dedicated-user export for a new inactive review; no retry, rebinding or new permission is granted.
+
 [Current diagnostic 023](docs/PREFLIGHT_023_RESULTS.md): API/active-user/app and native session identity passed live. Exact context-state verification then failed because Chrome omitted one expired non-session cookie. A separate review-required input proposal is offline verified; runtime checks remain strict.023 is consumed, build/UI/data/E2E did not execute. Historical handoffs below grant no current authority.
 
 [Latest actual diagnostic](docs/PREFLIGHT_022_RESULTS.md): approved022 passed fresh Salesforce API identity, then its framework guard blocked the active-user request before dispatch. The confirmed cause is differing apostrophe serialization in the generated exact URL allowlist. A shared canonical path helper is offline tested without widening scope. No browser/data execution;022 is consumed and018's older cause remains unresolved.

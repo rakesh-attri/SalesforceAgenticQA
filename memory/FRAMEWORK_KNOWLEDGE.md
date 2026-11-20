@@ -1,5 +1,14 @@
 # Framework Knowledge Base
 
+## Executed 024: API checks passed; native identity redirected
+
+[Actual diagnostic 024 result](../docs/PREFLIGHT_024_RESULTS.md): exact normalized-input/read-only/native-risk consent executed once on November 20, 13:14:45–13:14:51 IST, within original deadlines. One JWT and six GETs returned HTTP 200; exact API org/user, active-user and selected-app checks passed with zero framework denials. Local state/source authorization, installed headless Chrome launch and context creation passed. The first failed stage was native context-identity, reason identity-redirect, category session-or-scope; redirects were not followed. Both observed browser-disposal stages passed and preserved the primary reason. The exact native endpoint/status/destination and underlying server cause were not retained; expired/revoked session or wrong identity is not established.
+
+Final actual-cookie comparison and native build proof did NOT execute. The expiry normalizer remains offline verified, without a live comparison pass from this attempt. No business-record reads/writes, Page/JavaScript/Aura/MCP/images/generated live tests/factory/cleanup/reportingLabs/verified lesson; no readiness receipt. Native background effects are not enumerated.024 is consumed, failed-or-uncertain-no-replay, even before its original expiry. Original signed reviews, deadlines and earlier consumed/declined scopes remain unchanged.
+
+No runtime code changed. Reuse the source-pinned pre-approval396/396 unit/integration, five headless, typecheck/demo/private recipe evidence; no new suite is claimed or repeated after consent. Earlier intermittent fixture failures remain documented. Current delivery checks cover local integrity, protected values and diff only. Next input: a fresh independently approved dedicated-user normal-login export; confirmation permits preparation only, with new exact read-only/native-risk consent required before another call. No replacement review or data package has been prepared. All15/P0/P1/P2 and existing integrations/safety/ownership/learning requirements remain preserved. Older sections below retain historical status and confer no current authority.
+
+
 ## Fresh inactive diagnostic 024: single next operator decision
 
 After required offline validation, source-bound `SFQA-DIAG-20261120-024` was prepared INACTIVE. Review: `.state/lifecycle-preflight-SFQA-DIAG-20261120-024/REVIEW.html` (or `REVIEW.md`), `plan.review.json` and `manifest.review.json`. Proposed activation: `a8ae40f052acd90037d86083359fa7acd369763ff43469b0822e39eefb375a68`. Separate read-only policy: `10c1135c0df3c5b39f02d52a32d0c3d4a1ba1116d347b96b8fdbed256b863cb5`. Original expiry: **November 20, 2026, 1:27:06 p.m. IST**; execution must start **before 1:22:06 p.m. IST**, retaining the five-minute reserve and unchanged one-hour security limit. No renewal or replay.
