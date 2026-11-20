@@ -1,5 +1,9 @@
 # Current capability matrix
 
+## AUTH BLOCKED: refreshed input locally validated; no new execution authority
+
+The operator confirmed the November20,9:29p.m. normal-login export. Existing minimization plus one actual isolated headless Chrome157 import passed at9:31p.m., with zero requests. Separate ignored scoped input retains11 cookies/one origin;30 foreign cookies/one origin were excluded, no expired cookie removed. Both mandatory secure session bindings changed from030; all retained values/flags and origin storage imported exactly. Original export and historical scoped028 input are unchanged by validation. Current server validity and org/user identity remain unverified. No new receipt/package/activation, Salesforce/Gemini call, record operation or replay. Input confirmation permits local validation only. The next prerequisite is a new exact source/state-bound review. Runtime code and cumulative requirements below remain unchanged; the406/five-headless pre-consent regression evidence is historical, not rerun for this input-only check. See the [030 result update](LIFECYCLE_030_RESULTS.md).
+
 ## AUTH BLOCKED:030 consumed at native Lightning identity proof
 
 [Executed030](LIFECYCLE_030_RESULTS.md) ran once November20 at9:13:52–9:14:02p.m.IST under the exact three-plane approval, within its unchanged original window. Reviewed artifacts, runtime sources and scoped state matched. Engine/API/reference/authorization/storage/Chrome/context stages passed; native context identity failed with `identity-redirect`, operation `lightning-home-html`, Lightning-origin class, HTTP302. The independent Account pre/post comparison passed. The redirect's server-side cause remains unknown; no new browser identity/build or page-readiness pass is claimed.

@@ -1,5 +1,11 @@
 # Implementation report — 2026-11-13
 
+## AUTH BLOCKED: new export passes local import only
+
+After the operator confirmed the refreshed `.auth/qa-user.json`, existing exact-origin minimization and an isolated installed headless Chrome157.0.8103.78 context imported the separate scoped copy at9:31p.m.IST November20. The export was saved at9:29:07p.m. It retains11 cookies/one origin, removes30 foreign cookies/one origin and no expired cookie, and preserves every retained value/flag. Both mandatory secure origin sessions differ from the consumed030 binding. Actual Chrome cookie and origin-storage equality passed; zero requests, Salesforce/model calls or writes. Raw and historical inputs remain unchanged. Private input audit is `.state/refreshed-input-20261120T160117248Z.audit.json`.
+
+Server validity and actual org/user identity are not locally provable. No new run package, receipt, permission activation or attempt was prepared.030 remains consumed; input confirmation grants local validation only. Next prerequisite: a fresh exact source/state-bound review before any live proof. Runtime code is unchanged; prior406-unit/five-headless/typecheck/demo evidence was not rerun, and this single offline headless input check is reported separately. User discovery edit and all cumulative responsibilities/requirements remain preserved. [030's actual execution result](LIFECYCLE_030_RESULTS.md) remains unchanged.
+
 ## AUTH BLOCKED:030 executed once; native identity redirected before creation
 
 [Actual030 result](LIFECYCLE_030_RESULTS.md): all three exact approvals activated the original package; execution ran November20,2026,9:13:52.305–9:14:02.426p.m.IST, before the original9:53:09.455p.m. latest start and10:03:09.455p.m. expiry. Exact reviewed/source/state bindings passed. API/reference checks and isolated installed headless Chrome context creation passed; native context identity failed on Lightning-home HTML with HTTP302 (`identity-redirect`). The cause behind the redirect remains unresolved. Independent approved Account fields compared unchanged after failure. No redirect-following, JWT substitution, state rebinding or verification relaxation occurred.

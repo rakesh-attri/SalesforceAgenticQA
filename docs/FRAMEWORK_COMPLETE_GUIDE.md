@@ -1,5 +1,9 @@
 # SalesforceAgenticQA: the complete framework guide
 
+## Refreshed input available; new exact live review still required
+
+The November20,9:29p.m. approved normal-login export passed existing local minimization and exact headless Chrome157 import at9:31p.m., with zero requests. The separate ignored `.auth/qa-user-refreshed-20261120T160117248Z.json` preserves11 retained cookies/one origin, with both required session bindings changed from030. Original/raw and historical scoped files were not modified. Its private provenance audit is `.state/refreshed-input-20261120T160117248Z.audit.json`. Server validity and org/user identity remain unverified; input confirmation grants no live authority. No replacement package, receipt or activation was issued. The next prerequisite is a new exact source/state-bound review; earlier requests below to refresh the input are historical. Never rebind or replay030 using this new file.
+
 ## AUTH BLOCKED:030 consumed; refresh input before a new exact review
 
 [Actual030](LIFECYCLE_030_RESULTS.md) ran once within the original approved window. API/reference/authorization/storage/engine and isolated installed headless Chrome context creation passed, then native Lightning-home identity proof returned HTTP302. Its underlying cause is unknown. The independent nominated Account comparison remained unchanged. Zero records, mutations, reservations or pending business effects exist; no page, new image, generated Salesforce test, cleanup or live reportingLabs ran. The metadata correction remains offline verified because execution stopped before that stage.

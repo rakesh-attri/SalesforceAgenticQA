@@ -1,5 +1,7 @@
 # AUTH BLOCKED —030 stopped at native Lightning identity proof
 
+**Later input update — November20,2026,9:31 p.m. IST:** the operator confirmed a new normal-login export saved at9:29:07 p.m. Local validation passed using the existing exact-origin minimizer and isolated installed headless Chrome157.0.8103.78, with zero requests. A separate ignored `.auth/qa-user-refreshed-20261120T160117248Z.json` retains11 cookies/one origin, excluding30 foreign cookies/one origin and removing no expired entry. Both required secure session bindings differ from030; all retained values/flags and local origin storage imported exactly. The raw export and consumed scoped028 file remain unchanged by validation. Private audit: `.state/refreshed-input-20261120T160117248Z.audit.json`. Current server validity and actual org/user identity remain unverified. This confirms input only: no receipt, new run package, permission activation, Salesforce call or write. The next prerequisite is a new exact source/state-bound review, not another refresh request or replay of030. The execution result below is unchanged.
+
 The three exact business, native-risk/access and final execution decisions activated `SFQA-E2E-20261120-030` once. It ran **November 20, 2026, 9:13:52.305–9:14:02.426 p.m. IST**, before its original latest start of **9:53:09.455 p.m.** and original expiry of **10:03:09.455 p.m.** Neither deadline nor any reviewed hash was changed. The attempt is consumed despite the remaining clock time; no retry, rebinding or renewal is permitted.
 
 ## Actual stage results
