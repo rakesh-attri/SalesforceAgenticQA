@@ -2,6 +2,8 @@
 
 ## Latest actual preflight result
 
+Next inactive review: `SFQA-DIAG-20261120-023` at `.state/lifecycle-preflight-SFQA-DIAG-20261120-023/REVIEW.html`. Exact activation `b63e90987ebc80de1964d6331434ddd636eb66223da71417c0b23f987a02569b`; original November20 expiry12:18:23p.m.IST, latest start12:13:23p.m.IST. It uses corrected canonical paths and the same bound export, without adding an operation, business-record read or mutation. Fresh exact read-only/native-risk consent is required. All392 tests/five headless/typecheck/demo passed before creating this review. Do not rerun022; no new execution or data grant is active.
+
 [022 result](PREFLIGHT_022_RESULTS.md): fresh API identity passed, then a framework exact-path mismatch blocked the actor query before dispatch. The generator left literal apostrophes while the actual client encoded them as%27. A shared canonical proposal helper is offline verified without widening scope.022 is consumed; selected-app/native/browser/E2E checks did not execute.018's older cause remains unresolved. No data effects or new business authority. A new source-bound review requires separate consent after validation; never retry022 or reuse its original deadline.
 
 ## Historical inactive022 review, superseded by its consumed attempt above
