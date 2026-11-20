@@ -1,5 +1,14 @@
 # Current capability matrix
 
+## Fresh inactive diagnostic 024: single next operator decision
+
+After required offline validation, source-bound `SFQA-DIAG-20261120-024` was prepared INACTIVE. Review: `.state/lifecycle-preflight-SFQA-DIAG-20261120-024/REVIEW.html` (or `REVIEW.md`), `plan.review.json` and `manifest.review.json`. Proposed activation: `a8ae40f052acd90037d86083359fa7acd369763ff43469b0822e39eefb375a68`. Separate read-only policy: `10c1135c0df3c5b39f02d52a32d0c3d4a1ba1116d347b96b8fdbed256b863cb5`. Original expiry: **November 20, 2026, 1:27:06 p.m. IST**; execution must start **before 1:22:06 p.m. IST**, retaining the five-minute reserve and unchanged one-hour security limit. No renewal or replay.
+
+The new copy removes only the one expired non-session entry omitted by Chrome. Mandatory sessions, all other retained values/flags and origins are unchanged; original state files and grants remain unchanged. Exact input/source bindings and offline import passed. The recipe requires explicit normalized-input approval plus read-only execution/native-effects/access consent; current server validity/build proof remain unverified until fresh execution. Maximum one JWT, six exact identity/active-user/selected-app GETs and five fixed native proof requests (conditional read-only SOAP getUserInfo POST included), two isolated headless installed-Chrome verification browsers, five minutes total. No Page, JavaScript/Aura/MCP/images/business-record reads/writes/factory/cleanup/AI or E2E authority. Native session requests may have undocumented irreversible effects; checks cannot undo in-flight effects.
+
+Local audit passed exact hashes, normal-Production/cross-org/user/data/altered-state/path rejection and local headless review HTML with zero external requests. Approved files and execution intents: zero. No new live call. Code verified in `cb2849d`; all expensive checks preceded review creation.023 is consumed;018 and earlier declined/expired/consumed scopes stay unchanged. Fresh exact operator consent for024 is the only next decision; the complete lifecycle remains separately gated.
+
+
 ## November 20: diagnostic 023 consumed; expired-cookie mismatch confirmed
 
 [Actual result and correction](PREFLIGHT_023_RESULTS.md): one JWT/six GETs HTTP200, exact API identity, active user, selected app and both native-origin session identity proofs PASS live. The next exact loaded-context comparison failed with context-identity/context-state-mismatch: Chrome omitted one non-session cookie already expired at11:13:16IST. Offline real headless Chrome reproduces source15/import14 with all retained entries and mandatory sessions unchanged. Build proof/Page/MCP/images/business-record reads/writes/generated live tests/cleanup/reportingLabs NOT EXECUTED. No new readiness receipt or verified lesson.023 is consumed; original outcome/grants unchanged.
