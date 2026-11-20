@@ -1,5 +1,7 @@
 # SalesforceAgenticQA
 
+[Current preflight investigation](docs/PREFLIGHT_018_INVESTIGATION.md): confirmed offline diagnostic defects are corrected in the existing services, including disposal masking and loss through error wrapping. Lifecycle018's exact historical cause remains unresolved. No new live call or replay; fresh verification requires the separately reviewed minimal read-only scope after all offline checks.
+
 [Latest actual execution](docs/LIFECYCLE_018_RESULTS.md): separately approved 021 passed both real Account and Contact visible-view readiness with unchanged records and four local masked images. Final lifecycle 018 was separately approved and executed once, but failed before creation at the browser preflight boundary. Local reconciliation confirms zero created/active/uncertain effects; generated tests, cleanup and live reportingLabs did not execute. The exact inner cause was discarded by the original catch and remains unresolved. Sanitized stage diagnostics are now tested offline; 018 cannot replay.
 
 [Historical019 result](docs/LIFECYCLE_READINESS_019_RESULTS.md): live019 Account name/heading/Related/Details and stable readiness passed; Contact core content passed but a known off-viewport related-list busy signal blocked its strict contract. Both records stayed unchanged. Contact view classification and fresh021 observations require separate exact review; no data package or full lifecycle pass.

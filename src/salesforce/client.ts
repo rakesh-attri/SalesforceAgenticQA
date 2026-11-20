@@ -12,6 +12,7 @@ import { projectSelectedApp } from '../execution/lightning-initialization.js';
 import { authorizeBrowserSession, BrowserReviewSchema, resolveBrowserRecords, digest } from '../execution/browser-policy.js';
 import { sameSalesforceIdentity } from '../execution/lightning-identity.js';
 import {readObservationRecords} from './observation-read.js';
+import {withBrowserStage,preserveBrowserDiagnostic,type BrowserStageObserver} from '../execution/browser-diagnostics.js';
 export class SalesforceClient {
   private environment?:{policy:EnvironmentPolicy;identity:{Id:string;IsSandbox:boolean;userId:string};policyPath?:string};
   private constructor(private instance:string,private token:string, private version:string) {}
@@ -28,11 +29,18 @@ export class SalesforceClient {
     client.environment={policy:authority.policy,identity:initial};
     return {apiOrigin:client.instance,policy:authority.policy,
       async identity(){const identity=await client.identity();authorizeBrowserSession(review,parent,identity,build);return identity;},
-      async preflight(){
-        const identity=await client.identity();authorizeBrowserSession(review,parent,identity,build);
-        let actor:unknown,selected:unknown;try{actor=await client.get(`/services/data/${client.version}/query?q=${encodeURIComponent(`SELECT Id,IsActive FROM User WHERE Id='${identity.userId}' LIMIT 1`)}`);selected=await client.get(`/services/data/${client.version}/ui-api/apps/selected?formFactor=Large`);}catch{throw Error('Browser actor/app preflight unavailable; provider details withheld');}
-        const active=z.object({records:z.array(z.object({Id:z.string(),IsActive:z.literal(true)})).length(1)}).safeParse(actor);
-        if(!active.success||active.data.records[0].Id!==identity.userId||projectSelectedApp(selected).appIdHash!==review.plan.selectedAppIdHash)throw Error('Browser actor/app preflight changed');return identity;
+      async preflight(observer?:BrowserStageObserver){
+        const identity=await withBrowserStage(observer,'api-identity',async()=>{const identity=await client.identity();authorizeBrowserSession(review,parent,identity,build);return identity;});
+        await withBrowserStage(observer,'actor-access',async()=>{
+          let actor:unknown;try{actor=await withBrowserStage(observer,'actor-access',()=>client.get(`/services/data/${client.version}/query?q=${encodeURIComponent(`SELECT Id,IsActive FROM User WHERE Id='${identity.userId}' LIMIT 1`)}`));}catch(error){throw preserveBrowserDiagnostic(error,Error('Browser actor metadata unavailable; provider details withheld'));}
+          const active=z.object({records:z.array(z.object({Id:z.string(),IsActive:z.boolean()})).length(1)}).safeParse(actor);
+          if(!active.success)throw Error('Browser actor response is unsupported; provider details withheld');
+          if(!active.data.records[0].IsActive||active.data.records[0].Id!==identity.userId)throw Error('Browser approved actor is inactive or changed');
+        });
+        await withBrowserStage(observer,'app-selection',async()=>{
+          let selected:unknown;try{selected=await withBrowserStage(observer,'app-selection',()=>client.get(`/services/data/${client.version}/ui-api/apps/selected?formFactor=Large`));}catch(error){throw preserveBrowserDiagnostic(error,Error('Browser selected-app metadata unavailable; provider details withheld'));}
+          if(projectSelectedApp(selected).appIdHash!==review.plan.selectedAppIdHash)throw Error('Browser selected app changed');
+        });return identity;
       },
       async readObservation(grant:unknown){
         const identity=await client.identity();authorizeBrowserSession(review,parent,identity,build);

@@ -21,10 +21,10 @@ import { sameSalesforceIdentity } from './lightning-identity.js';
 import { browserNetworkDecision, type NetworkDecision } from './browser-network.js';
 import { RequestTraceClock, browserTraceScope, BrowserTraceSchema, summarizeBrowserExchange, compareBrowserTraces, type BrowserTrace } from './browser-trace.js';
 
-export async function verifyActualContext(context: BrowserContext, statePath: string, review: BrowserReview, policy: unknown, identity: EnvironmentIdentity, apiOrigin: string) {
+export async function verifyActualContext(context: BrowserContext, statePath: string, review: BrowserReview, policy: unknown, identity: EnvironmentIdentity, apiOrigin: string,observer?:BrowserStageObserver) {
   const source = await readPrivateSessionState(statePath);
   if (source.hash !== review.plan.sessionStateHash) throw Error('Browser state differs from the approved execution source');
-  await verifyDedicatedSession(statePath, policy, identity, apiOrigin);
+  await verifyDedicatedSession(statePath, policy, identity, apiOrigin,undefined,{onStage:observer});
   const state = validateDedicatedState(JSON.parse(await readFile(source.statePath, 'utf8')), (await import('./environment.js')).EnvironmentPolicySchema.parse(policy));
   const key = (cookie: { name: string; domain: string; path: string; value: string; secure: boolean; httpOnly: boolean }) => fingerprint([cookie.name, cookie.domain, cookie.path, cookie.value, cookie.secure, cookie.httpOnly]);
   const actual = (await context.cookies()).map(key).sort(), expected = state.cookies.map(cookie => key(cookie as Parameters<typeof key>[0])).sort();

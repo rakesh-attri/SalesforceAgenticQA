@@ -15,6 +15,7 @@ import { parseLightningIdentity,sameSalesforceIdentity } from './lightning-ident
 import { DedicatedStaticReviewSchema,authorizeStaticReview,matchesStaticReview } from './dedicated-static.js';
 import { fetchReviewedStatic,StaticTransportError } from './static-transport.js';
 import type { BoundaryDenialReason } from './browser-diagnostics.js';
+import {withBrowserStage,preserveBrowserDiagnostic,type BrowserStageObserver} from './browser-diagnostics.js';
 const Id=z.string().regex(/^[A-Za-z0-9]{15}(?:[A-Za-z0-9]{3})?$/);
 export class DedicatedSessionError extends Error {
   constructor(readonly code:'private-state'|'state-origin'|'session-cookie'|'identity-http'|'identity-redirect'|'identity-mismatch'|'state-changed'|'verification-unavailable'|'receipt') {super(`Dedicated browser session denied: ${code}. ${code==='identity-redirect'?'The identity proof redirected and was not followed. Refresh the independently approved state through the dedicated user normal login; no receipt can be issued from a redirect.':'Private session/provider details withheld; review the approved state, current user/org and origins.'}`);this.name='DedicatedSessionError';}
@@ -107,11 +108,11 @@ export function reviewDedicatedUi(raw:unknown,policy:unknown,identity:Environmen
   for(const w of input.plan.workflows){authorizeEnvironment(p,identity,'dedicated-ui',w.origin);if(w.apiAssertions.length||w.steps.some(s=>s.action==='fill'||/delete|save|new|edit|pay|purchase|transfer|refund|permission/i.test(`${s.locator.value} ${s.locator.name??''}`)))throw Error('Dedicated browser workflow is restricted to reviewed non-mutating owned-record navigation');}
   return input;
 }
-export async function verifyDedicatedSession(statePath:string,policy:unknown,identity:EnvironmentIdentity,apiOrigin:string,receiptPath?:string,deps?:{launch:()=>Promise<Browser>}) {
+export async function verifyDedicatedSession(statePath:string,policy:unknown,identity:EnvironmentIdentity,apiOrigin:string,receiptPath?:string,deps?:{launch?:()=>Promise<Browser>;onStage?:BrowserStageObserver}) {
   const p=EnvironmentPolicySchema.parse(policy);if(p.mode!=='DEDICATED_QA_ORG')throw Error('Dedicated browser session mode required');authorizeEnvironment(p,identity,'dedicated-ui',apiOrigin);
-  let browser:Browser|undefined;
-  try {const before=await readPrivateSessionState(statePath);validateDedicatedState(JSON.parse(await readFile(before.statePath,'utf8')),p);
-    browser=await (deps?.launch()??launchLocalBrowser());
+  let browser:Browser|undefined,failed=false;
+  try {return await withBrowserStage(deps?.onStage,'context-identity',async()=>{const before=await readPrivateSessionState(statePath);validateDedicatedState(JSON.parse(await readFile(before.statePath,'utf8')),p);
+    browser=await (deps?.launch?.()??launchLocalBrowser());
     const context=await browser.newContext({storageState:before.statePath,javaScriptEnabled:false,serviceWorkers:'block',acceptDownloads:false}),sessions:Array<{origin:string;session:string}>=[];
     for(const origin of p.allowedOrigins){const cookies=await context.cookies(origin),sid=cookies.filter(c=>c.name==='sid');if(sid.length!==1||!sid[0].secure)throw new DedicatedSessionError('session-cookie');sessions.push({origin,session:sid[0].value});}
     // Prove every approved origin's actual browser session, never the API JWT. An empty
@@ -141,8 +142,10 @@ export async function verifyDedicatedSession(statePath:string,policy:unknown,ide
       const user=z.object({organization_id:z.string(),user_id:z.string()}).safeParse(observed);if(!user.success||!sameSalesforceIdentity(user.data.organization_id,identity.Id)||!sameSalesforceIdentity(user.data.user_id,identity.userId))throw new DedicatedSessionError('identity-mismatch');}
     if((await readPrivateSessionState(statePath)).hash!==before.hash)throw new DedicatedSessionError('state-changed');
     if(receiptPath){const now=Date.now();try{await writePrivateSessionReceipt(receiptPath,{orgId:identity.Id,userId:identity.userId,persona:p.dedicatedQa!.persona,statePath:before.statePath,hash:before.hash,origins:p.allowedOrigins,reviewer:p.approval.operator,verifiedAt:new Date(now).toISOString(),expiresAt:new Date(Math.min(now+900000,Date.parse(p.approval.expiresAt))).toISOString()});}catch{throw new DedicatedSessionError('receipt');}}
-    return {statePath:before.statePath,orgId:identity.Id,userId:identity.userId,persona:p.dedicatedQa!.persona};
-  }catch(error){if(error instanceof DedicatedSessionError)throw error;throw new DedicatedSessionError('verification-unavailable');}finally{await browser?.close();}
+    return {statePath:before.statePath,orgId:identity.Id,userId:identity.userId,persona:p.dedicatedQa!.persona};});
+  }catch(error){failed=true;if(error instanceof DedicatedSessionError)throw error;throw preserveBrowserDiagnostic(error,new DedicatedSessionError('verification-unavailable'));}finally{
+    try{await withBrowserStage(deps?.onStage,'cleanup',async()=>{await browser?.close();});}catch(error){if(!failed)throw preserveBrowserDiagnostic(error,new DedicatedSessionError('verification-unavailable'));}
+  }
 }
 export async function checkedDedicatedSession(receiptPath:string,policy:EnvironmentPolicy,identity:EnvironmentIdentity,apiOrigin:string) {const receipt=await checkSessionReceipt(receiptPath,{orgId:identity.Id,userId:identity.userId,persona:policy.dedicatedQa!.persona},policy.allowedOrigins);if(receipt.reviewer!==policy.approval.operator)throw new DedicatedSessionError('receipt');return verifyDedicatedSession(receipt.statePath,policy,identity,apiOrigin);}
 export type DedicatedBootstrapDiagnostic={phase:'navigation'|'landing'|'state-write';pageClass:'not-loaded'|'unapproved-origin'|'lightning'|'login'|'other';authHints:string[];blocked:{origin:number;method:number;unknown:number;websocket:number}};

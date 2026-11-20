@@ -1,5 +1,13 @@
 # Implementation report — 2026-11-13
 
+## November20: resolve preflight evidence loss before fresh live verification
+
+[Detailed investigation](PREFLIGHT_018_INVESTIGATION.md). Saved018 ends after fresh-org-user-and-browser-session-verified and before build/app preflight completion. The exact original substage/cause is unresolved; all19 Node HTTP responses succeeded and no factory/record/mutation/main-session reservation exists. Local original-package/report/state hashes and engine binding match, but current browser login validity is unknown. No old grant, receipt or run is replayed.
+
+Actual-service offline reproduction proved that browser disposal can replace a build timeout; the red-before/green-after evidence is retained locally. Existing preflight/session cleanup now preserves primary diagnostics and still fails on disposal-only errors. Existing API checks distinguish actor/app shape/access/drift; safe wrappers preserve closed stage/reason/category even without an observer. The pipeline persists its primary failure summary alongside stage history. Own-property code lookup prevents unknown error strings from corrupting classification. Permissions, original assertions, session/data budgets and ownership/cleanup controls are unchanged. This fixes verified diagnostic defects without claiming the018 runtime cause or a live E2E pass.
+
+Final offline verification: typecheck PASS;391/391 full unit/integration tests (958831ms), zero failures/skips;5/5 installed headless tests (58.9s); required demo PASS. Initial32 focused tests and the intentional red-before/green-after actual-service reproduction passed their expected outcomes. Private review recipes typecheck. Diagnostic corrections remain OFFLINE verified; fresh live verification/E2E are BLOCKED pending confirmed refreshed input and separate exact consent. No new Salesforce/Gemini/Chroma call, factory, quota reset or verified lesson; user discovery edit preserved/excluded. No new live call, factory package, AI upload or verified lesson. All15/P0/P1/P2/Gemini001/RAG/LangGraph/MCP/reportingLabs and enterprise requirements remain cumulative; user discovery edit is preserved and excluded.
+
 ## November 19: actual readiness 021 and separately approved lifecycle 018
 
 [Full actual evidence and remaining gate](LIFECYCLE_018_RESULTS.md). Read-only021 passed both real Account/Contact visible readiness, exact fresh identity/build/app/state, real headless local Chrome/MCP and independent unchanged-record comparisons. The separately approved narrow Contact deferred off-viewport classification passed live; required/visible/unknown loading and faults still block. Four verified local masked images/236804 bytes; 197 native requests per object/zero framework denials; 170 API GET/three JWT.

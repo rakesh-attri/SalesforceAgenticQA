@@ -3,22 +3,45 @@ import { z } from 'zod';
 import type {BrowserContext} from '@playwright/test';
 import type {History} from '../core/history.js';
 
-export const BrowserStageSchema=z.enum(['engine','api-identity','references','authorization','storage-state','browser-launch','context-create','context-identity','context-initialization','browser-build','session-budget','network-boundary','navigation','document-proof','mcp-connect','mcp-operation','readiness','discovery','cleanup']);
-export const BrowserFailureCodeSchema=z.enum(['unknown','timeout','closed','engine-mismatch','state-binding','state-origin','private-state','session-cookie','identity-http','identity-redirect','identity-mismatch','state-changed','verification-unavailable','receipt','context-state-mismatch','build-or-scope-mismatch','budget','mcp-compatibility','mcp-unavailable','mcp-operation','readiness-incomplete']);
+export const BrowserStageSchema=z.enum(['engine','api-identity','actor-access','app-selection','references','authorization','storage-state','browser-launch','context-create','context-identity','context-initialization','browser-build','session-budget','network-boundary','navigation','document-proof','mcp-connect','mcp-operation','readiness','discovery','cleanup']);
+export const BrowserFailureCodeSchema=z.enum(['unknown','timeout','closed','engine-mismatch','state-binding','state-origin','private-state','session-cookie','identity-http','identity-redirect','identity-mismatch','state-changed','verification-unavailable','receipt','context-state-mismatch','build-or-scope-mismatch','build-http','build-source','actor-access','actor-response','actor-read-unavailable','app-context','app-response','app-read-unavailable','api-http','budget','mcp-compatibility','mcp-unavailable','mcp-operation','readiness-incomplete']);
 export const BrowserStageEntrySchema=z.object({stage:BrowserStageSchema,status:z.enum(['started','passed','failed']),code:BrowserFailureCodeSchema.optional(),elapsedMs:z.number().int().min(0),totalMs:z.number().int().min(0)}).strict();
 export type BrowserStage=z.infer<typeof BrowserStageSchema>;
 type StageEntry=z.infer<typeof BrowserStageEntrySchema>;
 export type BrowserStageObserver=(stage:BrowserStage,status:StageEntry['status'],code?:z.infer<typeof BrowserFailureCodeSchema>)=>StageEntry|undefined;
 const failures=new WeakMap<object,StageEntry>();
 export function browserErrorDiagnostic(error:unknown){return error&&typeof error==='object'?failures.get(error):undefined;}
+export function preserveBrowserDiagnostic(source:unknown,target:object){const entry=browserErrorDiagnostic(source);if(entry&&!failures.has(target))failures.set(target,BrowserStageEntrySchema.parse(entry));return target;}
 export function browserFailureCode(error:unknown):z.infer<typeof BrowserFailureCodeSchema>{
+ const recorded=browserErrorDiagnostic(error);if(recorded?.code)return recorded.code;
  if(error instanceof Error){const dedicated=error.name==='DedicatedSessionError'?BrowserFailureCodeSchema.safeParse((error as Error&{code?:unknown}).code):undefined;if(dedicated?.success)return dedicated.data;
   if(['TimeoutError','AbortError'].includes(error.name))return 'timeout';
-  const exact:Record<string,z.infer<typeof BrowserFailureCodeSchema>>={'Reviewed compatible Playwright/MCP engine profile required':'engine-mismatch','Approved state changed':'state-binding','Browser state differs from the approved execution source':'state-binding','Actual browser context differs from the proven approved session':'context-state-mismatch','Native browser build identity mismatch':'build-or-scope-mismatch','Browser duration or authorization expired':'budget','Reviewed browser session budget exhausted':'budget','Browser request budget exceeded':'budget','Browser resource-byte budget exceeded':'budget','Browser agent-action budget exceeded':'budget','Lightning session is closed':'closed','Private Playwright MCP failed: sdk-api-compatibility; raw output withheld':'mcp-compatibility','Private Playwright MCP failed: native-tool-unavailable; raw output withheld':'mcp-unavailable','Private Playwright MCP failed: native-timeout; raw output withheld':'timeout','Private Playwright MCP failed: native-operation; raw output withheld':'mcp-operation'};return exact[error.message]??'unknown';
+  if(/^Salesforce API GET failed: [1-5][0-9]{2}$/.test(error.message))return 'api-http';
+  const gateReasons:Record<string,z.infer<typeof BrowserFailureCodeSchema>>={
+   'Browser actor metadata unavailable; provider details withheld':'actor-read-unavailable',
+   'Browser actor response is unsupported; provider details withheld':'actor-response',
+   'Browser approved actor is inactive or changed':'actor-access',
+   'Browser selected-app metadata unavailable; provider details withheld':'app-read-unavailable',
+   'Browser selected app changed':'app-context',
+   'Selected-app metadata shape is unsupported; response withheld':'app-response',
+   'Native Lightning build proof unavailable':'build-http',
+   'Native Lightning build is missing or ambiguous; content withheld':'build-source',
+   'Unsupported or ambiguous Lightning identity source; content withheld':'build-source',
+   'Unsupported Lightning identity document; content withheld':'build-source',
+   'Native build actor mismatch':'build-or-scope-mismatch',
+   'Dedicated browser org/user/persona/build/origin mismatch':'build-or-scope-mismatch',
+   'Reviewed state changed':'state-binding',
+  };if(Object.hasOwn(gateReasons,error.message))return gateReasons[error.message];
+  const exact:Record<string,z.infer<typeof BrowserFailureCodeSchema>>={'Reviewed compatible Playwright/MCP engine profile required':'engine-mismatch','Approved state changed':'state-binding','Browser state differs from the approved execution source':'state-binding','Actual browser context differs from the proven approved session':'context-state-mismatch','Native browser build identity mismatch':'build-or-scope-mismatch','Browser duration or authorization expired':'budget','Reviewed browser session budget exhausted':'budget','Browser request budget exceeded':'budget','Browser resource-byte budget exceeded':'budget','Browser agent-action budget exceeded':'budget','Lightning session is closed':'closed','Private Playwright MCP failed: sdk-api-compatibility; raw output withheld':'mcp-compatibility','Private Playwright MCP failed: native-tool-unavailable; raw output withheld':'mcp-unavailable','Private Playwright MCP failed: native-timeout; raw output withheld':'timeout','Private Playwright MCP failed: native-operation; raw output withheld':'mcp-operation'};return Object.hasOwn(exact,error.message)?exact[error.message]:'unknown';
  }return 'unknown';
 }
+export function browserFailureSummary(error:unknown,fallback?:BrowserStage){
+ const reason=browserFailureCode(error),stage=browserErrorDiagnostic(error)?.stage??fallback;
+ const category=['timeout','closed','api-http'].includes(reason)?'transport':reason==='budget'?'budget':reason.startsWith('actor')||reason.startsWith('app')?'actor-or-app':reason.startsWith('build')||reason==='engine-mismatch'?'build-or-engine':reason==='unknown'?'unknown':'session-or-scope';
+ return{...(stage?{stage}:{}),reason,category};
+}
 export class BrowserStageError extends Error{constructor(readonly diagnostic:StageEntry){super('Browser observation blocked; sanitized stage evidence retained.');this.name='BrowserStageError';BrowserStageEntrySchema.parse(diagnostic);failures.set(this,diagnostic);}}
-export async function withBrowserStage<T>(observer:BrowserStageObserver|undefined,stage:BrowserStage,operation:()=>Promise<T>):Promise<T>{observer?.(stage,'started');try{const result=await operation();observer?.(stage,'passed');return result;}catch(error){const entry=observer?.(stage,'failed',browserFailureCode(error));if(error&&typeof error==='object'&&!failures.has(error)&&entry)failures.set(error,BrowserStageEntrySchema.parse(entry));throw error;}}
+export async function withBrowserStage<T>(observer:BrowserStageObserver|undefined,stage:BrowserStage,operation:()=>Promise<T>):Promise<T>{const started=Date.now();observer?.(stage,'started');try{const result=await operation();observer?.(stage,'passed');return result;}catch(error){const elapsedMs=Math.max(0,Date.now()-started),entry=observer?.(stage,'failed',browserFailureCode(error))??{stage,status:'failed' as const,code:browserFailureCode(error),elapsedMs,totalMs:elapsedMs};if(error&&typeof error==='object'&&!failures.has(error))failures.set(error,BrowserStageEntrySchema.parse(entry));throw error;}}
 const Counts=z.partialRecord(z.enum(['document','script','stylesheet','image','font','xhr','fetch','other']),z.number().int().min(0));
 export const BrowserExecutionDiagnosticSchema=z.object({version:z.literal(1),id:z.string().uuid(),runId:z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),policyHash:z.string().regex(/^[a-f0-9]{64}$/),validation:z.enum(['live-attempt','offline-mocked-salesforce']),events:z.array(BrowserStageEntrySchema).max(96),truncated:z.boolean(),pageAvailable:z.boolean(),pageObserved:z.boolean(),screenshot:z.enum(['not-requested','captured','refused','unavailable','disabled','budget-exhausted']),requests:Counts,responses:z.partialRecord(z.enum(['success','redirect','client-error','server-error','other']),z.number().int().min(0)),requestFailures:z.number().int().min(0),console:z.partialRecord(z.enum(['blocked','network','csp','other','page-error']),z.number().int().min(0)),rawValuesRetained:z.literal(false)}).strict();
 export class BrowserExecutionDiagnostics{

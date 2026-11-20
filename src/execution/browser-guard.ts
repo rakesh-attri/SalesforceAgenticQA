@@ -16,15 +16,21 @@ import { verifyActualContext, attachReviewedBrowserContext } from './browser-run
 import { proveReviewedBrowserBuild } from './browser-build.js';
 import {attachBrowserDebug,type DebugReason} from './browser-debug.js';
 import {loadPreferredChromeProfile} from './dedicated-chrome-profile.js';
-import {withBrowserStage,type BrowserStageObserver} from './browser-diagnostics.js';
+import {withBrowserStage,browserErrorDiagnostic,BrowserStageError,type BrowserStageObserver} from './browser-diagnostics.js';
 export { proveReviewedBrowserBuild } from './browser-build.js';
 export async function preflightReviewedBrowser(raw: unknown, parent: unknown, identity: EnvironmentIdentity, statePath: string, apiOrigin: string, observer?:BrowserStageObserver) {
-  const review = BrowserReviewSchema.parse(raw), authority = authorizeBrowserSession(review, parent, identity, review.plan), browser = await withBrowserStage(observer,'browser-launch',()=>launchLocalBrowser());
-  try { const source = await readPrivateSessionState(statePath); if (source.hash !== review.plan.sessionStateHash) throw Error('Reviewed state changed');
-    const context = await withBrowserStage(observer,'context-create',()=>browser.newContext({ storageState: source.statePath, javaScriptEnabled: false, serviceWorkers: 'block', acceptDownloads: false }));
-    await withBrowserStage(observer,'context-identity',()=>verifyActualContext(context, statePath, review, authority.policy, identity, apiOrigin));
+  let browser:Awaited<ReturnType<typeof launchLocalBrowser>>|undefined,failed=false;
+  const sanitized=(error:unknown)=>{const diagnostic=browserErrorDiagnostic(error);return diagnostic?new BrowserStageError(diagnostic):Error('Browser preflight denied; provider details withheld');};
+  try {
+    const {review,authority}=await withBrowserStage(observer,'authorization',async()=>{const review=BrowserReviewSchema.parse(raw);return{review,authority:authorizeBrowserSession(review,parent,identity,review.plan)};});
+    const source=await withBrowserStage(observer,'storage-state',async()=>{const source=await readPrivateSessionState(statePath);if(source.hash!==review.plan.sessionStateHash)throw Error('Reviewed state changed');return source;});
+    const ownedBrowser=browser=await withBrowserStage(observer,'browser-launch',()=>launchLocalBrowser());
+    const context = await withBrowserStage(observer,'context-create',()=>ownedBrowser.newContext({ storageState: source.statePath, javaScriptEnabled: false, serviceWorkers: 'block', acceptDownloads: false }));
+    await withBrowserStage(observer,'context-identity',()=>verifyActualContext(context, statePath, review, authority.policy, identity, apiOrigin,observer));
     return await withBrowserStage(observer,'browser-build',()=>proveReviewedBrowserBuild(context, review, parent, identity));
-  } finally { await browser.close(); }
+  } catch(error){failed=true;throw sanitized(error);} finally {
+    if(browser)try{await withBrowserStage(observer,'cleanup',()=>browser!.close());}catch(error){if(!failed)throw sanitized(error);}
+  }
 }
 export async function openBrowserJournal(path: string) {
   const root = await realpath('.state'), file = await realpath(resolve(path)), rel = relative(root, file);

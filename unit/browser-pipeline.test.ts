@@ -30,6 +30,7 @@ test('lifecycle preflight retains closed stage evidence before factory dispatch 
       assert.equal(report.status,'failed');assert.equal(report.created,0);assert.equal(report.cleaned,0);assert.equal(f.writes.length,0);assert.equal(f.records.size,0);assert.equal(history.results().length,0);assert.equal(report.learning.verifiedLessonPublished,false);
       const diagnostic=BrowserExecutionDiagnosticSchema.parse(report.preflightDiagnostics),first=diagnostic.events.find(event=>event.status==='failed');
       assert.equal(first?.stage,'context-identity');assert.equal(first?.code,kind==='identity'?'identity-http':kind==='timeout'?'timeout':'unknown');
+      assert.equal(report.failureDiagnostic?.stage,'context-identity');assert.equal(report.failureDiagnostic?.reason,first?.code);
       assert.equal(diagnostic.validation,'offline-mocked-salesforce');assert.equal(diagnostic.rawValuesRetained,false);
       assert.deepEqual(readBrowserExecutionDiagnostics(history,f.input.data.plan.runId,browserPlanHash(review.plan))[0],JSON.parse(JSON.stringify(diagnostic)));
       assert.ok(!(await readFile(report.reportPath,'utf8')).includes('PRIVATE_PROVIDER_TOKEN_AND_RECORD_BODY'));
